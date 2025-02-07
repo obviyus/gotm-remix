@@ -16,6 +16,7 @@ import GameCard from "~/components/GameCard";
 import { pool } from "~/utils/database.server";
 import { getSession } from "~/sessions";
 import type { RowDataPacket } from "mysql2";
+import type { NominationFormData } from "~/types";
 
 interface Game {
 	id: number;
@@ -144,18 +145,29 @@ export default function Nominate() {
 	const handleGameLength = (isShort: boolean) => {
 		if (!selectedGame) return;
 
-		const formData = {
-			game: JSON.stringify(selectedGame),
+		// Build the nomination data with type checking
+		const nominationData: NominationFormData = {
+			game: {
+				id: selectedGame.id,
+				name: selectedGame.name,
+				cover: selectedGame.cover,
+				first_release_date: selectedGame.first_release_date,
+				summary: selectedGame.summary,
+			},
 			monthId: monthId?.toString() ?? "",
 			short: isShort,
 			pitch: pitch.trim() || null,
 		};
 
-		nominate.submit(formData, {
-			method: "POST",
-			action: "/api/nominations",
-			encType: "application/json",
-		});
+		// Submit as stringified JSON
+		nominate.submit(
+			{ json: JSON.stringify(nominationData) },
+			{
+				method: "POST",
+				action: "/api/nominations",
+				encType: "application/json",
+			},
+		);
 
 		setIsOpen(false);
 		setSelectedGame(null);

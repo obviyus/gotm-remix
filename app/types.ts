@@ -24,3 +24,18 @@ export interface Ranking {
 	nomination_id: number;
 	rank: number;
 }
+
+export interface NominationFormData {
+    game: {
+        id: number;
+        name: string;
+        cover?: {
+            url: string;
+        };
+        first_release_date?: number;
+        summary?: string;
+    };
+    monthId: string;
+    short: boolean;
+    pitch?: string | null;
+}

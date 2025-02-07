@@ -2,6 +2,7 @@ import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
 import { getSession } from "~/sessions";
 import type { ResultSetHeader } from "mysql2";
+import type { NominationFormData } from "~/types";
 
 export async function action({ request }: ActionFunctionArgs) {
     const session = await getSession(request.headers.get("Cookie"));
@@ -11,19 +12,23 @@ export async function action({ request }: ActionFunctionArgs) {
         return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const contentType = request.headers.get("Content-Type");
-    let data;
-
     try {
+        let data: NominationFormData;
+        const contentType = request.headers.get("Content-Type");
+        
         if (contentType?.includes("application/json")) {
-            data = await request.json();
+            const body = await request.json();
+            // Handle both direct JSON and stringified JSON in the 'json' field
+            data = typeof body === 'string' ? JSON.parse(body) : 
+                   body.json ? JSON.parse(body.json) : body;
         } else {
             const formData = await request.formData();
-            data = {
+            const jsonStr = formData.get('json')?.toString();
+            data = jsonStr ? JSON.parse(jsonStr) : {
                 game: JSON.parse(formData.get('game')?.toString() || "{}"),
-                monthId: formData.get('monthId'),
+                monthId: formData.get('monthId')?.toString() || "",
                 short: formData.get('short') === 'true',
-                pitch: formData.get('pitch')?.toString()
+                pitch: formData.get('pitch')?.toString() || null
             };
         }
 
