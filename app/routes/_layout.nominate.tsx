@@ -27,11 +27,21 @@ interface Game {
 	summary?: string;
 }
 
+interface Nomination extends RowDataPacket {
+	id: number;
+	game_name: string;
+	game_cover: string;
+	game_year: string;
+	short: boolean;
+	pitch?: string;
+}
+
 interface LoaderData {
 	games: Game[];
 	monthId?: number;
 	userDiscordId: string;
 	monthStatus?: string;
+	userNominations: Nomination[];
 }
 
 interface MonthRow extends RowDataPacket {
@@ -62,12 +72,29 @@ export const loader: LoaderFunction = async ({ request }) => {
 		throw new Response("No months found", { status: 404 });
 	}
 
-	// Only return monthId if we're in nominating phase
+	const monthId =
+		monthRow[0].status === "nominating" ? monthRow[0].id : undefined;
+
+	// Fetch user's nominations for the current month if in nominating phase
+	let userNominations: Nomination[] = [];
+	if (monthId) {
+		const [nominations] = await pool.execute<Nomination[]>(
+			`SELECT n.*, p.pitch 
+			FROM nominations n 
+			LEFT JOIN pitches p ON n.id = p.nomination_id 
+			WHERE n.month_id = ? AND n.discord_id = ?
+			ORDER BY n.created_at DESC`,
+			[monthId, discordId],
+		);
+		userNominations = nominations;
+	}
+
 	return json<LoaderData>({
 		games: [],
-		monthId: monthRow[0].status === "nominating" ? monthRow[0].id : undefined,
+		monthId,
 		monthStatus: monthRow[0].status,
 		userDiscordId: discordId,
+		userNominations,
 	});
 };
 
@@ -88,7 +115,7 @@ export default function Nominate() {
 		games: initialGames,
 		monthId,
 		monthStatus,
-		userDiscordId,
+		userNominations,
 	} = useLoaderData<LoaderData>();
 	const actionData = useActionData<typeof action>();
 	const games = actionData?.games || initialGames;
@@ -117,13 +144,12 @@ export default function Nominate() {
 	const handleGameLength = (isShort: boolean) => {
 		if (!selectedGame) return;
 
-		const formData = new FormData();
-		formData.append("game", JSON.stringify(selectedGame));
-		formData.append("monthId", monthId?.toString() ?? "");
-		formData.append("short", isShort.toString());
-		if (pitch.trim()) {
-			formData.append("pitch", pitch);
-		}
+		const formData = {
+			game: JSON.stringify(selectedGame),
+			monthId: monthId?.toString() ?? "",
+			short: isShort,
+			pitch: pitch.trim() || null,
+		};
 
 		nominate.submit(formData, {
 			method: "POST",
@@ -133,7 +159,7 @@ export default function Nominate() {
 
 		setIsOpen(false);
 		setSelectedGame(null);
-		setPitch(""); // Reset pitch after submission
+		setPitch("");
 	};
 
 	if (!monthId || monthStatus !== "nominating") {
@@ -245,6 +271,30 @@ export default function Nominate() {
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<h1 className="text-3xl font-bold mb-8">Nominate Games</h1>
+
+			{/* User's nominations */}
+			{userNominations.length > 0 && (
+				<div className="mb-8">
+					<h2 className="text-xl font-semibold mb-4">Your Nominations</h2>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+						{userNominations.map((nomination) => (
+							<GameCard
+								game={{
+									id: nomination.id,
+									name: nomination.game_name,
+									cover: { url: nomination.game_cover },
+									first_release_date: Number.parseInt(nomination.game_year),
+									summary: nomination.pitch,
+									short: nomination.short,
+									pitch: nomination.pitch,
+								}}
+								key={nomination.id}
+								variant="nomination"
+							/>
+						))}
+					</div>
+				</div>
+			)}
 
 			{nominate.data?.error && (
 				<div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
