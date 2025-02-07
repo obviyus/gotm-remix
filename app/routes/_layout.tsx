@@ -21,6 +21,9 @@ export default function Layout() {
 							<Link to="/" className={getLinkClassName("/")}>
 								GOTM
 							</Link>
+							<Link to="/nominate" className={getLinkClassName("/nominate")}>
+								Nominate
+							</Link>
 							<Link to="/history" className={getLinkClassName("/history")}>
 								History
 							</Link>
