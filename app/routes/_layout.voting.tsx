@@ -1,4 +1,4 @@
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useFetcher } from "@remix-run/react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { json, redirect, type LoaderFunction } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
@@ -107,6 +107,8 @@ export default function Voting() {
 		longRankings
 	} = useLoaderData<LoaderData>();
 
+	const voteFetcher = useFetcher();
+	
 	// Initialize order based on existing rankings if available
 	const [currentOrder, setCurrentOrder] = useState<Record<number, string[]>>(() => {
 		const initialOrder: Record<number, string[]> = {
@@ -157,31 +159,24 @@ export default function Voting() {
 	const [votedShort, setVotedShort] = useState(initialVotedShort);
 
 	const deleteVote = async (short: boolean) => {
-		const response = await fetch("/api/votes", {
-			method: "DELETE",
-			body: JSON.stringify({
-				monthId,
-				userId,
-				short,
-			}),
-		});
+		voteFetcher.submit(
+			{ monthId, userId, short },
+			{ method: "DELETE", action: "/api/votes" }
+		);
 
-		if (response.ok) {
-			const shortKey = short ? 1 : 0;
-			const games = short ? shortNominations : longNominations;
-			
-			// Reset the order to have all games below the divider
-			setCurrentOrder((prev) => ({
-				...prev,
-				[shortKey]: ["divider", ...games.map(n => String(n.id))]
-			}));
-			
-			// Update vote status
-			if (short) {
-				setVotedShort(false);
-			} else {
-				setVotedLong(false);
-			}
+		// Update local state
+		const shortKey = short ? 1 : 0;
+		const games = short ? shortNominations : longNominations;
+		
+		setCurrentOrder((prev) => ({
+			...prev,
+			[shortKey]: ["divider", ...games.map(n => String(n.id))]
+		}));
+		
+		if (short) {
+			setVotedShort(false);
+		} else {
+			setVotedLong(false);
 		}
 	};
 
@@ -212,43 +207,25 @@ export default function Voting() {
 	};
 
 	const saveVote = async (short: boolean, order: string[]) => {
-		try {
-			const validOrder = order
-				.filter(id => id && id !== "divider")
-				.map(id => parseInt(id));
-			
-			if (validOrder.length === 0) {
-				await deleteVote(short);
-				return;
-			}
-			
-			const body = JSON.stringify({
-				monthId,
-				userId,
-				short,
-				order: validOrder,
-			})
-			
-			const response = await fetch("/api/votes", {
-				method: "POST",
-				headers: { 'Content-Type': 'application/json' },
-				body,
-			});
-	
-			if (!response.ok) {
-				throw new Error('Failed to save vote');
-			}
-
-			const result = await response.json();
-			if (result.success) {
-				updateVoteStatus(short, true);
-			} else {
-				throw new Error(result.error || 'Failed to save vote');
-			}
-		} catch (error) {
-			console.error('Error saving vote:', error);
-			updateVoteStatus(short, false);
+		const validOrder = order
+			.filter(id => id && id !== "divider")
+			.map(id => parseInt(id));
+		
+		if (validOrder.length === 0) {
+			await deleteVote(short);
+			return;
 		}
+
+		voteFetcher.submit(
+			{ monthId, userId, short, order: validOrder },
+			{ 
+				method: "POST", 
+				action: "/api/votes",
+				encType: "application/json"
+			}
+		);
+
+		updateVoteStatus(short, true);
 	};
 
 	const updateVoteStatus = (short: boolean, voted: boolean) => {

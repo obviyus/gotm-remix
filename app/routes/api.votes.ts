@@ -1,87 +1,97 @@
-import { json } from "@remix-run/node";
+import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
-export async function action({ request }: { request: Request }) {
-	if (request.method === "DELETE") {
-		const { monthId, userId, short } = await request.json();
+export async function action({ request }: ActionFunctionArgs) {
+    const isJson = request.headers.get("Content-Type")?.includes("application/json");
+    let data;
+    
+    if (isJson) {
+        data = await request.json();
+    } else {
+        const formData = await request.formData();
+        data = {
+            monthId: formData.get("monthId"),
+            userId: formData.get("userId"),
+            short: formData.get("short") === "true",
+            order: formData.get("order") ? JSON.parse(formData.get("order") as string) : undefined
+        };
+    }
 
-		await pool.execute(
-			`DELETE v, r 
-			 FROM votes v 
-			 LEFT JOIN rankings r ON r.vote_id = v.id 
-			 WHERE v.month_id = ? AND v.discord_id = ? AND v.short = ?`,
-			[monthId, userId, short],
-		);
+    const { monthId, userId, short } = data;
 
-		return json({ success: true });
-	}
+    if (request.method === "DELETE") {
+        await pool.execute(
+            `DELETE v, r 
+             FROM votes v 
+             LEFT JOIN rankings r ON r.vote_id = v.id 
+             WHERE v.month_id = ? AND v.discord_id = ? AND v.short = ?`,
+            [monthId, userId, short],
+        );
 
-	const { monthId, userId, short, order } = await request.json();
+        return json({ success: true });
+    }
 
-	try {
-		// Begin transaction to ensure data consistency
-		const connection = await pool.getConnection();
-		await connection.beginTransaction();
+    try {
+        // Begin transaction to ensure data consistency
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-		try {
-			// First check if a vote already exists
-			const [existingVote] = await connection.execute<RowDataPacket[]>(
-				"SELECT id FROM votes WHERE month_id = ? AND discord_id = ? AND short = ?",
-				[monthId, userId, short]
-			);
-			
-			let voteId: number;
-			
-			if (existingVote[0]?.id) {
-				// Use existing vote
-				voteId = existingVote[0].id;
-				// Delete existing rankings
-				await connection.execute("DELETE FROM rankings WHERE vote_id = ?", [voteId]);
-			} else {
-				// Create new vote
-				const [insertResult] = await connection.execute<ResultSetHeader>(
-					"INSERT INTO votes (month_id, discord_id, short) VALUES (?, ?, ?)",
-					[monthId, userId, short]
-				);
-				
-				// Get the inserted ID
-				if (insertResult.insertId) {
-					voteId = insertResult.insertId;
-				} else {
-					throw new Error("Failed to create vote - no insert ID returned");
-				}
-			}
+        try {
+            // First check if a vote already exists
+            const [existingVote] = await connection.execute<RowDataPacket[]>(
+                "SELECT id FROM votes WHERE month_id = ? AND discord_id = ? AND short = ?",
+                [monthId, userId, short]
+            );
+            
+            let voteId: number;
+            
+            if (existingVote[0]?.id) {
+                voteId = existingVote[0].id;
+                await connection.execute("DELETE FROM rankings WHERE vote_id = ?", [voteId]);
+            } else {
+                const [insertResult] = await connection.execute<ResultSetHeader>(
+                    "INSERT INTO votes (month_id, discord_id, short) VALUES (?, ?, ?)",
+                    [monthId, userId, short]
+                );
+                
+                if (insertResult.insertId) {
+                    voteId = insertResult.insertId;
+                } else {
+                    throw new Error("Failed to create vote - no insert ID returned");
+                }
+            }
 
-			// Insert new rankings if provided
-			if (order && order.length > 0) {
-				const values = order.map((nominationId: number, index: number) => [
-					voteId,
-					nominationId,
-					index + 1
-				]);
+            // Insert new rankings if provided
+            if (data.order?.length > 0) {
+                const values = data.order.map((nominationId: number, index: number) => [
+                    voteId,
+                    nominationId,
+                    index + 1
+                ]);
 
-				const placeholders = values.map(() => "(?, ?, ?)").join(", ");
-				await connection.execute(
-					`INSERT INTO rankings (vote_id, nomination_id, \`rank\`) 
-					VALUES ${placeholders}`,
-					values.flat()
-				);
-			}
+                const placeholders = values.map(() => "(?, ?, ?)").join(", ");
+                await connection.execute(
+                    `INSERT INTO rankings (vote_id, nomination_id, \`rank\`) 
+                    VALUES ${placeholders}`,
+                    values.flat()
+                );
+            }
 
-			// Commit the transaction
-			await connection.commit();
-			connection.release();
+            await connection.commit();
+            connection.release();
 
-			return json({ success: true, voteId });
-		} catch (error) {
-			// Rollback on error
-			await connection.rollback();
-			connection.release();
-			throw error;
-		}
-	} catch (error) {
-		console.error('Error processing vote:', error);
-		return json({ success: false, error: 'Failed to process vote' }, { status: 500 });
-	}
+            return json({ success: true, voteId });
+        } catch (error) {
+            await connection.rollback();
+            connection.release();
+            throw error;
+        }
+    } catch (error) {
+        console.error('Error processing vote:', error);
+        return json(
+            { success: false, error: 'Failed to process vote' }, 
+            { status: 500 }
+        );
+    }
 }
