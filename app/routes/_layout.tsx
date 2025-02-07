@@ -3,26 +3,42 @@ import { useState } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { json, type LoaderFunction } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
+import { getSession } from "~/sessions";
 import type { RowDataPacket } from "mysql2";
 
 interface LoaderData {
 	monthStatus: string;
+	isJuryMember: boolean;
 }
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
 	// Get latest month's status
 	const [rows] = await pool.execute<RowDataPacket[]>(
 		"SELECT status FROM months ORDER BY id DESC LIMIT 1",
 	);
 
+	// Check if user is a jury member
+	const session = await getSession(request.headers.get("Cookie"));
+	const discordId = session.get("discordId");
+
+	let isJuryMember = false;
+	if (discordId) {
+		const [juryRows] = await pool.execute<RowDataPacket[]>(
+			"SELECT id FROM jury_members WHERE discord_id = ? AND active = 1",
+			[discordId],
+		);
+		isJuryMember = juryRows.length > 0;
+	}
+
 	return json<LoaderData>({
 		monthStatus: rows[0]?.status || "ready",
+		isJuryMember,
 	});
 };
 
 export default function Layout() {
 	const location = useLocation();
-	const { monthStatus } = useLoaderData<LoaderData>();
+	const { monthStatus, isJuryMember } = useLoaderData<LoaderData>();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const getLinkClassName = (path: string, isMobile = false) => {
@@ -60,6 +76,8 @@ export default function Layout() {
 		centerItem,
 		{ path: "/jury", label: "Jury Members" },
 		{ path: "/privacy", label: "Privacy" },
+		// Only show admin link for jury members
+		...(isJuryMember ? [{ path: "/admin", label: "Admin" }] : []),
 	];
 
 	const activeTab =
