@@ -37,6 +37,18 @@ const CHART_CONFIG = {
 const CHART_OPTIONS = {
 	responsive: true,
 	maintainAspectRatio: false,
+	plugins: {
+		tooltip: {
+			callbacks: {
+				label: (context: any) => {
+					const data = context.raw;
+					const fromGame = getBaseGameName(data.from);
+					const toGame = getBaseGameName(data.to);
+					return `${toGame} got ${Math.round(data.flow)} votes from ${fromGame}`;
+				}
+			}
+		}
+	}
 } as const;
 
 function getBaseGameName(nodeName: string): string {
@@ -75,11 +87,13 @@ export function VotingResultsChart({
 			gameColors.set(game, COLOR_PALETTE[index % COLOR_PALETTE.length]);
 		});
 
-		const sankeyData = results.map(({ source, target, weight }) => ({
-			from: source,
-			to: target,
-			flow: Number(weight),
-		}));
+		const sankeyData = results
+			.filter(({ weight }) => Number(weight) > 0.01) // Filter out connections with negligible weight
+			.map(({ source, target, weight }) => ({
+				from: source,  // Keep original source with numbers
+				to: target,   // Keep original target with numbers
+				flow: Number(weight),
+			}));
 
 		const nodeColumns = new Map<string, number>();
 		const processedNodes = new Set<string>();
@@ -148,14 +162,18 @@ export function VotingResultsChart({
 			}
 		}
 
-		// Create labels object
+		// Create labels object - only show for source nodes and final sink nodes
+		const sinkNodes = new Set<string>();
+		for (const node of targetNodes) {
+			if (!sourceNodes.has(node)) {
+				sinkNodes.add(node);
+			}
+		}
+
 		const sankeyLabels = Object.fromEntries(
 			Array.from(processedNodes).map((node) => [
 				node,
-				initialNodes.has(node) ||
-				gameLastNodes.get(getBaseGameName(node)) === node
-					? node
-					: "",
+				initialNodes.has(node) || sinkNodes.has(node) ? node : "",
 			]),
 		);
 
