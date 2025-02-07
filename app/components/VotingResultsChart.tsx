@@ -48,6 +48,11 @@ const CHART_OPTIONS = {
 				}
 			}
 		}
+	},
+	layout: {
+		padding: {
+			right: 20 // Padding on the right for better scrolling experience
+		}
 	}
 } as const;
 
@@ -215,16 +220,18 @@ export function VotingResultsChart({
 					{getWinner(results) ? ` 🏆 ${getWinner(results)}` : ""}
 				</h2>
 			</div>
-			<div className="relative h-[24rem] w-full sm:h-[28rem]">
-				{results.length > 0 ? (
-					<canvas ref={canvasRef} />
-				) : (
-					<div className="flex h-full items-center justify-center">
-						<p className="text-base font-medium text-gray-500 sm:text-lg">
-							No votes available yet
-						</p>
-					</div>
-				)}
+			<div className="relative h-[24rem] w-full sm:h-[28rem] overflow-x-auto">
+				<div className="min-w-[600px] h-full">
+					{results.length > 0 ? (
+						<canvas ref={canvasRef} />
+					) : (
+						<div className="flex h-full items-center justify-center">
+							<p className="text-base font-medium text-gray-500 sm:text-lg">
+								No votes available yet
+							</p>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);
