@@ -98,29 +98,25 @@ export default function GameCard({
 						)}
 					</div>
 					{(onEdit || onDelete) && (
-						<div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
+						<div className="flex gap-2 mt-2 pt-2 border-t border-gray-100 w-full overflow-hidden">
 							{onEdit && (
 								<button
 									type="button"
 									onClick={() => onEdit(game)}
-									className="flex-1 flex items-center justify-center gap-2 p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+									className="flex-1 min-w-0 flex items-center justify-center p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
 									title={game.pitch ? "Edit pitch" : "Add pitch"}
 								>
 									<PencilSquareIcon className="w-4 h-4" />
-									<span className="text-sm">
-										{game.pitch ? "Edit" : "Add Pitch"}
-									</span>
 								</button>
 							)}
 							{onDelete && (
 								<button
 									type="button"
 									onClick={() => onDelete(game)}
-									className="flex-1 flex items-center justify-center gap-2 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+									className="flex-1 min-w-0 flex items-center justify-center p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
 									title="Delete nomination"
 								>
 									<TrashIcon className="w-4 h-4" />
-									<span className="text-sm">Delete</span>
 								</button>
 							)}
 						</div>

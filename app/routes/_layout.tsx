@@ -63,7 +63,7 @@ export default function Layout() {
 			case "jury":
 				return { path: "/", label: "Jury at Work" };
 			case "playing":
-				return { path: "/", label: "Play" };
+				return null;
 			default:
 				return { path: "/", label: "GOTM" };
 		}
@@ -73,7 +73,7 @@ export default function Layout() {
 	const navLinks = [
 		{ path: "/", label: "GOTM" },
 		{ path: "/history", label: "History" },
-		centerItem,
+		...(centerItem ? [centerItem] : []),
 		{ path: "/jury", label: "Jury Members" },
 		{ path: "/privacy", label: "Privacy" },
 		// Only show admin link for jury members
