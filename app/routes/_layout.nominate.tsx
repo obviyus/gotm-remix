@@ -132,6 +132,18 @@ export default function Nominate() {
 	const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 	const [pitch, setPitch] = useState("");
 
+	// State for edit modal
+	const [isEditOpen, setIsEditOpen] = useState(false);
+	const [editingNomination, setEditingNomination] = useState<Nomination | null>(
+		null,
+	);
+	const [editPitch, setEditPitch] = useState("");
+
+	// Delete confirmation modal state
+	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+	const [deletingNomination, setDeletingNomination] =
+		useState<Nomination | null>(null);
+
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		submit(e.currentTarget);
@@ -140,6 +152,61 @@ export default function Nominate() {
 	const handleGameSelect = (game: Game) => {
 		setSelectedGame(game);
 		setIsOpen(true);
+	};
+
+	const handleEdit = (nomination: Game) => {
+		const fullNomination = userNominations.find((n) => n.id === nomination.id);
+		if (fullNomination) {
+			setEditingNomination(fullNomination);
+			setEditPitch(fullNomination.pitch || "");
+			setIsEditOpen(true);
+		}
+	};
+
+	const handleDelete = (nomination: Game) => {
+		const fullNomination = userNominations.find((n) => n.id === nomination.id);
+		if (fullNomination) {
+			setDeletingNomination(fullNomination);
+			setIsDeleteOpen(true);
+		}
+	};
+
+	const handleEditSubmit = () => {
+		if (!editingNomination) return;
+
+		nominate.submit(
+			{
+				nominationId: editingNomination.id,
+				pitch: editPitch.trim() || null,
+			},
+			{
+				method: "PATCH",
+				action: "/api/nominations",
+				encType: "application/json",
+			},
+		);
+
+		setIsEditOpen(false);
+		setEditingNomination(null);
+		setEditPitch("");
+	};
+
+	const handleDeleteConfirm = () => {
+		if (!deletingNomination) return;
+
+		nominate.submit(
+			{
+				nominationId: deletingNomination.id.toString(),
+				_action: "delete",
+			},
+			{
+				method: "DELETE",
+				action: "/api/nominations",
+			},
+		);
+
+		setIsDeleteOpen(false);
+		setDeletingNomination(null);
 	};
 
 	const handleGameLength = (isShort: boolean) => {
@@ -302,6 +369,8 @@ export default function Nominate() {
 								}}
 								key={nomination.id}
 								variant="nomination"
+								onEdit={handleEdit}
+								onDelete={handleDelete}
 							/>
 						))}
 					</div>
@@ -408,6 +477,92 @@ export default function Nominate() {
 								<span className="block text-xs text-blue-200">
 									(&gt; 12 hours)
 								</span>
+							</button>
+						</div>
+					</DialogPanel>
+				</div>
+			</Dialog>
+
+			{/* Edit Modal */}
+			<Dialog
+				open={isEditOpen}
+				onClose={() => {
+					setIsEditOpen(false);
+					setEditPitch("");
+				}}
+				className="relative z-50"
+			>
+				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-white p-6 shadow-xl">
+						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
+							Edit Nomination: {editingNomination?.game_name}
+						</DialogTitle>
+						<div className="mb-6">
+							<label
+								htmlFor="editPitch"
+								className="block text-sm font-medium text-gray-700 mb-2"
+							>
+								Pitch
+							</label>
+							<textarea
+								id="editPitch"
+								rows={3}
+								className="pl-2 pt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+								value={editPitch}
+								onChange={(e) => setEditPitch(e.target.value)}
+							/>
+						</div>
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => setIsEditOpen(false)}
+								className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleEditSubmit}
+								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+							>
+								Save Changes
+							</button>
+						</div>
+					</DialogPanel>
+				</div>
+			</Dialog>
+
+			{/* Delete Confirmation Modal */}
+			<Dialog
+				open={isDeleteOpen}
+				onClose={() => setIsDeleteOpen(false)}
+				className="relative z-50"
+			>
+				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+				<div className="fixed inset-0 flex items-center justify-center p-4">
+					<DialogPanel className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
+							Delete Nomination
+						</DialogTitle>
+						<p className="text-sm text-gray-500 mb-6">
+							Are you sure you want to delete your nomination for{" "}
+							{deletingNomination?.game_name}? This action cannot be undone.
+						</p>
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => setIsDeleteOpen(false)}
+								className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleDeleteConfirm}
+								className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+							>
+								Delete
 							</button>
 						</div>
 					</DialogPanel>

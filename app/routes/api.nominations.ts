@@ -12,6 +12,99 @@ export async function action({ request }: ActionFunctionArgs) {
         return json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (request.method === "DELETE") {
+        const formData = await request.formData();
+        const nominationId = formData.get("nominationId");
+
+        if (!nominationId) {
+            return json({ error: "Missing nomination ID" }, { status: 400 });
+        }
+
+        // Verify the nomination belongs to the user
+        const [nomination] = await pool.execute(
+            "SELECT id FROM nominations WHERE id = ? AND discord_id = ?",
+            [nominationId, discordId]
+        );
+
+        if (!Array.isArray(nomination) || nomination.length === 0) {
+            return json({ error: "Nomination not found or unauthorized" }, { status: 404 });
+        }
+
+        // Delete the nomination (pitches will be cascade deleted)
+        await pool.execute(
+            "DELETE FROM nominations WHERE id = ?",
+            [nominationId]
+        );
+
+        return json({ success: true });
+    }
+
+    if (request.method === "PATCH") {
+        try {
+            const contentType = request.headers.get("Content-Type");
+            const data = contentType?.includes("application/json")
+                ? await request.json()
+                : Object.fromEntries(await request.formData());
+
+            const nominationId = typeof data.nominationId === 'string' 
+                ? Number.parseInt(data.nominationId, 10)
+                : typeof data.nominationId === 'number'
+                    ? data.nominationId
+                    : null;
+
+            if (!nominationId || Number.isNaN(nominationId)) {
+                return json({ error: "Invalid nomination ID" }, { status: 400 });
+            }
+
+            const pitch = data.pitch?.toString() || null;
+
+            // Verify nomination exists and belongs to user
+            const [nomination] = await pool.execute(
+                "SELECT id FROM nominations WHERE id = ? AND discord_id = ?",
+                [nominationId, discordId]
+            );
+
+            if (!Array.isArray(nomination) || nomination.length === 0) {
+                return json({ error: "Nomination not found or unauthorized" }, { status: 404 });
+            }
+
+            // Start a transaction for updating the pitch
+            const connection = await pool.getConnection();
+            await connection.beginTransaction();
+
+            try {
+                // Delete existing pitch
+                await connection.execute(
+                    "DELETE FROM pitches WHERE nomination_id = ?",
+                    [nominationId]
+                );
+
+                // Insert new pitch if provided
+                if (pitch) {
+                    await connection.execute(
+                        "INSERT INTO pitches (nomination_id, discord_id, pitch) VALUES (?, ?, ?)",
+                        [nominationId, discordId, pitch]
+                    );
+                }
+
+                await connection.commit();
+                connection.release();
+
+                return json({ success: true });
+            } catch (error) {
+                await connection.rollback();
+                connection.release();
+                throw error;
+            }
+        } catch (error) {
+            console.error('Error processing edit:', error);
+            return json(
+                { error: 'Failed to process edit. Please try again.' },
+                { status: 500 }
+            );
+        }
+    }
+
     try {
         let data: NominationFormData;
         const contentType = request.headers.get("Content-Type");

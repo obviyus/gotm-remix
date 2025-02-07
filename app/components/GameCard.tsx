@@ -1,25 +1,18 @@
 import type { DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
-import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/20/solid";
-
-interface Game {
-	id: number;
-	name: string;
-	cover?:
-		| {
-				url: string;
-		  }
-		| string;
-	first_release_date?: number;
-	game_year?: string;
-	summary?: string;
-	pitch?: string;
-	short?: boolean;
-}
+import {
+	ArrowDownIcon,
+	ArrowUpIcon,
+	PencilSquareIcon,
+	TrashIcon,
+} from "@heroicons/react/20/solid";
+import type { Game } from "~/types";
 
 interface GameCardProps {
 	game: Game;
 	variant?: "default" | "nomination" | "search";
 	onNominate?: (game: Game) => void;
+	onEdit?: (game: Game) => void;
+	onDelete?: (game: Game) => void;
 	draggableProps?: React.HTMLAttributes<HTMLDivElement>;
 	dragHandleProps?: DraggableProvidedDragHandleProps;
 	innerRef?: (element?: HTMLElement | null) => void;
@@ -32,6 +25,8 @@ export default function GameCard({
 	game,
 	variant = "default",
 	onNominate,
+	onEdit,
+	onDelete,
 	draggableProps,
 	dragHandleProps,
 	innerRef,
@@ -98,6 +93,32 @@ export default function GameCard({
 							</p>
 						)}
 					</div>
+					{(onEdit || onDelete) && (
+						<div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
+							{onEdit && (
+								<button
+									type="button"
+									onClick={() => onEdit(game)}
+									className="flex-1 flex items-center justify-center gap-2 p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+									title="Edit nomination"
+								>
+									<PencilSquareIcon className="w-4 h-4" />
+									<span className="text-sm">Edit</span>
+								</button>
+							)}
+							{onDelete && (
+								<button
+									type="button"
+									onClick={() => onDelete(game)}
+									className="flex-1 flex items-center justify-center gap-2 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+									title="Delete nomination"
+								>
+									<TrashIcon className="w-4 h-4" />
+									<span className="text-sm">Delete</span>
+								</button>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 		);
