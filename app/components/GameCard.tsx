@@ -50,54 +50,58 @@ export default function GameCard({
 					</div>
 				)}
 			</div>
-			<div className="flex-1 p-2 flex flex-col space-y-1">
-				<div className="flex justify-between items-start gap-x-1">
-					<h3 className="text-sm font-semibold text-gray-900 flex-1">
-						{game.name}
-					</h3>
-					{game.first_release_date && (
-						<span className="text-xs text-gray-500 shrink-0">
-							{new Date(game.first_release_date * 1000).getFullYear()}
-						</span>
+			<div className="flex-1 p-2 flex flex-col justify-between h-full">
+				<div className="space-y-1">
+					<div className="flex justify-between items-start gap-x-1">
+						<h3 className="text-sm font-semibold text-gray-900 flex-1">
+							{game.name}
+						</h3>
+						{game.first_release_date && (
+							<span className="text-xs text-gray-500 shrink-0">
+								{new Date(game.first_release_date * 1000).getFullYear()}
+							</span>
+						)}
+					</div>
+					{game.summary && (
+						<p className="text-xs text-gray-600 line-clamp-2">
+							{game.summary}
+						</p>
 					)}
 				</div>
-				{game.summary && (
-					<p className="text-xs text-gray-600 line-clamp-2">
-						{game.summary}
-					</p>
-				)}
-				{onNominate && (
-					<button
-						type="button"
-						onClick={() => onNominate(game)}
-						className="w-full rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-500 focus:ring-offset-1"
-					>
-						Nominate
-					</button>
+				<div className="mt-auto pt-2">
+					{onNominate && (
+						<button
+							type="button"
+							onClick={() => onNominate(game)}
+							className="w-full rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-500 focus:ring-offset-1"
+						>
+							Nominate
+						</button>
 					)}
-				{(onRank || onUnrank) && (
-					<button
-						type="button"
-						onClick={isRanked ? onUnrank : onRank}
-						className={`w-full rounded-md px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring focus:ring-offset-1 flex items-center justify-center gap-1 ${
-							isRanked 
-								? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-								: 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-						}`}
-					>
-						{isRanked ? (
-							<>
-								 <ArrowDownIcon className="w-4 h-4" />
-								Unrank
-							</>
-						) : (
-							<>
-								<ArrowUpIcon className="w-4 h-4" />
-								Rank
-							</>
-						)}
-					</button>
-				)}
+					{(onRank || onUnrank) && (
+						<button
+							type="button"
+							onClick={isRanked ? onUnrank : onRank}
+							className={`w-full rounded-md px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring focus:ring-offset-1 flex items-center justify-center gap-1 ${
+								isRanked 
+									? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
+									: 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+							}`}
+						>
+							{isRanked ? (
+								<>
+									<ArrowDownIcon className="w-4 h-4" />
+									Unrank
+								</>
+							) : (
+								<>
+									<ArrowUpIcon className="w-4 h-4" />
+									Rank
+								</>
+							)}
+						</button>
+					)}
+				</div>
 			</div>
 		</div>
 	);
