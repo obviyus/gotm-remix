@@ -44,6 +44,12 @@ function getBaseGameName(nodeName: string): string {
 	return nodeName.replace(/\s*\(\d+\)\s*$/, "").trim();
 }
 
+const getWinner = (results: SankeyDataPoint[]): string | null => {
+	if (results.length === 0) return null;
+	const lastResult = results[results.length - 1];
+	return lastResult.target.split(" (")[0];
+};
+
 export function VotingResultsChart({
 	canvasId,
 	results,
@@ -185,9 +191,12 @@ export function VotingResultsChart({
 
 	return (
 		<div className="rounded-xl bg-white p-4 shadow-lg transition-shadow hover:shadow-xl sm:p-6">
-			<h2 className="mb-4 text-xl font-bold tracking-tight text-gray-900 sm:mb-6 sm:text-2xl">
-				{chartTitle} Games
-			</h2>
+			<div className="flex items-center justify-between mb-4 sm:mb-6">
+				<h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+					{chartTitle} Winner
+					{getWinner(results) ? ` 🏆 ${getWinner(results)}` : ""}
+				</h2>
+			</div>
 			<div className="relative h-[24rem] w-full sm:h-[28rem]">
 				{results.length > 0 ? (
 					<canvas ref={canvasRef} />

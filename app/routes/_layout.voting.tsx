@@ -1,11 +1,12 @@
 import { useLoaderData } from "@remix-run/react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { json } from "@remix-run/node";
+import { json, redirect, type LoaderFunction } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
 import type { Nomination } from "~/types";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import type { RowDataPacket } from "mysql2";
+import { getSession } from "~/sessions";
 
 interface LoaderData {
 	monthId: number;
@@ -14,47 +15,146 @@ interface LoaderData {
 	longNominations: Nomination[];
 	votedShort: boolean;
 	votedLong: boolean;
+	shortRankings: Array<{ nomination_id: number; rank: number }>;
+	longRankings: Array<{ nomination_id: number; rank: number }>;
 }
 
-export const loader = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
+	// Check for authentication
+	const session = await getSession(request.headers.get("Cookie"));
+	const discordId = session.get("discordId");
+
+	if (!discordId) {
+		return redirect("/auth/discord");
+	}
+
 	const [monthRow] = await pool.execute<RowDataPacket[]>(
 		"SELECT id FROM months WHERE status = 'voting' LIMIT 1",
 	);
 	const monthId = monthRow[0]?.id || 0;
 
-	// Fetch nominations and voting status
+	// Check if user has already voted
+	const [shortVoteRow] = await pool.execute<RowDataPacket[]>(
+		"SELECT id FROM votes WHERE month_id = ? AND discord_id = ? AND short = 1",
+		[monthId, discordId],
+	);
+
+	const [longVoteRow] = await pool.execute<RowDataPacket[]>(
+		"SELECT id FROM votes WHERE month_id = ? AND discord_id = ? AND short = 0",
+		[monthId, discordId],
+	);
+
+	// Fetch nominations
 	const [shortNoms] = await pool.execute(
-		`SELECT * FROM nominations 
+		`SELECT id, game_id, game_name as title, game_year, game_cover, game_url, game_platform_ids 
+     FROM nominations 
      WHERE month_id = ? AND jury_selected = 1 AND short = 1`,
 		[monthId],
 	);
 
 	const [longNoms] = await pool.execute(
-		`SELECT * FROM nominations 
+		`SELECT id, game_id, game_name as title, game_year, game_cover, game_url, game_platform_ids 
+     FROM nominations 
      WHERE month_id = ? AND jury_selected = 1 AND short = 0`,
 		[monthId],
 	);
 
+	// Fetch existing rankings if user has voted
+	let shortRankings: RowDataPacket[] = [];
+	let longRankings: RowDataPacket[] = [];
+
+	if (shortVoteRow[0]) {
+		[shortRankings] = await pool.execute<RowDataPacket[]>(
+			`SELECT nomination_id, \`rank\` 
+			 FROM rankings 
+			 WHERE vote_id = ? 
+			 ORDER BY \`rank\``,
+			[shortVoteRow[0].id]
+		);
+	}
+
+	if (longVoteRow[0]) {
+		[longRankings] = await pool.execute<RowDataPacket[]>(
+			`SELECT nomination_id, \`rank\` 
+			 FROM rankings 
+			 WHERE vote_id = ? 
+			 ORDER BY \`rank\``,
+			[longVoteRow[0].id]
+		);
+	}
+
 	return json({
 		monthId,
-		userId: "0",
+		userId: discordId,
 		shortNominations: shortNoms,
 		longNominations: longNoms,
-		votedShort: false,
-		votedLong: false,
+		votedShort: Boolean(shortVoteRow[0]),
+		votedLong: Boolean(longVoteRow[0]),
+		shortRankings,
+		longRankings,
 	});
 };
 
 export default function Voting() {
-	const { monthId, userId, shortNominations, longNominations } =
-		useLoaderData<LoaderData>();
+	const { 
+		monthId, 
+		userId, 
+		shortNominations, 
+		longNominations, 
+		votedShort: initialVotedShort, 
+		votedLong: initialVotedLong,
+		shortRankings,
+		longRankings
+	} = useLoaderData<LoaderData>();
 
-	const [currentOrder, setCurrentOrder] = useState<Record<number, string[]>>({
-		0: [], // long games
-		1: [], // short games
+	// Initialize order based on existing rankings if available
+	const [currentOrder, setCurrentOrder] = useState<Record<number, string[]>>(() => {
+		const initialOrder: Record<number, string[]> = {
+			0: ["divider"], // long games
+			1: ["divider"]  // short games
+		};
+
+		// For long games
+		if (longRankings.length > 0) {
+			// Add ranked games in order
+			const rankedLongIds = longRankings
+				.sort((a, b) => a.rank - b.rank)
+				.map(r => String(r.nomination_id));
+			initialOrder[0].unshift(...rankedLongIds);
+
+			// Add remaining unranked games below divider
+			const unrankedLongIds = longNominations
+				.filter(n => !longRankings.find(r => r.nomination_id === n.id))
+				.map(n => String(n.id));
+			initialOrder[0].push(...unrankedLongIds);
+		} else {
+			// If no rankings, all games go below divider
+			initialOrder[0].push(...longNominations.map(n => String(n.id)));
+		}
+
+		// For short games
+		if (shortRankings.length > 0) {
+			// Add ranked games in order
+			const rankedShortIds = shortRankings
+				.sort((a, b) => a.rank - b.rank)
+				.map(r => String(r.nomination_id));
+			initialOrder[1].unshift(...rankedShortIds);
+
+			// Add remaining unranked games below divider
+			const unrankedShortIds = shortNominations
+				.filter(n => !shortRankings.find(r => r.nomination_id === n.id))
+				.map(n => String(n.id));
+			initialOrder[1].push(...unrankedShortIds);
+		} else {
+			// If no rankings, all games go below divider
+			initialOrder[1].push(...shortNominations.map(n => String(n.id)));
+		}
+
+		return initialOrder;
 	});
-	const [votedLong, setVotedLong] = useState(false);
-	const [votedShort, setVotedShort] = useState(false);
+
+	const [votedLong, setVotedLong] = useState(initialVotedLong);
+	const [votedShort, setVotedShort] = useState(initialVotedShort);
 
 	const deleteVote = async (short: boolean) => {
 		const response = await fetch("/api/votes", {
@@ -67,12 +167,20 @@ export default function Voting() {
 		});
 
 		if (response.ok) {
+			const shortKey = short ? 1 : 0;
+			const games = short ? shortNominations : longNominations;
+			
+			// Reset the order to have all games below the divider
+			setCurrentOrder((prev) => ({
+				...prev,
+				[shortKey]: ["divider", ...games.map(n => String(n.id))]
+			}));
+			
+			// Update vote status
 			if (short) {
 				setVotedShort(false);
-				setCurrentOrder((prev) => ({ ...prev, 1: [] }));
 			} else {
 				setVotedLong(false);
-				setCurrentOrder((prev) => ({ ...prev, 0: [] }));
 			}
 		}
 	};
@@ -82,28 +190,65 @@ export default function Voting() {
 
 		const isShort = result.source.droppableId === "short";
 		const shortKey = isShort ? 1 : 0;
-
 		const items = Array.from(currentOrder[shortKey]);
+		const dividerIndex = items.indexOf("divider");
+
+		// Handle dragging items
 		const [reorderedItem] = items.splice(result.source.index, 1);
 		items.splice(result.destination.index, 0, reorderedItem);
 
-		setCurrentOrder({ ...currentOrder, [shortKey]: items });
-		await saveVote(isShort, items);
+		// Update the local state
+		setCurrentOrder(prevOrder => ({ ...prevOrder, [shortKey]: items }));
+		
+		// Get items above the divider and save them as votes
+		const newDividerIndex = items.indexOf("divider");
+		const rankedItems = items.slice(0, newDividerIndex);
+
+		if (rankedItems.length > 0) {
+			await saveVote(isShort, rankedItems);
+		} else {
+			await deleteVote(isShort);
+		}
 	};
 
 	const saveVote = async (short: boolean, order: string[]) => {
-		// Implementation similar to PHP saveVote method
-		const response = await fetch("/api/votes", {
-			method: "POST",
-			body: JSON.stringify({
+		try {
+			const validOrder = order
+				.filter(id => id && id !== "divider")
+				.map(id => parseInt(id));
+			
+			if (validOrder.length === 0) {
+				await deleteVote(short);
+				return;
+			}
+			
+			const body = JSON.stringify({
 				monthId,
 				userId,
 				short,
-				order,
-			}),
-		});
+				order: validOrder,
+			})
+			
+			const response = await fetch("/api/votes", {
+				method: "POST",
+				headers: { 'Content-Type': 'application/json' },
+				body,
+			});
+	
+			if (!response.ok) {
+				throw new Error('Failed to save vote');
+			}
 
-		// Update vote status after save
+			const result = await response.json();
+			if (result.success) {
+				updateVoteStatus(short, true);
+			} else {
+				throw new Error(result.error || 'Failed to save vote');
+			}
+		} catch (error) {
+			console.error('Error saving vote:', error);
+			updateVoteStatus(short, false);
+		}
 	};
 
 	const updateVoteStatus = (short: boolean, voted: boolean) => {
@@ -119,78 +264,110 @@ export default function Voting() {
 		const order = currentOrder[shortKey];
 		const dividerIndex = order.indexOf("divider");
 
-		const rankedGames =
-			dividerIndex > -1
-				? games.filter((g) =>
-						order.slice(0, dividerIndex).includes(String(g.id)),
-					)
-				: [];
+		// Initialize ranked and unranked games based on the current order
+		const rankedGames = games
+			.filter((g) => 
+				dividerIndex > -1 && order.slice(0, dividerIndex).includes(String(g.id))
+			)
+			.sort((a, b) => {
+				const aIndex = order.indexOf(String(a.id));
+				const bIndex = order.indexOf(String(b.id));
+				return aIndex - bIndex;
+			});
 
-		const unrankedGames =
-			dividerIndex > -1
-				? games.filter((g) =>
-						order.slice(dividerIndex + 1).includes(String(g.id)),
-					)
-				: games;
+		const unrankedGames = games
+			.filter((g) => 
+				dividerIndex === -1 || order.slice(dividerIndex + 1).includes(String(g.id)) || !order.includes(String(g.id))
+			)
+			.sort((a, b) => {
+				const aIndex = order.indexOf(String(a.id));
+				const bIndex = order.indexOf(String(b.id));
+				return aIndex - bIndex;
+			});
 
 		return (
 			<Droppable droppableId={isShort ? "short" : "long"}>
 				{(provided) => (
 					<div {...provided.droppableProps} ref={provided.innerRef}>
 						{/* Ranked Section */}
-						{rankedGames.length === 0 ? (
-							<div className="bg-gray-50 rounded p-4 text-center text-gray-500 mb-4">
-								Drag games here to rank them
-							</div>
-						) : (
-							rankedGames.map((game, index) => (
-								<Draggable
-									key={game.id}
-									draggableId={String(game.id)}
-									index={index}
-								>
-									{(provided) => (
-										<GameCard
-											title={game.title}
-											draggableProps={provided.draggableProps}
-											dragHandleProps={provided.dragHandleProps}
-											innerRef={provided.innerRef}
-										/>
-									)}
-								</Draggable>
-							))
-						)}
-
-						{/* Divider */}
-						<div className="border-t-2 border-dashed border-gray-300 my-4 relative">
-							<span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-gray-500">
-								Divider
-							</span>
+						<div className="space-y-4">
+							{rankedGames.length === 0 && order.length === 0 ? (
+								<div className="bg-gray-50 rounded p-4 text-center text-gray-500">
+									Drag games here to rank them
+								</div>
+							) : (
+								rankedGames.map((game, index) => (
+									<div key={game.id}>
+										<Draggable
+											draggableId={String(game.id)}
+											index={index}
+										>
+											{(provided) => (
+												<GameCard
+													game={{
+														id: game.id,
+														name: game.title,
+														cover: game.game_cover ? { url: game.game_cover } : undefined,
+														first_release_date: game.game_year ? parseInt(game.game_year) : undefined,
+													}}
+													draggableProps={provided.draggableProps}
+													dragHandleProps={provided.dragHandleProps}
+													innerRef={provided.innerRef}
+												/>
+											)}
+										</Draggable>
+									</div>
+								))
+							)}
 						</div>
 
-						{/* Unranked Section */}
-						{unrankedGames.length === 0 ? (
-							<div className="bg-gray-50 rounded p-4 text-center text-gray-500">
-								Drag games here to unrank them
-							</div>
-						) : (
-							unrankedGames.map((game, index) => (
-								<Draggable
-									key={game.id}
-									draggableId={String(game.id)}
-									index={dividerIndex + 1 + index}
+						{/* Divider */}
+						<Draggable draggableId="divider" index={rankedGames.length}>
+							{(provided) => (
+								<div
+									ref={provided.innerRef}
+									{...provided.draggableProps}
+									{...provided.dragHandleProps}
+									className="border-t-2 border-dashed border-gray-300 my-4 relative"
 								>
-									{(provided) => (
-										<GameCard
-											title={game.title}
-											draggableProps={provided.draggableProps}
-											dragHandleProps={provided.dragHandleProps}
-											innerRef={provided.innerRef}
-										/>
-									)}
-								</Draggable>
-							))
-						)}
+									<span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-gray-500">
+										Divider
+									</span>
+								</div>
+							)}
+						</Draggable>
+
+						{/* Unranked Section */}
+							<div className="space-y-4">
+							{unrankedGames.length === 0 ? (
+								<div className="bg-gray-50 rounded p-4 text-center text-gray-500">
+									Drag games here to unrank them
+								</div>
+							) : (
+								unrankedGames.map((game, index) => (
+									<div key={game.id}>
+										<Draggable
+											draggableId={String(game.id)}
+											index={rankedGames.length + 1 + index}
+										>
+											{(provided) => (
+												<GameCard
+													game={{
+														id: game.id,
+														name: game.title,
+														cover: game.game_cover ? { url: game.game_cover } : undefined,
+														first_release_date: game.game_year ? parseInt(game.game_year) : undefined,
+													}}
+													draggableProps={provided.draggableProps}
+													dragHandleProps={provided.dragHandleProps}
+													innerRef={provided.innerRef}
+												/>
+											)}
+										</Draggable>
+									</div>
+								))
+							)}
+						</div>
 						{provided.placeholder}
 					</div>
 				)}
@@ -200,9 +377,9 @@ export default function Voting() {
 
 	return (
 		<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center mb-8">
-				<h1 className="text-3xl font-bold mb-2">Drag and Drop the games</h1>
-				<h2 className="text-xl mb-4">
+			<div className="text-center space-y-2 mb-8">
+				<h1 className="text-3xl font-bold">Drag and Drop the games</h1>
+				<h2 className="text-xl">
 					to sort them in the priority you want them to win
 				</h2>
 				<p className="text-gray-600">
@@ -212,12 +389,12 @@ export default function Voting() {
 
 			<div className="grid md:grid-cols-2 gap-6">
 				{/* Long Games Column */}
-				<div className="bg-white rounded-lg shadow p-4">
-					<div className="flex justify-between items-center mb-4">
+				<div className="bg-white rounded-lg shadow p-4 space-y-4">
+					<div className="flex justify-between items-center">
 						<h2 className="text-2xl font-bold">Long Games</h2>
 						<div>{votedLong ? "✅" : "❌"}</div>
 					</div>
-					<div className="min-h-[60px] mb-4">
+					<div className="min-h-[60px]">
 						{votedLong && (
 							<button
 								type="button"
@@ -234,12 +411,12 @@ export default function Voting() {
 				</div>
 
 				{/* Short Games Column */}
-				<div className="bg-white rounded-lg shadow p-4">
-					<div className="flex justify-between items-center mb-4">
+				<div className="bg-white rounded-lg shadow p-4 space-y-4">
+					<div className="flex justify-between items-center">
 						<h2 className="text-2xl font-bold">Short Games</h2>
 						<div>{votedShort ? "✅" : "❌"}</div>
 					</div>
-					<div className="min-h-[60px] mb-4">
+					<div className="min-h-[60px]">
 						{votedShort && (
 							<button
 								type="button"
