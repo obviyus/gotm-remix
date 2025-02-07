@@ -15,8 +15,6 @@ export default function Privacy() {
 
 				<ul className="list-disc ml-6 mt-2">
 					<li>Account ID</li>
-					<li>Account nickname</li>
-					<li>Account avatar</li>
 				</ul>
 
 				<p className="mt-4">
