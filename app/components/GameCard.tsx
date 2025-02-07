@@ -50,8 +50,8 @@ export default function GameCard({
 					</div>
 				)}
 			</div>
-			<div className="flex-1 p-2 flex flex-col justify-between h-full">
-				<div className="space-y-1">
+			<div className="flex-1 p-2 flex flex-col">
+				<div className="flex-1">
 					<div className="flex justify-between items-start gap-x-1">
 						<h3 className="text-sm font-semibold text-gray-900 flex-1">
 							{game.name}
@@ -63,12 +63,12 @@ export default function GameCard({
 						)}
 					</div>
 					{game.summary && (
-						<p className="text-xs text-gray-600 line-clamp-2">
+						<p className="text-xs text-gray-600 line-clamp-2 mt-1">
 							{game.summary}
 						</p>
 					)}
 				</div>
-				<div className="mt-auto pt-2">
+				<div className="pt-2">
 					{onNominate && (
 						<button
 							type="button"
