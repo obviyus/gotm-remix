@@ -10,6 +10,7 @@ import {
 } from "@remix-run/react";
 import type { ActionFunctionArgs, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/utils/igdb.server";
 import GameCard from "~/components/GameCard";
 import { pool } from "~/utils/database.server";
@@ -54,7 +55,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 	// Get latest month to handle different states
 	const [monthRow] = await pool.execute<MonthRow[]>(
-		"SELECT id, status FROM months ORDER BY year DESC, month DESC LIMIT 1"
+		"SELECT id, status FROM months ORDER BY year DESC, month DESC LIMIT 1",
 	);
 
 	if (!monthRow || monthRow.length === 0) {
@@ -62,11 +63,11 @@ export const loader: LoaderFunction = async ({ request }) => {
 	}
 
 	// Only return monthId if we're in nominating phase
-	return json<LoaderData>({ 
+	return json<LoaderData>({
 		games: [],
-		monthId: monthRow[0].status === 'nominating' ? monthRow[0].id : undefined,
+		monthId: monthRow[0].status === "nominating" ? monthRow[0].id : undefined,
 		monthStatus: monthRow[0].status,
-		userDiscordId: discordId
+		userDiscordId: discordId,
 	});
 };
 
@@ -83,7 +84,12 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Nominate() {
-	const { games: initialGames, monthId, monthStatus, userDiscordId } = useLoaderData<LoaderData>();
+	const {
+		games: initialGames,
+		monthId,
+		monthStatus,
+		userDiscordId,
+	} = useLoaderData<LoaderData>();
 	const actionData = useActionData<typeof action>();
 	const games = actionData?.games || initialGames;
 	const submit = useSubmit();
@@ -93,40 +99,57 @@ export default function Nominate() {
 	const isSearching = navigation.formData?.get("query") != null;
 	const hasSearched = actionData !== undefined; // Track if a search was performed
 
+	// New state for modal
+	const [isOpen, setIsOpen] = useState(false);
+	const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+	const [pitch, setPitch] = useState("");
+
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		submit(e.currentTarget);
 	};
 
-	const handleNominate = async (game: Game) => {
-		const isShort = window.confirm(
-			"Is this a short game (< 12 hours)? Click OK for short, Cancel for long."
-		);
-
-		const formData = new FormData();
-		formData.append('game', JSON.stringify(game));
-		formData.append('monthId', monthId?.toString() ?? '');
-		formData.append('short', isShort.toString());
-
-		nominate.submit(
-			formData,
-			{ 
-				method: "POST",
-				action: "/api/nominations",
-				encType: "application/json"
-			}
-		);
+	const handleGameSelect = (game: Game) => {
+		setSelectedGame(game);
+		setIsOpen(true);
 	};
 
-	if (!monthId || monthStatus !== 'nominating') {
+	const handleGameLength = (isShort: boolean) => {
+		if (!selectedGame) return;
+
+		const formData = new FormData();
+		formData.append("game", JSON.stringify(selectedGame));
+		formData.append("monthId", monthId?.toString() ?? "");
+		formData.append("short", isShort.toString());
+		if (pitch.trim()) {
+			formData.append("pitch", pitch);
+		}
+
+		nominate.submit(formData, {
+			method: "POST",
+			action: "/api/nominations",
+			encType: "application/json",
+		});
+
+		setIsOpen(false);
+		setSelectedGame(null);
+		setPitch(""); // Reset pitch after submission
+	};
+
+	if (!monthId || monthStatus !== "nominating") {
 		return (
 			<div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 text-center">
-				<h1 className="text-3xl font-bold tracking-tight mb-4">Nominations {monthStatus === 'over' ? 'haven\'t started' : 'are closed'}</h1>
-				
+				<h1 className="text-3xl font-bold tracking-tight mb-4">
+					Nominations{" "}
+					{monthStatus === "over" ? "haven't started" : "are closed"}
+				</h1>
+
 				<div className="bg-white p-8 rounded-lg shadow-lg">
-					{monthStatus === 'ready' && (
+					{monthStatus === "ready" && (
 						<>
-							<p className="text-lg mb-6">The month is being set up. Check back soon for nominations!</p>
+							<p className="text-lg mb-6">
+								The month is being set up. Check back soon for nominations!
+							</p>
 							<Link
 								to="/history"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -134,10 +157,13 @@ export default function Nominate() {
 								Browse Past Months →
 							</Link>
 						</>
-						)}
-					{monthStatus === 'voting' && (
+					)}
+					{monthStatus === "voting" && (
 						<>
-							<p className="text-lg mb-6">The nomination phase is over, but you can now vote for your favorite games!</p>
+							<p className="text-lg mb-6">
+								The nomination phase is over, but you can now vote for your
+								favorite games!
+							</p>
 							<Link
 								to="/voting"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -147,9 +173,12 @@ export default function Nominate() {
 						</>
 					)}
 
-					{monthStatus === 'playing' && (
+					{monthStatus === "playing" && (
 						<>
-							<p className="text-lg mb-6">Games have been selected! Check out what we're playing this month.</p>
+							<p className="text-lg mb-6">
+								Games have been selected! Check out what we're playing this
+								month.
+							</p>
 							<Link
 								to="/"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -159,16 +188,24 @@ export default function Nominate() {
 						</>
 					)}
 
-					{monthStatus === 'jury' && (
+					{monthStatus === "jury" && (
 						<>
-							<p className="text-lg mb-6">The jury is currently selecting games from the nominations. Check back soon!</p>
-							<p className="text-gray-600">Once they're done, you'll be able to vote on the selected games.</p>
+							<p className="text-lg mb-6">
+								The jury is currently selecting games from the nominations.
+								Check back soon!
+							</p>
+							<p className="text-gray-600">
+								Once they're done, you'll be able to vote on the selected games.
+							</p>
 						</>
 					)}
 
-					{monthStatus === 'over' && (
+					{monthStatus === "over" && (
 						<>
-							<p className="text-lg mb-6">The next month's nominations haven't started yet. Check back soon!</p>
+							<p className="text-lg mb-6">
+								The next month's nominations haven't started yet. Check back
+								soon!
+							</p>
 							<Link
 								to="/history"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -184,7 +221,7 @@ export default function Nominate() {
 
 	const GameSkeleton = () => (
 		<div className="flex flex-row rounded-lg border border-gray-200 bg-white shadow-sm animate-pulse">
-			<div className="relative w-1/3" style={{ aspectRatio: '2/3' }}>
+			<div className="relative w-1/3" style={{ aspectRatio: "2/3" }}>
 				<div className="absolute inset-0 bg-gray-200 rounded-l-lg" />
 			</div>
 			<div className="flex-1 p-2 flex flex-col">
@@ -241,10 +278,84 @@ export default function Nominate() {
 				</div>
 			</Form>
 
+			{/* Game Length Selection Modal */}
+			<Dialog
+				open={isOpen}
+				onClose={() => {
+					setIsOpen(false);
+					setPitch(""); // Reset pitch when closing modal
+				}}
+				className="relative z-50"
+			>
+				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+
+				{/* Full-screen container for mobile slide-up and desktop centered modal */}
+				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+					<DialogPanel
+						className={`
+                        w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-white p-6 shadow-xl 
+                        transform transition-all duration-300 ease-in-out
+                        translate-y-0 scale-100 opacity-100
+                        data-[state=closed]:translate-y-full data-[state=closed]:scale-100 data-[state=closed]:opacity-0
+                        sm:data-[state=closed]:translate-y-0 sm:data-[state=closed]:scale-95
+                    `}
+					>
+						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
+							Nominate {selectedGame?.name} (
+							{selectedGame?.first_release_date
+								? new Date(selectedGame.first_release_date * 1000).getFullYear()
+								: "Unknown"}
+							)
+						</DialogTitle>
+
+						{/* Pitch Input */}
+						<div className="mb-6">
+							<label
+								htmlFor="pitch"
+								className="block text-sm font-medium text-gray-700 mb-2"
+							>
+								Pitch (Optional)
+							</label>
+							<textarea
+								id="pitch"
+								name="pitch"
+								rows={3}
+								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+								value={pitch}
+								onChange={(e) => setPitch(e.target.value)}
+							/>
+						</div>
+
+						<div className="grid grid-cols-2 gap-4">
+							<button
+								type="button"
+								onClick={() => handleGameLength(true)}
+								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							>
+								Short Game
+								<span className="block text-xs text-blue-200">
+									(&lt; 12 hours)
+								</span>
+							</button>
+							<button
+								type="button"
+								onClick={() => handleGameLength(false)}
+								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							>
+								Long Game
+								<span className="block text-xs text-blue-200">
+									(&gt; 12 hours)
+								</span>
+							</button>
+						</div>
+					</DialogPanel>
+				</div>
+			</Dialog>
+
 			{isSearching ? (
 				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{Array.from({ length: 10 }).map((_, i) => (
-						<GameSkeleton key={i} />
+					{Array.from({ length: 10 }).map(() => (
+						<GameSkeleton key={crypto.randomUUID()} />
 					))}
 				</div>
 			) : games.length > 0 ? (
@@ -253,19 +364,27 @@ export default function Nominate() {
 						<GameCard
 							key={game.id}
 							game={game}
-							onNominate={() => handleNominate(game)}
+							onNominate={() => handleGameSelect(game)}
 						/>
 					))}
 				</div>
 			) : hasSearched && searchTerm ? (
 				<div className="text-center py-12">
-					<h3 className="text-lg font-semibold text-gray-900">No results found</h3>
-					<p className="mt-2 text-gray-500">No games found matching "{searchTerm}". Try a different search term.</p>
+					<h3 className="text-lg font-semibold text-gray-900">
+						No results found
+					</h3>
+					<p className="mt-2 text-gray-500">
+						No games found matching "{searchTerm}". Try a different search term.
+					</p>
 				</div>
 			) : (
 				<div className="text-center py-12 bg-gray-100 rounded-lg">
-					<h3 className="text-lg font-semibold text-gray-900">Search for games to nominate</h3>
-					<p className="mt-2 text-gray-500">Type in the search box above to find games</p>
+					<h3 className="text-lg font-semibold text-gray-900">
+						Search for games to nominate
+					</h3>
+					<p className="mt-2 text-gray-500">
+						Type in the search box above to find games
+					</p>
 				</div>
 			)}
 		</div>
