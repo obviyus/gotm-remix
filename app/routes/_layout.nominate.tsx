@@ -6,6 +6,7 @@ import {
 	useActionData,
 	useFetcher,
 	Link,
+	useNavigation,
 } from "@remix-run/react";
 import type { ActionFunctionArgs, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
@@ -88,6 +89,9 @@ export default function Nominate() {
 	const submit = useSubmit();
 	const [searchTerm, setSearchTerm] = useState("");
 	const nominate = useFetcher<NominationResponse>();
+	const navigation = useNavigation();
+	const isSearching = navigation.formData?.get("query") != null;
+	const hasSearched = actionData !== undefined; // Track if a search was performed
 
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -178,6 +182,29 @@ export default function Nominate() {
 		);
 	}
 
+	const GameSkeleton = () => (
+		<div className="flex flex-row rounded-lg border border-gray-200 bg-white shadow-sm animate-pulse">
+			<div className="relative w-1/3" style={{ aspectRatio: '2/3' }}>
+				<div className="absolute inset-0 bg-gray-200 rounded-l-lg" />
+			</div>
+			<div className="flex-1 p-2 flex flex-col">
+				<div className="flex-1">
+					<div className="flex justify-between items-start gap-x-1">
+						<div className="h-5 bg-gray-200 rounded w-3/4" />
+						<div className="h-3 bg-gray-200 rounded w-12 shrink-0" />
+					</div>
+					<div className="space-y-1 mt-1">
+						<div className="h-3 bg-gray-200 rounded w-full" />
+						<div className="h-3 bg-gray-200 rounded w-2/3" />
+					</div>
+				</div>
+				<div className="pt-2">
+					<div className="h-7 bg-gray-200 rounded w-full" />
+				</div>
+			</div>
+		</div>
+	);
+
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<h1 className="text-3xl font-bold mb-8">Nominate Games</h1>
@@ -202,31 +229,44 @@ export default function Nominate() {
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
 						placeholder="Search for games..."
-						className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+						className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 pl-6 pr-4"
 					/>
 					<button
 						type="submit"
-						className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						disabled={isSearching}
+						className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						Search
+						{isSearching ? "Searching..." : "Search"}
 					</button>
 				</div>
 			</Form>
 
-			<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				{games.map((game: Game) => (
-					<GameCard
-						key={game.id}
-						game={game}
-						onNominate={() => handleNominate(game)}
-					/>
-				))}
-			</div>
-
-			{games.length === 0 && searchTerm && (
-				<p className="text-center text-gray-500 mt-8">
-					No games found for &quot;{searchTerm}&quot;
-				</p>
+			{isSearching ? (
+				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					{Array.from({ length: 10 }).map((_, i) => (
+						<GameSkeleton key={i} />
+					))}
+				</div>
+			) : games.length > 0 ? (
+				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					{games.map((game: Game) => (
+						<GameCard
+							key={game.id}
+							game={game}
+							onNominate={() => handleNominate(game)}
+						/>
+					))}
+				</div>
+			) : hasSearched && searchTerm ? (
+				<div className="text-center py-12">
+					<h3 className="text-lg font-semibold text-gray-900">No results found</h3>
+					<p className="mt-2 text-gray-500">No games found matching "{searchTerm}". Try a different search term.</p>
+				</div>
+			) : (
+				<div className="text-center py-12 bg-gray-100 rounded-lg">
+					<h3 className="text-lg font-semibold text-gray-900">Search for games to nominate</h3>
+					<p className="mt-2 text-gray-500">Type in the search box above to find games</p>
+				</div>
 			)}
 		</div>
 	);
