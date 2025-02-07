@@ -3,8 +3,6 @@ import { createCookieSessionStorage } from "@remix-run/node";
 type SessionData = {
 	discordId: string;
 	accessToken: string;
-	username: string;
-	avatar: string;
 };
 
 type SessionFlashData = {
