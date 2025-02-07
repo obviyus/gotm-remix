@@ -43,6 +43,7 @@ interface LoaderData {
 	userDiscordId: string;
 	monthStatus?: string;
 	userNominations: Nomination[];
+	allNominations: Nomination[];
 }
 
 interface MonthRow extends RowDataPacket {
@@ -78,16 +79,21 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 	// Fetch user's nominations for the current month if in nominating phase
 	let userNominations: Nomination[] = [];
+	let allNominations: Nomination[] = [];
 	if (monthId) {
-		const [nominations] = await pool.execute<Nomination[]>(
-			`SELECT n.*, p.pitch 
-			FROM nominations n 
-			LEFT JOIN pitches p ON n.id = p.nomination_id 
-			WHERE n.month_id = ? AND n.discord_id = ?
-			ORDER BY n.created_at DESC`,
-			[monthId, discordId],
+		// Fetch all nominations for the month
+		const [allNominationsRows] = await pool.execute<Nomination[]>(
+			`SELECT n.*, p.pitch, p.discord_id as pitch_discord_id
+			 FROM nominations n 
+			 LEFT JOIN pitches p ON n.id = p.nomination_id 
+			 WHERE n.month_id = ?
+			 ORDER BY n.created_at DESC`,
+			[monthId],
 		);
-		userNominations = nominations;
+		allNominations = allNominationsRows;
+
+		// Filter for user's nominations
+		userNominations = allNominations.filter((n) => n.discord_id === discordId);
 	}
 
 	return json<LoaderData>({
@@ -96,6 +102,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		monthStatus: monthRow[0].status,
 		userDiscordId: discordId,
 		userNominations,
+		allNominations,
 	});
 };
 
@@ -117,6 +124,8 @@ export default function Nominate() {
 		monthId,
 		monthStatus,
 		userNominations,
+		allNominations,
+		userDiscordId,
 	} = useLoaderData<LoaderData>();
 	const actionData = useActionData<typeof action>();
 	const games = actionData?.games || initialGames;
@@ -149,9 +158,17 @@ export default function Nominate() {
 		submit(e.currentTarget);
 	};
 
-	const handleGameSelect = (game: Game) => {
-		setSelectedGame(game);
-		setIsOpen(true);
+	const handleGameSelect = (game: Game, existingNomination?: Nomination) => {
+		if (existingNomination) {
+			// If game is already nominated, go straight to pitch dialog
+			setEditingNomination(existingNomination);
+			setEditPitch("");
+			setIsEditOpen(true);
+		} else {
+			// Otherwise show the nomination dialog
+			setSelectedGame(game);
+			setIsOpen(true);
+		}
 	};
 
 	const handleEdit = (nomination: Game) => {
@@ -496,7 +513,8 @@ export default function Nominate() {
 				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
 					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-white p-6 shadow-xl">
 						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
-							Edit Nomination: {editingNomination?.game_name}
+							{editingNomination?.pitch ? "Edit" : "Add"} Pitch:{" "}
+							{editingNomination?.game_name}
 						</DialogTitle>
 						<div className="mb-6">
 							<label
@@ -511,6 +529,7 @@ export default function Nominate() {
 								className="pl-2 pt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 								value={editPitch}
 								onChange={(e) => setEditPitch(e.target.value)}
+								placeholder="Write your pitch here..."
 							/>
 						</div>
 						<div className="flex justify-end gap-3">
@@ -526,7 +545,7 @@ export default function Nominate() {
 								onClick={handleEditSubmit}
 								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 							>
-								Save Changes
+								{editingNomination?.pitch ? "Save Changes" : "Add Pitch"}
 							</button>
 						</div>
 					</DialogPanel>
@@ -577,13 +596,24 @@ export default function Nominate() {
 				</div>
 			) : games.length > 0 ? (
 				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{games.map((game: Game) => (
-						<GameCard
-							key={game.id}
-							game={game}
-							onNominate={() => handleGameSelect(game)}
-						/>
-					))}
+					{games.map((game: Game) => {
+						const existingNomination = allNominations.find(
+							(n) => String(n.game_id) === String(game.id),
+						);
+						const isCurrentUserNomination =
+							existingNomination?.discord_id === userDiscordId;
+
+						return (
+							<GameCard
+								key={game.id}
+								game={game}
+								onNominate={() => handleGameSelect(game, existingNomination)}
+								variant="search"
+								alreadyNominated={Boolean(existingNomination)}
+								isCurrentUserNomination={isCurrentUserNomination}
+							/>
+						);
+					})}
 				</div>
 			) : hasSearched && searchTerm ? (
 				<div className="text-center py-12">

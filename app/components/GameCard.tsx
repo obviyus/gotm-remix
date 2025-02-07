@@ -19,6 +19,8 @@ interface GameCardProps {
 	onRank?: () => void;
 	onUnrank?: () => void;
 	isRanked?: boolean;
+	alreadyNominated?: boolean;
+	isCurrentUserNomination?: boolean;
 }
 
 export default function GameCard({
@@ -33,6 +35,8 @@ export default function GameCard({
 	onRank,
 	onUnrank,
 	isRanked,
+	alreadyNominated,
+	isCurrentUserNomination,
 }: GameCardProps) {
 	const getCoverUrl = (cover: Game["cover"]) => {
 		if (!cover) return null;
@@ -100,10 +104,12 @@ export default function GameCard({
 									type="button"
 									onClick={() => onEdit(game)}
 									className="flex-1 flex items-center justify-center gap-2 p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
-									title="Edit nomination"
+									title={game.pitch ? "Edit pitch" : "Add pitch"}
 								>
 									<PencilSquareIcon className="w-4 h-4" />
-									<span className="text-sm">Edit</span>
+									<span className="text-sm">
+										{game.pitch ? "Edit" : "Add Pitch"}
+									</span>
 								</button>
 							)}
 							{onDelete && (
@@ -126,31 +132,62 @@ export default function GameCard({
 
 	if (variant === "search") {
 		return (
-			<div className="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
-				{coverUrl && (
-					<img
-						src={coverUrl}
-						alt={game.name}
-						className="h-48 w-full rounded-t-lg object-cover"
-					/>
-				)}
-				<div className="flex flex-1 flex-col p-4">
-					<h3 className="text-lg font-semibold text-gray-900">{game.name}</h3>
-					{year && <p className="text-sm text-gray-500">{year}</p>}
-					{game.summary && (
-						<p className="mt-2 text-sm text-gray-600 line-clamp-3">
-							{game.summary}
-						</p>
+			<div className="flex flex-row rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow h-full">
+				<div className="relative w-1/3" style={{ aspectRatio: "2/3" }}>
+					{coverUrl ? (
+						<img
+							src={coverUrl}
+							alt={game.name}
+							className="absolute inset-0 w-full h-full object-cover rounded-l-lg"
+						/>
+					) : (
+						<div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+							<span className="text-gray-400">No cover</span>
+						</div>
 					)}
-					{onNominate && (
-						<button
-							type="button"
-							onClick={() => onNominate(game)}
-							className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-						>
-							Nominate
-						</button>
-					)}
+				</div>
+				<div className="flex-1 p-2 flex flex-col">
+					<div className="flex-1">
+						<div className="flex justify-between items-start gap-x-1">
+							<h3 className="text-sm font-semibold text-gray-900 flex-1">
+								{game.name}
+							</h3>
+							{year && (
+								<span className="text-xs text-gray-500 shrink-0">{year}</span>
+							)}
+						</div>
+						{game.summary && (
+							<p className="text-xs text-gray-600 line-clamp-2 mt-1">
+								{game.summary}
+							</p>
+						)}
+					</div>
+					<div className="pt-2">
+						{onNominate &&
+							(alreadyNominated ? (
+								isCurrentUserNomination ? (
+									<p className="text-xs text-gray-500 italic">
+										You already nominated this game
+									</p>
+								) : (
+									<button
+										type="button"
+										onClick={() => onNominate(game)}
+										className="w-full rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-500 focus:ring-offset-1"
+									>
+										Add Your Pitch
+									</button>
+								)
+							) : (
+								<button
+									type="button"
+									onClick={() => onNominate(game)}
+									className="w-full rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-500 focus:ring-offset-1"
+								>
+									Nominate
+								</button>
+							))}
+					</div>
 				</div>
 			</div>
 		);
