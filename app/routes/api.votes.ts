@@ -4,15 +4,15 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 
 export async function action({ request }: ActionFunctionArgs) {
     const isJson = request.headers.get("Content-Type")?.includes("application/json");
-    let data;
+    let data: { monthId: string | null, userId: string | null, short: boolean, order?: number[] | undefined };
     
     if (isJson) {
         data = await request.json();
     } else {
         const formData = await request.formData();
         data = {
-            monthId: formData.get("monthId"),
-            userId: formData.get("userId"),
+            monthId: formData.get("monthId") as string | null,
+            userId: formData.get("userId")  as string | null,
             short: formData.get("short") === "true",
             order: formData.get("order") ? JSON.parse(formData.get("order") as string) : undefined
         };
@@ -63,8 +63,8 @@ export async function action({ request }: ActionFunctionArgs) {
             }
 
             // Insert new rankings if provided
-            if (data.order?.length > 0) {
-                const values = data.order.map((nominationId: number, index: number) => [
+            if ((data.order ?? []).length > 0) {
+                const values = (data.order ?? []).map((nominationId: number, index: number) => [
                     voteId,
                     nominationId,
                     index + 1

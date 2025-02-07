@@ -1,3 +1,4 @@
+import type { DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/20/solid";
 
 interface Game {
@@ -13,8 +14,8 @@ interface Game {
 interface GameCardProps {
 	game: Game;
 	onNominate?: (game: Game) => void;
-	draggableProps?: any;
-	dragHandleProps?: any;
+	draggableProps?: React.HTMLAttributes<HTMLDivElement>;
+	dragHandleProps?: DraggableProvidedDragHandleProps;
 	innerRef?: (element?: HTMLElement | null) => void;
 	onRank?: () => void;
 	onUnrank?: () => void;
@@ -37,7 +38,11 @@ export default function GameCard({
 			{...draggableProps}
 			ref={innerRef}
 		>
-			<div className="relative w-1/3" style={{ aspectRatio: '2/3' }} {...dragHandleProps}>
+			<div
+				className="relative w-1/3"
+				style={{ aspectRatio: "2/3" }}
+				{...dragHandleProps}
+			>
 				{game.cover ? (
 					<img
 						src={game.cover.url.replace("t_thumb", "t_cover_big")}
@@ -83,9 +88,9 @@ export default function GameCard({
 							type="button"
 							onClick={isRanked ? onUnrank : onRank}
 							className={`w-full rounded-md px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring focus:ring-offset-1 flex items-center justify-center gap-1 ${
-								isRanked 
-									? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-									: 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+								isRanked
+									? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+									: "bg-green-600 hover:bg-green-700 focus:ring-green-500"
 							}`}
 						>
 							{isRanked ? (

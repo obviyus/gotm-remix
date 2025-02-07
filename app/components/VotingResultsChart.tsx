@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
-import { Chart as ChartJS } from "chart.js/auto";
+import {
+	Chart as ChartJS,
+	type ChartOptions,
+	type ChartType,
+} from "chart.js/auto";
 import { SankeyController, Flow } from "chartjs-chart-sankey";
 
 ChartJS.register(SankeyController, Flow);
@@ -40,21 +44,23 @@ const CHART_OPTIONS = {
 	plugins: {
 		tooltip: {
 			callbacks: {
-				label: (context: any) => {
+				label: (context: {
+					raw: { from: string; to: string; flow: number };
+				}) => {
 					const data = context.raw;
 					const fromGame = getBaseGameName(data.from);
 					const toGame = getBaseGameName(data.to);
 					return `${toGame} got ${Math.round(data.flow)} votes from ${fromGame}`;
-				}
-			}
-		}
+				},
+			},
+		},
 	},
 	layout: {
 		padding: {
-			right: 20 // Padding on the right for better scrolling experience
-		}
-	}
-} as const;
+			right: 20, // Padding on the right for better scrolling experience
+		},
+	},
+} as const as ChartOptions<ChartType>;
 
 function getBaseGameName(nodeName: string): string {
 	// Remove trailing spaces and numbers in parentheses
@@ -95,8 +101,8 @@ export function VotingResultsChart({
 		const sankeyData = results
 			.filter(({ weight }) => Number(weight) > 0.01) // Filter out connections with negligible weight
 			.map(({ source, target, weight }) => ({
-				from: source,  // Keep original source with numbers
-				to: target,   // Keep original target with numbers
+				from: source, // Keep original source with numbers
+				to: target, // Keep original target with numbers
 				flow: Number(weight),
 			}));
 
