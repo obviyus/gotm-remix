@@ -259,6 +259,51 @@ export default function Voting() {
 		}
 	};
 
+	const moveItemAboveDivider = (isShort: boolean, itemId: string) => {
+		const shortKey = isShort ? 1 : 0;
+		const items = Array.from(currentOrder[shortKey]);
+		const dividerIndex = items.indexOf("divider");
+		
+		// Remove the item from its current position
+		const currentIndex = items.indexOf(itemId);
+		if (currentIndex === -1) return;
+		items.splice(currentIndex, 1);
+		
+		// Insert just above the divider
+		const newDividerIndex = items.indexOf("divider");
+		items.splice(newDividerIndex, 0, itemId);
+		
+		// Update state and save
+		setCurrentOrder(prevOrder => ({ ...prevOrder, [shortKey]: items }));
+		const rankedItems = items.slice(0, items.indexOf("divider"));
+		if (rankedItems.length > 0) {
+			saveVote(isShort, rankedItems);
+		}
+	};
+
+	const moveItemBelowDivider = (isShort: boolean, itemId: string) => {
+		const shortKey = isShort ? 1 : 0;
+		const items = Array.from(currentOrder[shortKey]);
+		
+		// Remove the item from its current position
+		const currentIndex = items.indexOf(itemId);
+		if (currentIndex === -1) return;
+		items.splice(currentIndex, 1);
+		
+		// Insert just below the divider
+		const dividerIndex = items.indexOf("divider");
+		items.splice(dividerIndex + 1, 0, itemId);
+		
+		// Update state and save
+		setCurrentOrder(prevOrder => ({ ...prevOrder, [shortKey]: items }));
+		const rankedItems = items.slice(0, dividerIndex);
+		if (rankedItems.length > 0) {
+			saveVote(isShort, rankedItems);
+		} else {
+			deleteVote(isShort);
+		}
+	};
+
 	const renderGames = (games: Nomination[], isShort: boolean) => {
 		const shortKey = isShort ? 1 : 0;
 		const order = currentOrder[shortKey];
@@ -313,6 +358,8 @@ export default function Voting() {
 													draggableProps={provided.draggableProps}
 													dragHandleProps={provided.dragHandleProps}
 													innerRef={provided.innerRef}
+													isRanked={true}
+													onUnrank={() => moveItemBelowDivider(isShort, String(game.id))}
 												/>
 											)}
 										</Draggable>
@@ -361,6 +408,8 @@ export default function Voting() {
 													draggableProps={provided.draggableProps}
 													dragHandleProps={provided.dragHandleProps}
 													innerRef={provided.innerRef}
+													isRanked={false}
+													onRank={() => moveItemAboveDivider(isShort, String(game.id))}
 												/>
 											)}
 										</Draggable>

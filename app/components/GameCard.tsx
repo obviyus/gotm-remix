@@ -1,3 +1,5 @@
+import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/20/solid";
+
 interface Game {
 	id: number;
 	name: string;
@@ -14,6 +16,9 @@ interface GameCardProps {
 	draggableProps?: any;
 	dragHandleProps?: any;
 	innerRef?: (element?: HTMLElement | null) => void;
+	onRank?: () => void;
+	onUnrank?: () => void;
+	isRanked?: boolean;
 }
 
 export default function GameCard({
@@ -22,6 +27,9 @@ export default function GameCard({
 	draggableProps,
 	dragHandleProps,
 	innerRef,
+	onRank,
+	onUnrank,
+	isRanked,
 }: GameCardProps) {
 	return (
 		<div
@@ -65,6 +73,29 @@ export default function GameCard({
 						className="w-full rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-500 focus:ring-offset-1"
 					>
 						Nominate
+					</button>
+					)}
+				{(onRank || onUnrank) && (
+					<button
+						type="button"
+						onClick={isRanked ? onUnrank : onRank}
+						className={`w-full rounded-md px-2 py-1 text-xs font-medium text-white focus:outline-none focus:ring focus:ring-offset-1 flex items-center justify-center gap-1 ${
+							isRanked 
+								? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
+								: 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+						}`}
+					>
+						{isRanked ? (
+							<>
+								 <ArrowDownIcon className="w-4 h-4" />
+								Unrank
+							</>
+						) : (
+							<>
+								<ArrowUpIcon className="w-4 h-4" />
+								Rank
+							</>
+						)}
 					</button>
 				)}
 			</div>
