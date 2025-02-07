@@ -1,9 +1,28 @@
-import { Link, Outlet, useLocation } from "@remix-run/react";
+import { Link, Outlet, useLocation, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { json, type LoaderFunction } from "@remix-run/node";
+import { pool } from "~/utils/database.server";
+import type { RowDataPacket } from "mysql2";
+
+interface LoaderData {
+	monthStatus: string;
+}
+
+export const loader: LoaderFunction = async () => {
+	// Get latest month's status
+	const [rows] = await pool.execute<RowDataPacket[]>(
+		"SELECT status FROM months ORDER BY id DESC LIMIT 1",
+	);
+
+	return json<LoaderData>({
+		monthStatus: rows[0]?.status || "ready",
+	});
+};
 
 export default function Layout() {
 	const location = useLocation();
+	const { monthStatus } = useLoaderData<LoaderData>();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const getLinkClassName = (path: string, isMobile = false) => {
@@ -19,11 +38,27 @@ export default function Layout() {
 		}`;
 	};
 
+	const getCenterItem = () => {
+		switch (monthStatus) {
+			case "nominating":
+				return { path: "/nominate", label: "Nominate" };
+			case "voting":
+				return { path: "/voting", label: "Vote" };
+			case "jury":
+				return { path: "/", label: "Jury at Work" };
+			case "playing":
+				return { path: "/", label: "Play" };
+			default:
+				return { path: "/", label: "GOTM" };
+		}
+	};
+
+	const centerItem = getCenterItem();
 	const navLinks = [
 		{ path: "/", label: "GOTM" },
-		{ path: "/nominate", label: "Nominate" },
 		{ path: "/history", label: "History" },
-		{ path: "/jury", label: "Jury" },
+		centerItem,
+		{ path: "/jury", label: "Jury Members" },
 		{ path: "/privacy", label: "Privacy" },
 	];
 
