@@ -1,6 +1,10 @@
 import type { RowDataPacket } from "mysql2";
 import { pool } from "./database.server";
 
+// Cache structure to store voting results
+const resultsCache = new Map<string, { results: Result[], timestamp: number }>();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
 export interface Month {
 	id: number;
 	month: string;
@@ -45,57 +49,76 @@ export const getMonth = async (monthId: number): Promise<Month> => {
 	return month;
 };
 
-export const getNominations = async (
+export const getNominationsAndVotes = async (
 	monthId: number,
 	short: boolean,
-): Promise<Nomination[]> => {
-	const [rows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id, game_name, month_id, short
-         FROM nominations
-         WHERE month_id = ?
-           AND jury_selected = 1
-           AND short = ?;`,
-		[monthId, short],
-	);
-	return rows as Nomination[];
+): Promise<{ nominations: Nomination[], votes: Vote[] }> => {
+	const [nominationsResult, votesResult] = await Promise.all([
+		pool.execute<RowDataPacket[]>(
+			`SELECT id, game_name, month_id, short
+             FROM nominations
+             WHERE month_id = ?
+               AND jury_selected = 1
+               AND short = ?
+             ORDER BY game_name;`,
+			[monthId, short],
+		),
+		pool.execute<RowDataPacket[]>(
+			`SELECT v.id, v.month_id, v.short
+             FROM votes v
+             WHERE v.month_id = ?
+               AND v.short = ?
+               AND EXISTS (
+                 SELECT 1 FROM rankings r 
+                 WHERE r.vote_id = v.id
+               )`,
+			[monthId, short],
+		),
+	]);
+
+	return {
+		nominations: nominationsResult[0] as Nomination[],
+		votes: votesResult[0] as Vote[],
+	};
 };
 
-export const getVotes = async (
-	monthId: number,
-	short: boolean,
-): Promise<Vote[]> => {
-	const [rows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id, month_id, short
-         FROM votes
-         WHERE month_id = ?
-           AND short = ?;`,
-		[monthId, short],
-	);
-	return rows as Vote[];
-};
+export const getRankingsForVotes = async (
+	voteIds: number[],
+): Promise<Map<number, Ranking[]>> => {
+	if (voteIds.length === 0) return new Map();
 
-export const getRankingsForVote = async (
-	voteId: number,
-): Promise<Ranking[]> => {
+	// Handle empty array case for MySQL
+	const placeholders = Array(voteIds.length).fill('?').join(',');
 	const [rankings] = await pool.execute<RowDataPacket[]>(
-		`SELECT nomination_id, \`rank\`
+		`SELECT vote_id, nomination_id, \`rank\`
          FROM rankings
-         WHERE vote_id = ?
-         ORDER BY \`rank\`;`,
-		[voteId],
+         WHERE vote_id IN (${placeholders})
+         ORDER BY vote_id, \`rank\``,
+		[...voteIds], // Spread the array to prevent nested array issues
 	);
-	return rankings as Ranking[];
+
+	const rankingsMap = new Map<number, Ranking[]>();
+	for (const row of rankings as RowDataPacket[]) {
+		const voteId = row.vote_id;
+		if (!rankingsMap.has(voteId)) {
+			rankingsMap.set(voteId, []);
+		}
+		rankingsMap.get(voteId)?.push({
+			nomination_id: row.nomination_id,
+			rank: row.rank,
+		});
+	}
+	return rankingsMap;
 };
 
 export const buildInMemoryRankings = async (
 	votes: Vote[],
 ): Promise<Map<number, Ranking[]>> => {
-	const map = new Map<number, Ranking[]>();
-	for (const vote of votes) {
-		const rankings = await getRankingsForVote(vote.id);
-		map.set(vote.id, [...rankings]);
-	}
-	return map;
+    if (votes.length === 0) return new Map();
+    
+    // Use the existing getRankingsForVotes function instead
+    const rankingsMap = await getRankingsForVotes(votes.map(v => v.id));
+    return rankingsMap;
 };
 
 export const getCurrentVoteCount = (
@@ -323,20 +346,44 @@ export const calculateVotingResults = async (
 	monthId: number,
 	short: boolean,
 ): Promise<Result[]> => {
-	const nominations = await getNominations(monthId, short);
-	const votes = await getVotes(monthId, short);
+	try {
+		const cacheKey = `${monthId}-${short}`;
+		const cached = resultsCache.get(cacheKey);
+		
+		if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+			return cached.results;
+		}
 
-	if (votes.length === 0) {
+		const { nominations, votes } = await getNominationsAndVotes(monthId, short);
+		console.log(`[Voting] Found ${votes.length} votes for ${short ? 'short' : 'long'} games`);
+
+		if (votes.length === 0) {
+			const emptyResults: Result[] = [];
+			resultsCache.set(cacheKey, { results: emptyResults, timestamp: Date.now() });
+			return emptyResults;
+		}
+
+		const voteRankingsMap = await getRankingsForVotes(votes.map(v => v.id));		
+		const initialCounts = getCurrentVoteCount(nominations, voteRankingsMap);
+		const viable = nominations.filter((n) => initialCounts[n.id] > 0);
+
+		if (viable.length === 0) {
+			const emptyResults: Result[] = [];
+			resultsCache.set(cacheKey, { results: emptyResults, timestamp: Date.now() });
+			return emptyResults;
+		}
+
+		const results = await runRounds(viable, votes);
+		resultsCache.set(cacheKey, { results, timestamp: Date.now() });
+		return results;
+	} catch (error) {
+		console.error('[Voting] Error calculating results:', error);
 		return [];
 	}
+};
 
-	const voteRankingsMap = await buildInMemoryRankings(votes);
-	const initialCounts = getCurrentVoteCount(nominations, voteRankingsMap);
-	const viable = nominations.filter((n) => initialCounts[n.id] > 0);
-
-	if (viable.length === 0) {
-		return [];
-	}
-
-	return runRounds(viable, votes);
+// Function to invalidate cache when votes change
+export const invalidateVotingCache = (monthId: number, short: boolean) => {
+	const cacheKey = `${monthId}-${short}`;
+	resultsCache.delete(cacheKey);
 };

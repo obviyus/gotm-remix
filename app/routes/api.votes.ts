@@ -1,6 +1,7 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import { invalidateVotingCache } from "~/utils/voting.server";
 
 export async function action({ request }: ActionFunctionArgs) {
     const isJson = request.headers.get("Content-Type")?.includes("application/json");
@@ -20,6 +21,10 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const { monthId, userId, short } = data;
 
+    if (!monthId || !userId) {
+        return json({ success: false, error: "Missing monthId or userId" }, { status: 400 });
+    }
+
     if (request.method === "DELETE") {
         await pool.execute(
             `DELETE v, r 
@@ -29,6 +34,8 @@ export async function action({ request }: ActionFunctionArgs) {
             [monthId, userId, short],
         );
 
+        // Invalidate cache after deleting vote
+        invalidateVotingCache(Number(monthId), short);
         return json({ success: true });
     }
 
@@ -48,7 +55,10 @@ export async function action({ request }: ActionFunctionArgs) {
             
             if (existingVote[0]?.id) {
                 voteId = existingVote[0].id;
-                await connection.execute("DELETE FROM rankings WHERE vote_id = ?", [voteId]);
+                await connection.execute(
+                    "DELETE FROM rankings WHERE vote_id = ?", 
+                    [voteId]
+                );
             } else {
                 const [insertResult] = await connection.execute<ResultSetHeader>(
                     "INSERT INTO votes (month_id, discord_id, short) VALUES (?, ?, ?)",
@@ -63,8 +73,8 @@ export async function action({ request }: ActionFunctionArgs) {
             }
 
             // Insert new rankings if provided
-            if ((data.order ?? []).length > 0) {
-                const values = (data.order ?? []).map((nominationId: number, index: number) => [
+            if (data.order && data.order.length > 0) {
+                const values = data.order.map((nominationId: number, index: number) => [
                     voteId,
                     nominationId,
                     index + 1
@@ -80,6 +90,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
             await connection.commit();
             connection.release();
+
+            // Invalidate cache after successful vote
+            invalidateVotingCache(Number(monthId), short);
 
             return json({ success: true, voteId });
         } catch (error) {
