@@ -24,7 +24,7 @@ export function Column({ title, statusBadge, action, children }: ColumnProps) {
 				<h2 className="text-2xl font-bold text-zinc-100">{title}</h2>
 				{statusBadge && (
 					<span
-						className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+						className={`inline-flex items-center rounded-full px-2.5 py-1.5 text-sm font-medium ${
 							statusBadge.isSuccess
 								? "bg-green-950 text-green-400 ring-1 ring-inset ring-green-800"
 								: "bg-zinc-800 text-zinc-400 ring-1 ring-inset ring-zinc-700"

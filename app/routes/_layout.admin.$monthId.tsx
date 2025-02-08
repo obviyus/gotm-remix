@@ -292,14 +292,16 @@ export default function Admin() {
 				<div className="flex justify-between items-center mb-8">
 					<Link
 						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) + 1]?.id}`}
-						className={`px-4 py-2 text-sm font-medium rounded-md border border-white/10 bg-black/20 text-zinc-200 hover:bg-white/5 transition-colors ${
+						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
 							months.findIndex((m) => m.id === selectedMonth.id) ===
 							months.length - 1
 								? "pointer-events-none opacity-50"
-								: ""
+								: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
 						}`}
 					>
-						← Previous Month
+						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+							← Previous Month
+						</span>
 					</Link>
 
 					<h1 className="text-2xl font-bold flex items-center gap-2 text-zinc-200">
@@ -310,7 +312,7 @@ export default function Admin() {
 						{["nominating", "jury", "voting"].includes(
 							selectedMonth.status,
 						) && (
-							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
+							<span className="inline-flex items-center p-2 px-4 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
 								Active Month
 							</span>
 						)}
@@ -318,13 +320,15 @@ export default function Admin() {
 
 					<Link
 						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) - 1]?.id}`}
-						className={`px-4 py-2 text-sm font-medium rounded-md border border-white/10 bg-black/20 text-zinc-200 hover:bg-white/5 transition-colors ${
+						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
 							months.findIndex((m) => m.id === selectedMonth.id) === 0
 								? "pointer-events-none opacity-50"
-								: ""
+								: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
 						}`}
 					>
-						Next Month →
+						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+							Next Month →
+						</span>
 					</Link>
 				</div>
 			)}
@@ -394,15 +398,17 @@ export default function Admin() {
 						<button
 							type="submit"
 							disabled={createMonthFetcher.state !== "idle"}
-							className={`self-end ${
+							className={`self-end inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
 								createMonthFetcher.state !== "idle"
-									? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
-									: "bg-blue-500 hover:bg-blue-600 text-zinc-200"
-							} px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors`}
+									? "opacity-50 cursor-not-allowed"
+									: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+							}`}
 						>
-							{createMonthFetcher.state !== "idle"
-								? "Creating..."
-								: "Create Month"}
+							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+								{createMonthFetcher.state !== "idle"
+									? "Creating..."
+									: "Create Month"}
+							</span>
 						</button>
 					</div>
 					{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
@@ -653,10 +659,12 @@ export default function Admin() {
 						<div className="mt-6 flex justify-end">
 							<button
 								type="button"
-								className="bg-zinc-800 text-zinc-200 px-4 py-2 rounded-md hover:bg-zinc-700 transition-colors border border-white/10"
+								className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
 								onClick={() => setSelectedNominationId(null)}
 							>
-								Close
+								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+									Close
+								</span>
 							</button>
 						</div>
 					</DialogPanel>

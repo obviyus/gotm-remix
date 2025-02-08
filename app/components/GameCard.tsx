@@ -8,6 +8,7 @@ import {
 	ArrowUpIcon,
 	PencilSquareIcon,
 	TrashIcon,
+	StarIcon,
 } from "@heroicons/react/20/solid";
 import type { Game } from "~/types";
 
@@ -68,100 +69,86 @@ export default function GameCard({
 		<div
 			ref={innerRef}
 			{...draggableProps}
-			className="group relative bg-zinc-800 rounded-lg shadow-sm border border-zinc-700 hover:border-zinc-600 transition-colors flex h-32"
+			{...dragHandleProps}
+			className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-500 flex h-52 min-w-0 hover:shadow-xl hover:shadow-zinc-900/30"
 		>
 			{/* Cover Image */}
-			<div className="w-24 flex-shrink-0">
+			<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
 				{coverUrl ? (
-					<img
-						src={coverUrl}
-						alt={game.name}
-						className="h-full w-full object-cover"
-					/>
+					<>
+						<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/40 to-transparent z-10" />
+						<img
+							src={coverUrl}
+							alt={game.name}
+							className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105 group-hover:brightness-110"
+						/>
+					</>
 				) : (
-					<div className="h-full w-full bg-zinc-900 flex items-center justify-center">
+					<div className="h-full w-full bg-zinc-800/50 flex items-center justify-center backdrop-blur-sm">
 						<span className="text-zinc-500">No cover</span>
 					</div>
 				)}
 			</div>
 
 			{/* Content */}
-			<div
-				className="flex-1 p-4 flex flex-col justify-between"
-				{...dragHandleProps}
-			>
-				<div>
-					<div className="flex justify-between items-start">
-						<h3 className="text-sm font-medium text-zinc-100">{game.name}</h3>
-						{year && <p className="text-sm text-zinc-400 ml-2">{year}</p>}
+			<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
+				<div className="min-w-0 space-y-2">
+					<div className="flex justify-between items-start gap-2">
+						<h3 className="text-sm font-medium text-zinc-100 break-words bg-gradient-to-r from-zinc-100 to-zinc-300 bg-clip-text text-transparent leading-snug">
+							{game.name}
+						</h3>
+						{year && (
+							<p className="text-xs text-zinc-500 flex-shrink-0 font-medium">
+								{year}
+							</p>
+						)}
 					</div>
-
-					{game.summary && (
-						<p className="mt-1 text-sm text-zinc-400 line-clamp-2">
-							{game.summary}
-						</p>
-					)}
 				</div>
 
-				<div className="flex items-center justify-end gap-2">
+				<div className="flex flex-col gap-2 mt-auto min-w-0">
 					{showVotingButtons && (
-						<button
-							type="button"
-							onClick={isRanked ? onUnrank : onRank}
-							className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-								isRanked
-									? "text-red-400 bg-red-950 hover:bg-red-900"
-									: "text-emerald-400 bg-emerald-950 hover:bg-emerald-900"
-							}`}
-						>
-							{isRanked ? (
-								<>
-									<ArrowDownIcon className="w-3.5 h-3.5" />
-									Unrank
-								</>
-							) : (
-								<>
-									<ArrowUpIcon className="w-3.5 h-3.5" />
-									Rank
-								</>
-							)}
-						</button>
-					)}
+						<div className="flex flex-col w-full gap-2">
+							<button
+								type="button"
+								onClick={isRanked ? onUnrank : onRank}
+								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+									isRanked
+										? "text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+								}`}
+							>
+								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+									{isRanked ? (
+										<>
+											<ArrowDownIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+											Remove from Ranking
+										</>
+									) : (
+										<>
+											<ArrowUpIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+											Add to Ranking
+										</>
+									)}
+								</span>
+							</button>
 
-					{onViewPitches && (
-						<button
-							type="button"
-							onClick={onViewPitches}
-							className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full text-zinc-300 bg-zinc-700 hover:bg-zinc-600 transition-colors"
-						>
-							<ChatBubbleBottomCenterTextIcon className="w-3.5 h-3.5" />
-							{pitchCount} {pitchCount === 1 ? "pitch" : "pitches"}
-						</button>
-					)}
-
-					{(onEdit || onDelete) && (
-						<>
-							{onEdit && (
+							{onViewPitches && (
 								<button
 									type="button"
-									onClick={() => onEdit(game)}
-									className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-950 rounded-md"
-									title={game.pitch ? "Edit pitch" : "Add pitch"}
+									onClick={onViewPitches}
+									className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-zinc-200 bg-zinc-500/10 hover:bg-zinc-500/20 transition-all duration-300 backdrop-blur-sm border border-zinc-500/20 hover:border-zinc-500/30"
 								>
-									<PencilSquareIcon className="w-4 h-4" />
+									<ChatBubbleBottomCenterTextIcon className="w-4 h-4" />
+									{pitchCount > 0 ? (
+										<>
+											View {pitchCount} {pitchCount === 1 ? "Pitch" : "Pitches"}
+										</>
+									) : (
+										"No Pitches Yet"
+									)}
 								</button>
 							)}
-							{onDelete && (
-								<button
-									type="button"
-									onClick={() => onDelete(game)}
-									className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950 rounded-md"
-									title="Delete nomination"
-								>
-									<TrashIcon className="w-4 h-4" />
-								</button>
-							)}
-						</>
+						</div>
 					)}
 
 					{onNominate && (
@@ -169,14 +156,46 @@ export default function GameCard({
 							type="button"
 							onClick={() => onNominate(game)}
 							disabled={alreadyNominated && isCurrentUserNomination}
-							className="px-3 py-1 text-xs font-medium rounded-full text-zinc-100 transition-colors bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
+							className="w-full group/btn relative px-4 py-2 text-sm font-medium rounded-lg text-white/90 transition-all duration-300 overflow-hidden bg-blue-600/90 hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-900/20 disabled:hover:shadow-none disabled:hover:bg-blue-700 border border-blue-500/20 hover:border-blue-500/30"
 						>
-							{alreadyNominated
-								? isCurrentUserNomination
-									? "Already nominated"
-									: "Add Your Pitch"
-								: "Nominate"}
+							<span className="relative z-10 group-disabled:text-zinc-400 flex items-center justify-center gap-2">
+								<StarIcon className="w-4 h-4" />
+								{alreadyNominated
+									? isCurrentUserNomination
+										? "Already nominated"
+										: "Add Your Pitch"
+									: "Nominate"}
+							</span>
 						</button>
+					)}
+
+					{(onEdit || onDelete) && (
+						<div className="flex items-center justify-end gap-2">
+							{onEdit && (
+								<button
+									type="button"
+									onClick={() => onEdit(game)}
+									className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
+									title={game.pitch ? "Edit pitch" : "Add pitch"}
+								>
+									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+										<PencilSquareIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+									</span>
+								</button>
+							)}
+							{onDelete && (
+								<button
+									type="button"
+									onClick={() => onDelete(game)}
+									className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+									title="Delete nomination"
+								>
+									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+										<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+									</span>
+								</button>
+							)}
+						</div>
 					)}
 				</div>
 			</div>

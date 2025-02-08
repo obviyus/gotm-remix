@@ -420,9 +420,9 @@ export default function Voting() {
 									ref={provided.innerRef}
 									{...provided.draggableProps}
 									{...provided.dragHandleProps}
-									className="border-t border-gray-200 my-6 relative"
+									className="border-t-2 border-gray-600/60 my-8 relative max-w-3xl mx-auto w-full"
 								>
-									<span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs font-medium text-gray-400 select-none">
+									<span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-6 py-1.5 text-sm font-medium text-gray-200 select-none rounded-full border border-gray-600/60">
 										Drag above to rank
 									</span>
 								</div>
@@ -493,11 +493,13 @@ export default function Voting() {
 					votedLong && (
 						<button
 							type="button"
-							className="px-4 py-2 text-sm font-medium rounded-md text-red-600 transition-colors hover:text-red-900 bg-red-50 border border-red-200 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center gap-2"
+							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
 							onClick={() => deleteVote(false)}
 						>
-							<TrashIcon className="w-4 h-4" />
-							Clear Long Vote
+							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+								<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+								Clear Vote
+							</span>
 						</button>
 					)
 				}
@@ -517,11 +519,13 @@ export default function Voting() {
 					votedShort && (
 						<button
 							type="button"
-							className="px-4 py-2 text-sm font-medium rounded-md text-red-600 transition-colors hover:text-red-900 bg-red-50 border border-red-200 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center gap-2"
+							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
 							onClick={() => deleteVote(true)}
 						>
-							<TrashIcon className="w-4 h-4" />
-							Clear Short Vote
+							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+								<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+								Clear Vote
+							</span>
 						</button>
 					)
 				}
@@ -542,8 +546,8 @@ export default function Voting() {
 					aria-hidden="true"
 				/>
 				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6 shadow-xl ring-1 ring-gray-900/5">
-						<DialogTitle className="text-lg font-medium text-gray-900 mb-4">
+					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-gray-900 p-6 shadow-xl ring-1 ring-white/10">
+						<DialogTitle className="text-lg font-medium text-gray-100 mb-4">
 							Pitches for {selectedNomination?.title}
 						</DialogTitle>
 						<div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
@@ -551,14 +555,14 @@ export default function Voting() {
 								pitches?.[selectedNomination.id]?.map((pitch) => (
 									<div
 										key={`${selectedNomination.id}-${pitch.discord_id}`}
-										className="rounded-lg border border-gray-200 p-4 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors"
+										className="rounded-lg border border-gray-700 p-4 bg-gray-800/50 hover:bg-gray-800 hover:border-gray-600 transition-colors"
 									>
 										<div className="flex items-center mb-2">
-											<div className="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+											<div className="text-sm text-gray-300 bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700">
 												{pitch.discord_id}
 											</div>
 										</div>
-										<div className="text-gray-700 whitespace-pre-wrap text-sm">
+										<div className="text-gray-300 whitespace-pre-wrap text-sm">
 											{pitch.pitch}
 										</div>
 									</div>
@@ -566,8 +570,8 @@ export default function Voting() {
 							{selectedNomination &&
 								(!pitches?.[selectedNomination.id] ||
 									pitches[selectedNomination.id].length === 0) && (
-									<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-										<p className="text-sm text-gray-500">
+									<div className="rounded-lg border border-dashed border-gray-700 p-8 text-center">
+										<p className="text-sm text-gray-400">
 											No pitches available for this game
 										</p>
 									</div>
@@ -576,7 +580,7 @@ export default function Voting() {
 						<div className="mt-6 flex justify-end gap-3">
 							<button
 								type="button"
-								className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 transition-colors hover:text-gray-900 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+								className="px-4 py-2 text-sm font-medium rounded-lg text-gray-300 transition-colors hover:text-gray-100 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
 								onClick={() => setSelectedNomination(null)}
 							>
 								Close
