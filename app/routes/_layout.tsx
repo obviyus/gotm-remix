@@ -116,6 +116,7 @@ export default function Layout() {
 											<Link
 												key={link.path}
 												to={link.path}
+												prefetch="viewport"
 												className={getLinkClassName(link.path)}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
