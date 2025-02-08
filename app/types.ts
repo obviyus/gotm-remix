@@ -47,6 +47,7 @@ export interface NominationFormData {
             url: string;
         };
         first_release_date?: number;
+        game_year?: string;
         summary?: string;
     };
     monthId: string;

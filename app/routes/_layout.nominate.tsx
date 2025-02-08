@@ -383,6 +383,7 @@ export default function Nominate() {
 									summary: nomination.pitch,
 									short: nomination.short,
 									pitch: nomination.pitch,
+									game_year: nomination.game_year,
 								}}
 								key={nomination.id}
 								variant="nomination"
