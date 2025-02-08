@@ -63,6 +63,7 @@ export default function Layout() {
 			case "jury":
 				return { path: "/", label: "Jury at Work" };
 			case "playing":
+			case "over":
 				return null;
 			default:
 				return { path: "/", label: "GOTM" };
