@@ -10,3 +10,13 @@ services:
       - "3306:3306"
     volumes:
       - ./mysql:/var/lib/mysql
+  pg_gotm:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysql
