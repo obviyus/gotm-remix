@@ -152,6 +152,7 @@ export default function Nominate() {
 
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		if (!searchTerm.trim()) return;
 		submit(e.currentTarget);
 	};
 
@@ -459,10 +460,12 @@ export default function Nominate() {
 							/>
 							<button
 								type="submit"
-								disabled={isSearching}
-								className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+								disabled={isSearching || !searchTerm.trim()}
+								className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
 							>
-								{isSearching ? "Searching..." : "Search"}
+								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+									{isSearching ? "Searching..." : "Search"}
+								</span>
 							</button>
 						</div>
 					</Form>
@@ -541,6 +544,29 @@ export default function Nominate() {
 							)
 						</DialogTitle>
 
+						{/* Game Cover and Summary */}
+						<div className="mb-6 flex gap-4">
+							{selectedGame?.cover && (
+								<div className="flex-shrink-0">
+									<img
+										src={selectedGame.cover.url.replace(
+											"/t_thumb/",
+											"/t_cover_big/",
+										)}
+										alt={selectedGame.name}
+										className="w-32 rounded-lg shadow-lg border border-white/10"
+									/>
+								</div>
+							)}
+							{selectedGame?.summary && (
+								<div className="flex-1">
+									<p className="text-sm text-zinc-400 line-clamp-[12]">
+										{selectedGame.summary}
+									</p>
+								</div>
+							)}
+						</div>
+
 						{/* Pitch Input */}
 						<div className="mb-6">
 							<label
@@ -564,33 +590,37 @@ export default function Nominate() {
 								type="button"
 								onClick={() => handleGameLength(true)}
 								disabled={Boolean(shortNomination)}
-								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+									shortNomination
+										? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
+										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+								}`}
 							>
-								Short Game
-								<span className="block text-xs text-blue-200">
-									(&lt; 12 hours)
+								<span className="relative z-10 flex flex-col items-center justify-center gap-1 transition-transform group-hover/btn:scale-105">
+									Short Game
+									<span className="text-xs opacity-80">(&lt; 12 hours)</span>
+									{shortNomination && (
+										<span className="text-xs">Already nominated</span>
+									)}
 								</span>
-								{shortNomination && (
-									<span className="block text-xs text-blue-200">
-										Already nominated
-									</span>
-								)}
 							</button>
 							<button
 								type="button"
 								onClick={() => handleGameLength(false)}
 								disabled={Boolean(longNomination)}
-								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+									longNomination
+										? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
+										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+								}`}
 							>
-								Long Game
-								<span className="block text-xs text-blue-200">
-									(&gt; 12 hours)
+								<span className="relative z-10 flex flex-col items-center justify-center gap-1 transition-transform group-hover/btn:scale-105">
+									Long Game
+									<span className="text-xs opacity-80">(&gt; 12 hours)</span>
+									{longNomination && (
+										<span className="text-xs">Already nominated</span>
+									)}
 								</span>
-								{longNomination && (
-									<span className="block text-xs text-blue-200">
-										Already nominated
-									</span>
-								)}
 							</button>
 						</div>
 					</DialogPanel>
