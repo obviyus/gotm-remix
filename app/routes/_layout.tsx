@@ -154,6 +154,30 @@ export default function Layout() {
 			<main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 				<Outlet />
 			</main>
+			<footer className="mt-auto py-4 border-t border-gray-200">
+				<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+					<p className="text-center text-sm text-gray-500">
+						Created by{" "}
+						<a
+							href="https://github.com/sneakingJ"
+							className="text-blue-500 hover:text-blue-900 hover:underline"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							@sneakingJ
+						</a>
+						. Source code on{" "}
+						<a
+							href="https://github.com/obviyus/gotm-remix"
+							className="text-blue-500 hover:text-blue-900 hover:underline"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							GitHub
+						</a>
+					</p>
+				</div>
+			</footer>
 		</div>
 	);
 }
