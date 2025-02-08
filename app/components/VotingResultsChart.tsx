@@ -20,22 +20,25 @@ interface VotingResultsChartProps {
 }
 
 const COLOR_PALETTE = [
-	"#2563eb", // blue-600
-	"#16a34a", // green-600
-	"#9333ea", // purple-600
-	"#ea580c", // orange-600
-	"#0891b2", // cyan-600
-	"#db2777", // pink-600
-	"#4f46e5", // indigo-600
-	"#ca8a04", // yellow-600
-	"#0d9488", // teal-600
+	"#60a5fa", // blue-400
+	"#4ade80", // green-400
+	"#c084fc", // purple-400
+	"#fb923c", // orange-400
+	"#22d3ee", // cyan-400
+	"#f472b6", // pink-400
+	"#818cf8", // indigo-400
+	"#facc15", // yellow-400
+	"#2dd4bf", // teal-400
 ];
 
 const CHART_CONFIG = {
 	nodeWidth: 30,
-	nodePadding: 24,
+	nodePadding: 30,
 	size: "max" as const,
-	font: { size: 16 },
+	font: { size: 14, weight: "bold" as const },
+	color: "white",
+	borderWidth: 0,
+	padding: 15,
 } as const;
 
 const CHART_OPTIONS = {
@@ -219,9 +222,9 @@ export function VotingResultsChart({
 	const chartTitle = canvasId.startsWith("long") ? "Long" : "Short";
 
 	return (
-		<div className="rounded-xl bg-white p-4 shadow-lg transition-shadow hover:shadow-xl sm:p-6">
+		<div className="rounded-xl bg-zinc-800 p-4 shadow-lg transition-shadow hover:shadow-xl sm:p-6 ring-1 ring-zinc-700">
 			<div className="flex items-center justify-between mb-4 sm:mb-6">
-				<h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+				<h2 className="text-xl font-bold tracking-tight text-zinc-100 sm:text-2xl">
 					{chartTitle} Winner
 					{getWinner(results) ? ` 🏆 ${getWinner(results)}` : ""}
 				</h2>
@@ -232,8 +235,8 @@ export function VotingResultsChart({
 						<canvas ref={canvasRef} />
 					) : (
 						<div className="flex h-full items-center justify-center">
-							<p className="text-base font-medium text-gray-500 sm:text-lg">
-								No votes available yet
+							<p className="text-base font-medium text-zinc-400 sm:text-lg">
+								No voting results available yet
 							</p>
 						</div>
 					)}

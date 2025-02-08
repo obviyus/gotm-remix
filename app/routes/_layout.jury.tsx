@@ -21,10 +21,10 @@ export default function Jury() {
 	const { juryMembers } = useLoaderData<{ juryMembers: JuryMember[] }>();
 
 	return (
-		<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-			<article className="mx-auto">
+		<div className="mx-auto h-full px-4 py-6 sm:px-6 lg:px-8">
+			<article className="mx-auto h-full">
 				<header className="mb-6">
-					<h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+					<h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
 						Jury Members
 					</h1>
 				</header>

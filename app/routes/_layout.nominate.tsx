@@ -271,15 +271,15 @@ export default function Nominate() {
 	if (!monthId || monthStatus !== "nominating") {
 		return (
 			<div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 text-center">
-				<h1 className="text-3xl font-bold tracking-tight mb-4">
+				<h1 className="text-3xl font-bold tracking-tight text-zinc-200 mb-4">
 					Nominations{" "}
 					{monthStatus === "over" ? "haven't started" : "are closed"}
 				</h1>
 
-				<div className="bg-white p-8 rounded-lg shadow-lg">
+				<div className="bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 p-8 shadow-lg">
 					{monthStatus === "ready" && (
 						<>
-							<p className="text-lg mb-6">
+							<p className="text-lg mb-6 text-zinc-200">
 								The month is being set up. Check back soon for nominations!
 							</p>
 							<Link
@@ -292,7 +292,7 @@ export default function Nominate() {
 					)}
 					{monthStatus === "voting" && (
 						<>
-							<p className="text-lg mb-6">
+							<p className="text-lg mb-6 text-zinc-200">
 								The nomination phase is over, but you can now vote for your
 								favorite games!
 							</p>
@@ -307,7 +307,7 @@ export default function Nominate() {
 
 					{monthStatus === "playing" && (
 						<>
-							<p className="text-lg mb-6">
+							<p className="text-lg mb-6 text-zinc-200">
 								Games have been selected! Check out what we're playing this
 								month.
 							</p>
@@ -322,11 +322,11 @@ export default function Nominate() {
 
 					{monthStatus === "jury" && (
 						<>
-							<p className="text-lg mb-6">
+							<p className="text-lg mb-6 text-zinc-200">
 								The jury is currently selecting games from the nominations.
 								Check back soon!
 							</p>
-							<p className="text-gray-600">
+							<p className="text-zinc-400">
 								Once they're done, you'll be able to vote on the selected games.
 							</p>
 						</>
@@ -334,7 +334,7 @@ export default function Nominate() {
 
 					{monthStatus === "over" && (
 						<>
-							<p className="text-lg mb-6">
+							<p className="text-lg mb-6 text-zinc-200">
 								The next month's nominations haven't started yet. Check back
 								soon!
 							</p>
@@ -352,23 +352,23 @@ export default function Nominate() {
 	}
 
 	const GameSkeleton = () => (
-		<div className="flex flex-row rounded-lg border border-gray-200 bg-white shadow-sm animate-pulse">
+		<div className="flex flex-row rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm shadow-sm animate-pulse">
 			<div className="relative w-1/3" style={{ aspectRatio: "2/3" }}>
-				<div className="absolute inset-0 bg-gray-200 rounded-l-lg" />
+				<div className="absolute inset-0 bg-zinc-800 rounded-l-lg" />
 			</div>
 			<div className="flex-1 p-2 flex flex-col">
 				<div className="flex-1">
 					<div className="flex justify-between items-start gap-x-1">
-						<div className="h-5 bg-gray-200 rounded w-3/4" />
-						<div className="h-3 bg-gray-200 rounded w-12 shrink-0" />
+						<div className="h-5 bg-zinc-800 rounded w-3/4" />
+						<div className="h-3 bg-zinc-800 rounded w-12 shrink-0" />
 					</div>
 					<div className="space-y-1 mt-1">
-						<div className="h-3 bg-gray-200 rounded w-full" />
-						<div className="h-3 bg-gray-200 rounded w-2/3" />
+						<div className="h-3 bg-zinc-800 rounded w-full" />
+						<div className="h-3 bg-zinc-800 rounded w-2/3" />
 					</div>
 				</div>
 				<div className="pt-2">
-					<div className="h-7 bg-gray-200 rounded w-full" />
+					<div className="h-7 bg-zinc-800 rounded w-full" />
 				</div>
 			</div>
 		</div>
@@ -420,14 +420,14 @@ export default function Nominate() {
 			{!hasReachedNominationLimit && (
 				<div>
 					<div className="mb-4">
-						<h3 className="text-lg font-medium text-gray-900">
+						<h3 className="text-lg font-medium text-zinc-200">
 							Nomination Status:
 						</h3>
-						<ul className="mt-2 space-y-1 text-sm text-gray-600">
+						<ul className="mt-2 space-y-1 text-sm text-zinc-400">
 							<li className="flex items-center">
 								<span
 									className={
-										shortNomination ? "text-green-600" : "text-gray-600"
+										shortNomination ? "text-emerald-400" : "text-zinc-400"
 									}
 								>
 									{shortNomination ? "✓" : "○"} Short Game (
@@ -437,7 +437,7 @@ export default function Nominate() {
 							<li className="flex items-center">
 								<span
 									className={
-										longNomination ? "text-green-600" : "text-gray-600"
+										longNomination ? "text-emerald-400" : "text-zinc-400"
 									}
 								>
 									{longNomination ? "✓" : "○"} Long Game (
@@ -455,7 +455,7 @@ export default function Nominate() {
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								placeholder="Search for games..."
-								className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 pl-6 pr-4"
+								className="flex-1 rounded-md border-white/10 bg-black/20 text-zinc-200 placeholder-zinc-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
 							<button
 								type="submit"
@@ -497,20 +497,20 @@ export default function Nominate() {
 						</div>
 					) : hasSearched && searchTerm ? (
 						<div className="text-center py-12">
-							<h3 className="text-lg font-semibold text-gray-900">
+							<h3 className="text-lg font-semibold text-zinc-200">
 								No results found
 							</h3>
-							<p className="mt-2 text-gray-500">
+							<p className="mt-2 text-zinc-400">
 								No games found matching "{searchTerm}". Try a different search
 								term.
 							</p>
 						</div>
 					) : (
-						<div className="text-center py-12 bg-gray-100 rounded-lg">
-							<h3 className="text-lg font-semibold text-gray-900">
+						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
+							<h3 className="text-lg font-semibold text-zinc-200">
 								Search for games to nominate
 							</h3>
-							<p className="mt-2 text-gray-500">
+							<p className="mt-2 text-zinc-400">
 								Type in the search box above to find games. You can nominate one
 								short game and one long game.
 							</p>
@@ -532,16 +532,8 @@ export default function Nominate() {
 
 				{/* Full-screen container for mobile slide-up and desktop centered modal */}
 				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-					<DialogPanel
-						className={`
-                        w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-white p-6 shadow-xl 
-                        transform transition-all duration-300 ease-in-out
-                        translate-y-0 scale-100 opacity-100
-                        data-[state=closed]:translate-y-full data-[state=closed]:scale-100 data-[state=closed]:opacity-0
-                        sm:data-[state=closed]:translate-y-0 sm:data-[state=closed]:scale-95
-                    `}
-					>
-						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
+					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-zinc-900 border border-white/10 p-6 shadow-xl">
+						<DialogTitle className="text-lg font-medium leading-6 text-zinc-200 mb-4">
 							Nominate {selectedGame?.name} (
 							{selectedGame?.first_release_date
 								? new Date(selectedGame.first_release_date * 1000).getFullYear()
@@ -553,7 +545,7 @@ export default function Nominate() {
 						<div className="mb-6">
 							<label
 								htmlFor="pitch"
-								className="block text-sm font-medium text-gray-700 mb-2"
+								className="block text-sm font-medium text-zinc-400 mb-2"
 							>
 								Pitch (Optional)
 							</label>
@@ -561,7 +553,7 @@ export default function Nominate() {
 								id="pitch"
 								name="pitch"
 								rows={3}
-								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 placeholder-zinc-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 								value={pitch}
 								onChange={(e) => setPitch(e.target.value)}
 							/>
@@ -614,24 +606,27 @@ export default function Nominate() {
 				}}
 				className="relative z-50"
 			>
-				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+				<div
+					className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+					aria-hidden="true"
+				/>
 				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-white p-6 shadow-xl">
-						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
+					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-zinc-900 border border-white/10 p-6 shadow-xl">
+						<DialogTitle className="text-lg font-medium leading-6 text-zinc-200 mb-4">
 							{editingNomination?.pitch ? "Edit" : "Add"} Pitch:{" "}
 							{editingNomination?.game_name}
 						</DialogTitle>
 						<div className="mb-6">
 							<label
 								htmlFor="editPitch"
-								className="block text-sm font-medium text-gray-700 mb-2"
+								className="block text-sm font-medium text-zinc-400 mb-2"
 							>
 								Pitch
 							</label>
 							<textarea
 								id="editPitch"
 								rows={3}
-								className="pl-2 pt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 placeholder-zinc-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 								value={editPitch}
 								onChange={(e) => setEditPitch(e.target.value)}
 								placeholder="Write your pitch here..."
@@ -641,7 +636,7 @@ export default function Nominate() {
 							<button
 								type="button"
 								onClick={() => setIsEditOpen(false)}
-								className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300"
+								className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 transition-colors border border-white/10"
 							>
 								Cancel
 							</button>
@@ -663,13 +658,16 @@ export default function Nominate() {
 				onClose={() => setIsDeleteOpen(false)}
 				className="relative z-50"
 			>
-				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+				<div
+					className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+					aria-hidden="true"
+				/>
 				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-						<DialogTitle className="text-lg font-medium leading-6 text-gray-900 mb-4">
+					<DialogPanel className="w-full max-w-sm rounded-lg bg-zinc-900 border border-white/10 p-6 shadow-xl">
+						<DialogTitle className="text-lg font-medium leading-6 text-zinc-200 mb-4">
 							Delete Nomination
 						</DialogTitle>
-						<p className="text-sm text-gray-500 mb-6">
+						<p className="text-sm text-zinc-400 mb-6">
 							Are you sure you want to delete your nomination for{" "}
 							{deletingNomination?.game_name}? This action cannot be undone.
 						</p>
@@ -677,7 +675,7 @@ export default function Nominate() {
 							<button
 								type="button"
 								onClick={() => setIsDeleteOpen(false)}
-								className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300"
+								className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 transition-colors border border-white/10"
 							>
 								Cancel
 							</button>

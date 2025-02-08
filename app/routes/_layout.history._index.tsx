@@ -32,9 +32,12 @@ export default function History() {
 					<Link
 						key={month.id}
 						to={`/history/${month.id}`}
-						className="block p-6 bg-white rounded-lg border border-gray-200 hover:border-blue-500 transition-colors"
+						prefetch="viewport"
+						className="block p-4 rounded-lg border transition-all duration-200 ease-in-out
+						bg-zinc-900 border-zinc-800 text-zinc-100
+						hover:border-blue-400 hover:shadow-lg hover:shadow-zinc-900/30"
 					>
-						<h2 className="text-xl font-semibold text-gray-900">
+						<h2 className="text-xl font-semibold text-zinc-100">
 							{new Date(month.year, month.month - 1).toLocaleString("default", {
 								month: "long",
 								year: "numeric",

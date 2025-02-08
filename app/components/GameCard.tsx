@@ -68,7 +68,7 @@ export default function GameCard({
 		<div
 			ref={innerRef}
 			{...draggableProps}
-			className="group relative bg-white rounded-lg shadow-sm border border-gray-200 hover:border-gray-300 transition-colors flex h-32"
+			className="group relative bg-zinc-800 rounded-lg shadow-sm border border-zinc-700 hover:border-zinc-600 transition-colors flex h-32"
 		>
 			{/* Cover Image */}
 			<div className="w-24 flex-shrink-0">
@@ -79,8 +79,8 @@ export default function GameCard({
 						className="h-full w-full object-cover"
 					/>
 				) : (
-					<div className="h-full w-full bg-gray-100 flex items-center justify-center">
-						<span className="text-gray-400">No cover</span>
+					<div className="h-full w-full bg-zinc-900 flex items-center justify-center">
+						<span className="text-zinc-500">No cover</span>
 					</div>
 				)}
 			</div>
@@ -92,12 +92,12 @@ export default function GameCard({
 			>
 				<div>
 					<div className="flex justify-between items-start">
-						<h3 className="text-sm font-medium text-gray-900">{game.name}</h3>
-						{year && <p className="text-sm text-gray-500 ml-2">{year}</p>}
+						<h3 className="text-sm font-medium text-zinc-100">{game.name}</h3>
+						{year && <p className="text-sm text-zinc-400 ml-2">{year}</p>}
 					</div>
 
 					{game.summary && (
-						<p className="mt-1 text-sm text-gray-500 line-clamp-2">
+						<p className="mt-1 text-sm text-zinc-400 line-clamp-2">
 							{game.summary}
 						</p>
 					)}
@@ -110,8 +110,8 @@ export default function GameCard({
 							onClick={isRanked ? onUnrank : onRank}
 							className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full transition-colors ${
 								isRanked
-									? "text-red-600 bg-red-50 hover:bg-red-100"
-									: "text-green-600 bg-green-50 hover:bg-green-100"
+									? "text-red-400 bg-red-950 hover:bg-red-900"
+									: "text-emerald-400 bg-emerald-950 hover:bg-emerald-900"
 							}`}
 						>
 							{isRanked ? (
@@ -132,7 +132,7 @@ export default function GameCard({
 						<button
 							type="button"
 							onClick={onViewPitches}
-							className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+							className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full text-zinc-300 bg-zinc-700 hover:bg-zinc-600 transition-colors"
 						>
 							<ChatBubbleBottomCenterTextIcon className="w-3.5 h-3.5" />
 							{pitchCount} {pitchCount === 1 ? "pitch" : "pitches"}
@@ -145,7 +145,7 @@ export default function GameCard({
 								<button
 									type="button"
 									onClick={() => onEdit(game)}
-									className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md"
+									className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-950 rounded-md"
 									title={game.pitch ? "Edit pitch" : "Add pitch"}
 								>
 									<PencilSquareIcon className="w-4 h-4" />
@@ -155,7 +155,7 @@ export default function GameCard({
 								<button
 									type="button"
 									onClick={() => onDelete(game)}
-									className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md"
+									className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950 rounded-md"
 									title="Delete nomination"
 								>
 									<TrashIcon className="w-4 h-4" />
@@ -169,7 +169,7 @@ export default function GameCard({
 							type="button"
 							onClick={() => onNominate(game)}
 							disabled={alreadyNominated && isCurrentUserNomination}
-							className="px-3 py-1 text-xs font-medium rounded-full text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+							className="px-3 py-1 text-xs font-medium rounded-full text-zinc-100 transition-colors bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
 						>
 							{alreadyNominated
 								? isCurrentUserNomination

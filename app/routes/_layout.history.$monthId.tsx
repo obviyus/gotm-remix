@@ -43,7 +43,7 @@ export default function HistoryMonth() {
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
 			<header className="mb-6">
-				<h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+				<h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
 					{new Date(`${month.year}-${month.month}-01`).toLocaleString("en-US", {
 						month: "long",
 						year: "numeric",

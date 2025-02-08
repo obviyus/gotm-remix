@@ -292,7 +292,7 @@ export default function Admin() {
 				<div className="flex justify-between items-center mb-8">
 					<Link
 						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) + 1]?.id}`}
-						className={`px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 ${
+						className={`px-4 py-2 text-sm font-medium rounded-md border border-white/10 bg-black/20 text-zinc-200 hover:bg-white/5 transition-colors ${
 							months.findIndex((m) => m.id === selectedMonth.id) ===
 							months.length - 1
 								? "pointer-events-none opacity-50"
@@ -302,7 +302,7 @@ export default function Admin() {
 						← Previous Month
 					</Link>
 
-					<h1 className="text-2xl font-bold flex items-center gap-2">
+					<h1 className="text-2xl font-bold flex items-center gap-2 text-zinc-200">
 						{new Date(
 							selectedMonth.year,
 							selectedMonth.month - 1,
@@ -310,7 +310,7 @@ export default function Admin() {
 						{["nominating", "jury", "voting"].includes(
 							selectedMonth.status,
 						) && (
-							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
 								Active Month
 							</span>
 						)}
@@ -318,7 +318,7 @@ export default function Admin() {
 
 					<Link
 						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) - 1]?.id}`}
-						className={`px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 ${
+						className={`px-4 py-2 text-sm font-medium rounded-md border border-white/10 bg-black/20 text-zinc-200 hover:bg-white/5 transition-colors ${
 							months.findIndex((m) => m.id === selectedMonth.id) === 0
 								? "pointer-events-none opacity-50"
 								: ""
@@ -331,14 +331,16 @@ export default function Admin() {
 
 			{/* Create New Month Section */}
 			<section className="mb-12">
-				<h2 className="text-2xl font-semibold mb-4">Create New Month</h2>
+				<h2 className="text-2xl font-semibold mb-4 text-zinc-200">
+					Create New Month
+				</h2>
 				<createMonthFetcher.Form method="POST">
 					<input type="hidden" name="intent" value="createMonth" />
 					<div className="flex items-center gap-4">
 						<div className="flex-1">
 							<label
 								htmlFor="year"
-								className="block text-sm font-medium text-gray-700 mb-2"
+								className="block text-sm font-medium text-zinc-400 mb-2"
 							>
 								Year
 							</label>
@@ -349,13 +351,13 @@ export default function Admin() {
 								min="2000"
 								max="2100"
 								required
-								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
 						</div>
 						<div className="flex-1">
 							<label
 								htmlFor="month"
-								className="block text-sm font-medium text-gray-700 mb-2"
+								className="block text-sm font-medium text-zinc-400 mb-2"
 							>
 								Month (1-12)
 							</label>
@@ -366,13 +368,13 @@ export default function Admin() {
 								min="1"
 								max="12"
 								required
-								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
 						</div>
 						<div className="flex-1">
 							<label
 								htmlFor="status"
-								className="block text-sm font-medium text-gray-700 mb-2"
+								className="block text-sm font-medium text-zinc-400 mb-2"
 							>
 								Initial Status
 							</label>
@@ -380,7 +382,7 @@ export default function Admin() {
 								id="status"
 								name="status"
 								required
-								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							>
 								{monthStatuses.map((status) => (
 									<option key={status} value={status} className="py-1">
@@ -394,22 +396,24 @@ export default function Admin() {
 							disabled={createMonthFetcher.state !== "idle"}
 							className={`self-end ${
 								createMonthFetcher.state !== "idle"
-									? "bg-gray-400 cursor-not-allowed"
-									: "bg-green-600 hover:bg-green-700"
-							} text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
+									? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+									: "bg-blue-500 hover:bg-blue-600 text-zinc-200"
+							} px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors`}
 						>
 							{createMonthFetcher.state !== "idle"
 								? "Creating..."
 								: "Create Month"}
 						</button>
 					</div>
-					{error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+					{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
 				</createMonthFetcher.Form>
 			</section>
 
 			{/* Month Status Section */}
 			<section className="mb-12">
-				<h2 className="text-2xl font-semibold mb-4">Month Status</h2>
+				<h2 className="text-2xl font-semibold mb-4 text-zinc-200">
+					Month Status
+				</h2>
 				{selectedMonth && (
 					<>
 						<statusUpdateFetcher.Form
@@ -421,7 +425,7 @@ export default function Admin() {
 							<div className="flex-1">
 								<label
 									htmlFor="status"
-									className="block text-sm font-medium text-gray-700 mb-2"
+									className="block text-sm font-medium text-zinc-400 mb-2"
 								>
 									Status for{" "}
 									{new Date(
@@ -442,7 +446,7 @@ export default function Admin() {
 											form.requestSubmit();
 										}
 									}}
-									className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 								>
 									{monthStatuses.map((status) => (
 										<option key={status} value={status} className="py-1">
@@ -453,7 +457,7 @@ export default function Admin() {
 							</div>
 						</statusUpdateFetcher.Form>
 						{statusUpdateFetcher.data?.error && (
-							<p className="mt-2 text-sm text-red-600">
+							<p className="mt-2 text-sm text-red-400">
 								{statusUpdateFetcher.data.error}
 							</p>
 						)}
@@ -465,71 +469,72 @@ export default function Admin() {
 			{selectedMonth && nominations.length > 0 && (
 				<section>
 					<h2 className="text-2xl font-semibold mb-4">Jury Selection</h2>
-					<div className="bg-white rounded-lg shadow overflow-hidden">
+					<div className="bg-black/10 backdrop-blur-sm rounded-lg shadow overflow-hidden border border-white/10">
 						<div className="overflow-x-auto">
-							<table className="min-w-full divide-y divide-gray-200">
-								<thead className="bg-gray-50">
+							<table className="min-w-full divide-y divide-white/10">
+								<thead>
 									<tr>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Game
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Year
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Type
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Pitches
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Selected
 										</th>
 									</tr>
 								</thead>
-								<tbody className="bg-white divide-y divide-gray-200">
+								<tbody className="divide-y divide-white/10">
 									{nominations.map((nomination) => (
-										<tr key={nomination.id} className="hover:bg-gray-50">
+										<tr
+											key={nomination.id}
+											className="hover:bg-white/5 transition-colors"
+										>
 											<td className="px-6 py-4 whitespace-nowrap">
 												<div className="flex items-center">
 													{nomination.game_cover && (
 														<img
 															src={nomination.game_cover}
 															alt=""
-															className="h-10 w-10 object-cover rounded-sm mr-3"
+															className="h-10 w-10 object-cover rounded-sm mr-3 border border-white/10"
 														/>
 													)}
-													<div>
-														<div className="text-sm font-medium text-gray-900">
-															{nomination.game_name}
-														</div>
+													<div className="text-sm font-medium text-zinc-200">
+														{nomination.game_name}
 													</div>
 												</div>
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
 												{nomination.game_year}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap">
 												<span
 													className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
 														nomination.short
-															? "bg-green-100 text-green-800"
-															: "bg-blue-100 text-blue-800"
+															? "bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
+															: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
 													}`}
 												>
 													{nomination.short ? "Short" : "Long"}
@@ -539,7 +544,7 @@ export default function Admin() {
 												<button
 													type="button"
 													onClick={() => setSelectedNominationId(nomination.id)}
-													className="text-blue-600 hover:text-blue-900"
+													className="text-zinc-400 hover:text-zinc-200 transition-colors"
 												>
 													View Pitches ({pitches[nomination.id]?.length || 0})
 												</button>
@@ -565,8 +570,8 @@ export default function Admin() {
 														type="submit"
 														className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
 															nomination.jury_selected
-																? "bg-blue-600"
-																: "bg-gray-200"
+																? "bg-blue-500"
+																: "bg-zinc-700"
 														}`}
 													>
 														<span
@@ -594,10 +599,13 @@ export default function Admin() {
 				onClose={() => setSelectedNominationId(null)}
 				className="relative z-50"
 			>
-				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+				<div
+					className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+					aria-hidden="true"
+				/>
 				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6">
-						<DialogTitle className="text-lg font-medium mb-4">
+					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-zinc-900 border border-white/10 p-6 shadow-2xl">
+						<DialogTitle className="text-lg font-medium mb-4 text-zinc-200">
 							Pitches for{" "}
 							{
 								nominations.find((n) => n.id === selectedNominationId)
@@ -607,26 +615,29 @@ export default function Admin() {
 						<div className="space-y-4 max-h-[60vh] overflow-y-auto">
 							{selectedNominationId &&
 								pitches[selectedNominationId]?.map((pitch) => (
-									<div key={pitch.id} className="border rounded-lg p-4">
+									<div
+										key={pitch.id}
+										className="border border-white/10 rounded-lg p-4 bg-black/20"
+									>
 										<div className="flex items-center justify-between mb-2">
-											<div className="flex items-center gap-2 text-sm text-gray-500">
+											<div className="flex items-center gap-2 text-sm text-zinc-400">
 												<span>From: {pitch.discord_id}</span>
 												<button
 													type="button"
 													onClick={() => copyToClipboard(pitch.discord_id)}
-													className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
+													className="text-zinc-500 hover:text-zinc-300 p-1 rounded-md hover:bg-white/5 transition-colors"
 													title="Copy Discord ID"
 												>
 													<ClipboardDocumentIcon className="h-4 w-4" />
 													{copiedId === pitch.discord_id && (
-														<span className="absolute bg-black text-white text-xs px-2 py-1 rounded -mt-8 -ml-4">
+														<span className="absolute bg-zinc-800 text-zinc-200 text-xs px-2 py-1 rounded -mt-8 -ml-4 border border-white/10">
 															Copied!
 														</span>
 													)}
 												</button>
 											</div>
 										</div>
-										<div className="text-gray-700 whitespace-pre-wrap">
+										<div className="text-zinc-300 whitespace-pre-wrap">
 											{pitch.pitch}
 										</div>
 									</div>
@@ -634,7 +645,7 @@ export default function Admin() {
 							{selectedNominationId &&
 								(!pitches[selectedNominationId] ||
 									pitches[selectedNominationId].length === 0) && (
-									<p className="text-gray-500 text-center py-4">
+									<p className="text-zinc-400 text-center py-4">
 										No pitches available
 									</p>
 								)}
@@ -642,7 +653,7 @@ export default function Admin() {
 						<div className="mt-6 flex justify-end">
 							<button
 								type="button"
-								className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+								className="bg-zinc-800 text-zinc-200 px-4 py-2 rounded-md hover:bg-zinc-700 transition-colors border border-white/10"
 								onClick={() => setSelectedNominationId(null)}
 							>
 								Close

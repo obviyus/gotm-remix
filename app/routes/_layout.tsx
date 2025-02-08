@@ -47,8 +47,8 @@ export default function Layout() {
 				: "inline-flex items-center px-4 py-2 text-lg font-medium rounded-lg"
 		} transition-all ${
 			isActive
-				? "bg-gray-900 text-white"
-				: "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+				? "bg-blue-600 text-zinc-100"
+				: "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
 		}`;
 	};
 
@@ -83,15 +83,15 @@ export default function Layout() {
 		navLinks.find((link) => link.path === location.pathname)?.label || "GOTM";
 
 	return (
-		<div className="min-h-full">
-			<nav className="border-b border-gray-200 bg-white">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+		<div className="min-h-screen flex flex-col bg-zinc-900">
+			<nav className="border-b border-zinc-800 bg-zinc-900">
+				<div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
 					<div className="flex h-16 justify-between md:justify-center">
 						{/* Mobile menu button and active page title */}
 						<div className="flex items-center gap-4 md:hidden">
 							<button
 								type="button"
-								className="text-gray-500 hover:text-gray-900 focus:outline-none"
+								className="text-zinc-400 hover:text-zinc-100 focus:outline-none"
 								onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
 							>
 								<span className="sr-only">Open main menu</span>
@@ -101,7 +101,7 @@ export default function Layout() {
 									<XMarkIcon className="h-6 w-6" aria-hidden="true" />
 								)}
 							</button>
-							<span className="text-lg font-bold text-gray-900">
+							<span className="text-lg font-bold text-zinc-100">
 								{activeTab}
 							</span>
 						</div>
@@ -126,7 +126,7 @@ export default function Layout() {
 
 				{/* Mobile menu, show/hide based on menu state */}
 				<div
-					className={`md:hidden fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50 transition-all duration-200 ease-in-out ${
+					className={`md:hidden fixed top-16 left-0 right-0 bg-zinc-900 border-b border-zinc-800 shadow-lg z-50 transition-all duration-200 ease-in-out ${
 						isMobileMenuOpen
 							? "opacity-100 translate-y-0"
 							: "opacity-0 -translate-y-2"
@@ -149,16 +149,16 @@ export default function Layout() {
 					</div>
 				</div>
 			</nav>
-			<main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+			<main className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 flex-1">
 				<Outlet />
 			</main>
-			<footer className="mt-auto py-4 border-t border-gray-200">
+			<footer className="py-4 border-t border-zinc-800">
 				<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-					<p className="text-center text-sm text-gray-500">
+					<p className="text-center text-sm text-zinc-400">
 						Created by{" "}
 						<a
 							href="https://github.com/sneakingJ"
-							className="text-blue-500 hover:text-blue-900 hover:underline"
+							className="text-blue-400 hover:text-blue-300 hover:underline"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -167,7 +167,7 @@ export default function Layout() {
 						. Source code on{" "}
 						<a
 							href="https://github.com/obviyus/gotm-remix"
-							className="text-blue-500 hover:text-blue-900 hover:underline"
+							className="text-blue-400 hover:text-blue-300 hover:underline"
 							target="_blank"
 							rel="noopener noreferrer"
 						>

@@ -213,8 +213,8 @@ export default function Index() {
 					aria-hidden="true"
 				/>
 				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6 shadow-xl ring-1 ring-gray-900/5">
-						<DialogTitle className="text-lg font-medium text-gray-900 mb-4">
+					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-zinc-800 p-6 shadow-xl ring-1 ring-zinc-700">
+						<DialogTitle className="text-lg font-medium text-zinc-100 mb-4">
 							Pitches for {selectedNomination?.title}
 						</DialogTitle>
 						<div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
@@ -222,14 +222,14 @@ export default function Index() {
 								pitches?.[selectedNomination.id]?.map((pitch) => (
 									<div
 										key={`${selectedNomination.id}-${pitch.discord_id}`}
-										className="rounded-lg border border-gray-200 p-4 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors"
+										className="rounded-lg border border-zinc-700 p-4 bg-zinc-800/50 hover:bg-zinc-700 hover:border-zinc-600 transition-colors"
 									>
 										<div className="flex items-center mb-2">
-											<div className="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+											<div className="text-sm text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">
 												{pitch.discord_id}
 											</div>
 										</div>
-										<div className="text-gray-700 whitespace-pre-wrap text-sm">
+										<div className="text-zinc-300 whitespace-pre-wrap text-sm">
 											{pitch.pitch}
 										</div>
 									</div>
@@ -237,8 +237,8 @@ export default function Index() {
 							{selectedNomination &&
 								(!pitches?.[selectedNomination.id] ||
 									pitches[selectedNomination.id].length === 0) && (
-									<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-										<p className="text-sm text-gray-500">
+									<div className="rounded-lg border border-dashed border-zinc-700 p-8 text-center">
+										<p className="text-sm text-zinc-400">
 											No pitches available for this game
 										</p>
 									</div>
@@ -247,7 +247,7 @@ export default function Index() {
 						<div className="mt-6 flex justify-end gap-3">
 							<button
 								type="button"
-								className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 transition-colors hover:text-gray-900 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+								className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-300 transition-colors hover:text-zinc-100 bg-zinc-700 hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-800"
 								onClick={() => setSelectedNomination(null)}
 							>
 								Close
