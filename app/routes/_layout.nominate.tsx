@@ -13,7 +13,7 @@ import { json, redirect } from "@remix-run/node";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/utils/igdb.server";
 import GameCard from "~/components/GameCard";
-import { pool } from "~/utils/database.server";
+import { pool, getCurrentMonth } from "~/utils/database.server";
 import { getSession } from "~/sessions";
 import type { RowDataPacket } from "mysql2";
 import type { NominationFormData } from "~/types";
@@ -65,17 +65,9 @@ export const loader: LoaderFunction = async ({ request }) => {
 		return redirect("/auth/discord");
 	}
 
-	// Get latest month to handle different states
-	const [monthRow] = await pool.execute<MonthRow[]>(
-		"SELECT id, status FROM months ORDER BY year DESC, month DESC LIMIT 1",
-	);
+	const monthRow = await getCurrentMonth();
 
-	if (!monthRow || monthRow.length === 0) {
-		throw new Response("No months found", { status: 404 });
-	}
-
-	const monthId =
-		monthRow[0].status === "nominating" ? monthRow[0].id : undefined;
+	const monthId = monthRow.status === "nominating" ? monthRow.id : undefined;
 
 	// Fetch user's nominations for the current month if in nominating phase
 	let userNominations: Nomination[] = [];
@@ -99,7 +91,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 	return json<LoaderData>({
 		games: [],
 		monthId,
-		monthStatus: monthRow[0].status,
+		monthStatus: monthRow.status,
 		userDiscordId: discordId,
 		userNominations,
 		allNominations,
@@ -229,6 +221,13 @@ export default function Nominate() {
 	const handleGameLength = (isShort: boolean) => {
 		if (!selectedGame) return;
 
+		// Convert first_release_date to a year string
+		const gameYear = selectedGame.first_release_date
+			? new Date(selectedGame.first_release_date * 1000)
+					.getFullYear()
+					.toString()
+			: undefined;
+
 		// Build the nomination data with type checking
 		const nominationData: NominationFormData = {
 			game: {
@@ -236,6 +235,7 @@ export default function Nominate() {
 				name: selectedGame.name,
 				cover: selectedGame.cover,
 				first_release_date: selectedGame.first_release_date,
+				game_year: gameYear,
 				summary: selectedGame.summary,
 			},
 			monthId: monthId?.toString() ?? "",

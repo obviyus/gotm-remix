@@ -1,5 +1,5 @@
 import { redirect, type LoaderFunction } from "@remix-run/node";
-import { pool } from "~/utils/database.server";
+import { pool, getCurrentMonth } from "~/utils/database.server";
 import { getSession } from "~/sessions";
 import type { RowDataPacket } from "mysql2";
 
@@ -21,14 +21,6 @@ export const loader: LoaderFunction = async ({ request }) => {
 		throw new Response("Unauthorized", { status: 403 });
 	}
 
-	// Get latest month ID
-	const [monthRows] = await pool.execute<RowDataPacket[]>(
-		"SELECT id FROM months ORDER BY year DESC, month DESC LIMIT 1",
-	);
-
-	if (monthRows.length === 0) {
-		throw new Response("No months found", { status: 404 });
-	}
-
-	return redirect(`/admin/${monthRows[0].id}`);
+	const month = await getCurrentMonth();
+	return redirect(`/admin/${month.id}`);
 };

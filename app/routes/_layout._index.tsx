@@ -1,5 +1,5 @@
-import { useLoaderData } from "@remix-run/react";
-import { pool } from "~/utils/database.server";
+import { json, useLoaderData } from "@remix-run/react";
+import { pool, getCurrentMonth } from "~/utils/database.server";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
 import type { RowDataPacket } from "mysql2";
@@ -28,19 +28,7 @@ type LoaderData = {
 };
 
 export const loader = async () => {
-	// Get the latest month
-	const [rows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id, month, year, status
-         FROM months 
-         ORDER BY id DESC 
-         LIMIT 1;`,
-	);
-
-	if (rows.length === 0) {
-		throw new Response("No months found", { status: 404 });
-	}
-
-	const month = rows[0] as Month;
+	const month = (await getCurrentMonth()) as Month;
 
 	if (month.status === "nominating") {
 		// Fetch nominations
@@ -52,13 +40,32 @@ export const loader = async () => {
 			[month.id],
 		);
 
-		// Fetch pitches
-		const [pitchRows] = await pool.execute<RowDataPacket[]>(
-			`SELECT nomination_id, discord_id, pitch 
-			 FROM pitches 
-			 WHERE nomination_id IN (${nominations.map(() => "?").join(",")})`,
-			nominations.map((n) => n.id),
-		);
+		// Only fetch pitches if we have nominations
+		let pitchesByNomination = {};
+		if (nominations.length > 0) {
+			const placeholders = Array(nominations.length).fill("?").join(",");
+			const [pitchRows] = await pool.execute<RowDataPacket[]>(
+				`SELECT nomination_id, discord_id, pitch 
+                 FROM pitches 
+                 WHERE nomination_id IN (${placeholders})`,
+				nominations.map((n: RowDataPacket) => n.id),
+			);
+
+			// Group pitches by nomination_id
+			pitchesByNomination = pitchRows.reduce(
+				(acc, row) => {
+					if (!acc[row.nomination_id]) {
+						acc[row.nomination_id] = [];
+					}
+					acc[row.nomination_id].push({
+						discord_id: row.discord_id,
+						pitch: row.pitch,
+					});
+					return acc;
+				},
+				{} as Record<number, Array<{ discord_id: string; pitch: string }>>,
+			);
+		}
 
 		// Group nominations by type
 		const nominationsByType = nominations.reduce(
@@ -74,34 +81,35 @@ export const loader = async () => {
 			{ short: [] as Nomination[], long: [] as Nomination[] },
 		);
 
-		// Group pitches by nomination_id
-		const pitchesByNomination = pitchRows.reduce(
-			(acc, row) => {
-				if (!acc[row.nomination_id]) {
-					acc[row.nomination_id] = [];
-				}
-				acc[row.nomination_id].push({
-					discord_id: row.discord_id,
-					pitch: row.pitch,
-				});
-				return acc;
-			},
-			{} as Record<number, Array<{ discord_id: string; pitch: string }>>,
-		);
-
-		return {
+		return json<LoaderData>({
 			month,
 			nominations: nominationsByType,
 			pitches: pitchesByNomination,
-		};
+		});
 	}
 
-	const results = {
-		long: await calculateVotingResults(month.id, false),
-		short: await calculateVotingResults(month.id, true),
-	};
+	if (
+		month.status === "voting" ||
+		month.status === "over" ||
+		month.status === "playing"
+	) {
+		// Calculate both results in parallel
+		const [longResults, shortResults] = await Promise.all([
+			calculateVotingResults(month.id, false),
+			calculateVotingResults(month.id, true),
+		]);
 
-	return { month, results };
+		return json<LoaderData>({
+			month,
+			results: {
+				long: longResults,
+				short: shortResults,
+			},
+		});
+	}
+
+	// Default case: just return the month info
+	return json<LoaderData>({ month });
 };
 
 export default function Index() {

@@ -1,5 +1,5 @@
 import { useLoaderData, Link, Outlet } from "@remix-run/react";
-import { pool } from "~/utils/database.server";
+import { pool, getCurrentMonth } from "~/utils/database.server";
 import type { RowDataPacket } from "mysql2";
 
 interface Month {
@@ -9,10 +9,14 @@ interface Month {
 }
 
 export const loader = async () => {
+	const currentMonth = await getCurrentMonth();
+
 	const [rows] = await pool.execute<RowDataPacket[]>(
 		`SELECT id, month, year 
          FROM months 
+         WHERE (year < ? OR (year = ? AND month <= ?))
          ORDER BY id DESC;`,
+		[currentMonth.year, currentMonth.year, currentMonth.month],
 	);
 
 	return { months: rows as Month[] };
@@ -34,6 +38,7 @@ export default function History() {
 					<Link
 						key={month.id}
 						to={`/history/${month.id}`}
+						prefetch="viewport"
 						className="block rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
 					>
 						<h2 className="text-lg font-semibold">

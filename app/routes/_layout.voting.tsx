@@ -6,7 +6,7 @@ import {
 	type DropResult,
 } from "@hello-pangea/dnd";
 import { json, redirect, type LoaderFunction } from "@remix-run/node";
-import { pool } from "~/utils/database.server";
+import { pool, getCurrentMonth } from "~/utils/database.server";
 import type { Nomination } from "~/types";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
@@ -33,10 +33,13 @@ export const loader: LoaderFunction = async ({ request }) => {
 		return redirect("/auth/discord");
 	}
 
-	const [monthRow] = await pool.execute<RowDataPacket[]>(
-		"SELECT id FROM months WHERE status = 'voting' LIMIT 1",
-	);
-	const monthId = monthRow[0]?.id || 0;
+	const monthRow = await getCurrentMonth();
+
+	const monthId = monthRow.status === "voting" ? monthRow.id : undefined;
+
+	if (!monthId) {
+		return json({ monthId: undefined });
+	}
 
 	// Check if user has already voted
 	const [shortVoteRow] = await pool.execute<RowDataPacket[]>(

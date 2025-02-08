@@ -254,11 +254,17 @@ export default function Admin() {
 						← Previous Month
 					</Link>
 
-					<h1 className="text-2xl font-bold">
+					<h1 className="text-2xl font-bold flex items-center gap-2">
 						{new Date(
 							selectedMonth.year,
 							selectedMonth.month - 1,
 						).toLocaleString("default", { month: "long", year: "numeric" })}
+						{selectedMonth.year === new Date().getFullYear() &&
+							selectedMonth.month === new Date().getMonth() + 1 && (
+								<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+									Current Month
+								</span>
+							)}
 					</h1>
 
 					<Link

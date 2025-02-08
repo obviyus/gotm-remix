@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { json, type LoaderFunction } from "@remix-run/node";
-import { pool } from "~/utils/database.server";
+import { pool, getCurrentMonth } from "~/utils/database.server";
 import { getSession } from "~/sessions";
 import type { RowDataPacket } from "mysql2";
 
@@ -12,10 +12,8 @@ interface LoaderData {
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
-	// Get latest month's status
-	const [rows] = await pool.execute<RowDataPacket[]>(
-		"SELECT status FROM months ORDER BY id DESC LIMIT 1",
-	);
+	// Get latest month's status using getCurrentMonth utility
+	const currentMonth = await getCurrentMonth();
 
 	// Check if user is a jury member
 	const session = await getSession(request.headers.get("Cookie"));
@@ -31,7 +29,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 	}
 
 	return json<LoaderData>({
-		monthStatus: rows[0]?.status || "ready",
+		monthStatus: currentMonth?.status || "ready",
 		isJuryMember,
 	});
 };
