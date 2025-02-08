@@ -15,7 +15,7 @@ export const loader = async () => {
 	const [rows] = await pool.execute<RowDataPacket[]>(
 		`SELECT id, month, year, status
      FROM months 
-     WHERE status != 'nominating' AND status != 'jury' AND status != 'voting'
+     WHERE status IN ('playing', 'over', 'voting')
      ORDER BY year DESC, month DESC;`,
 	);
 
@@ -26,10 +26,7 @@ export default function History() {
 	const { months } = useLoaderData<{ months: Month[] }>();
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-			<h1 className="text-3xl font-bold tracking-tight text-gray-900">
-				History
-			</h1>
+		<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{months.map((month) => (
 					<Link
@@ -43,9 +40,6 @@ export default function History() {
 								year: "numeric",
 							})}
 						</h2>
-						<p className="mt-2 text-sm text-gray-600 capitalize">
-							{month.status}
-						</p>
 					</Link>
 				))}
 			</div>
