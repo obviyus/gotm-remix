@@ -1,6 +1,12 @@
-import { useLoaderData, Link, Form, useNavigate } from "@remix-run/react";
+import {
+	useLoaderData,
+	Link,
+	Form,
+	useNavigate,
+	useFetcher,
+} from "@remix-run/react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	json,
 	redirect,
@@ -40,6 +46,11 @@ interface LoaderData {
 	selectedMonth: Month | null;
 	nominations: Nomination[];
 	pitches: Record<number, Pitch[]>;
+}
+
+interface ActionResponse {
+	success?: boolean;
+	error?: string;
 }
 
 export const loader: LoaderFunction = async ({ request, params }) => {
@@ -143,12 +154,23 @@ export const action: ActionFunction = async ({ request }) => {
 				return json({ error: "Invalid year or month" }, { status: 400 });
 			}
 
-			await pool.execute(
-				"INSERT INTO months (year, month, status) VALUES (?, ?, 'ready')",
-				[year, month],
-			);
-
-			return json({ success: true });
+			try {
+				await pool.execute(
+					"INSERT INTO months (year, month, status) VALUES (?, ?, 'ready')",
+					[year, month],
+				);
+				return json({ success: true });
+			} catch (error) {
+				if (
+					error &&
+					typeof error === "object" &&
+					"code" in error &&
+					error.code === "ER_DUP_ENTRY"
+				) {
+					return json({ error: "This month already exists" }, { status: 400 });
+				}
+				throw error;
+			}
 		}
 
 		case "toggleJurySelected": {
@@ -180,6 +202,25 @@ export default function Admin() {
 	>(null);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
 	const navigate = useNavigate();
+	const createMonthFetcher = useFetcher<ActionResponse>();
+	const [error, setError] = useState<string | null>(null);
+
+	// Get next month's date
+	const nextMonth = new Date();
+	nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+	// Clear error when submission is successful
+	useEffect(() => {
+		if (
+			createMonthFetcher.state === "idle" &&
+			createMonthFetcher.data?.success
+		) {
+			setError(null);
+			navigate(".", { replace: true });
+		} else if (createMonthFetcher.data?.error) {
+			setError(createMonthFetcher.data.error);
+		}
+	}, [createMonthFetcher.state, createMonthFetcher.data, navigate]);
 
 	const copyToClipboard = async (discordId: string) => {
 		await navigator.clipboard.writeText(discordId);
@@ -236,7 +277,7 @@ export default function Admin() {
 			{/* Create New Month Section */}
 			<section className="mb-12">
 				<h2 className="text-2xl font-semibold mb-4">Create New Month</h2>
-				<form method="POST">
+				<createMonthFetcher.Form method="POST">
 					<input type="hidden" name="intent" value="createMonth" />
 					<div className="flex items-center gap-4">
 						<div className="flex-1">
@@ -250,7 +291,7 @@ export default function Admin() {
 								type="number"
 								id="year"
 								name="year"
-								defaultValue={new Date().getFullYear()}
+								defaultValue={nextMonth.getFullYear()}
 								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
 						</div>
@@ -267,18 +308,26 @@ export default function Admin() {
 								name="month"
 								min="1"
 								max="12"
-								defaultValue={new Date().getMonth() + 1}
+								defaultValue={nextMonth.getMonth() + 1}
 								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
 						</div>
 						<button
 							type="submit"
-							className="mt-8 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+							disabled={createMonthFetcher.state !== "idle"}
+							className={`mt-8 ${
+								createMonthFetcher.state !== "idle"
+									? "bg-gray-400 cursor-not-allowed"
+									: "bg-green-600 hover:bg-green-700"
+							} text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
 						>
-							Create Month
+							{createMonthFetcher.state !== "idle"
+								? "Creating..."
+								: "Create Month"}
 						</button>
 					</div>
-				</form>
+					{error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+				</createMonthFetcher.Form>
 			</section>
 
 			{/* Month Status Section */}
