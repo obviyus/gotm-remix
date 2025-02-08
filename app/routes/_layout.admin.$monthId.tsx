@@ -246,8 +246,11 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Admin() {
-	const { months, selectedMonth, nominations, pitches } = useLoaderData<LoaderData>();
-	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
+	const { months, selectedMonth, nominations, pitches } =
+		useLoaderData<LoaderData>();
+	const [selectedNominationId, setSelectedNominationId] = useState<
+		number | null
+	>(null);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
 	const navigate = useNavigate();
 	const createMonthFetcher = useFetcher<ActionResponse>();
@@ -256,7 +259,10 @@ export default function Admin() {
 
 	// Clear error when submission is successful
 	useEffect(() => {
-		if (createMonthFetcher.state === "idle" && createMonthFetcher.data?.success) {
+		if (
+			createMonthFetcher.state === "idle" &&
+			createMonthFetcher.data?.success
+		) {
 			setError(null);
 			navigate(".", { replace: true });
 		} else if (createMonthFetcher.data?.error) {
@@ -406,7 +412,10 @@ export default function Admin() {
 				<h2 className="text-2xl font-semibold mb-4">Month Status</h2>
 				{selectedMonth && (
 					<>
-						<statusUpdateFetcher.Form method="POST" className="flex items-end gap-4">
+						<statusUpdateFetcher.Form
+							method="POST"
+							className="flex items-end gap-4"
+						>
 							<input type="hidden" name="monthId" value={selectedMonth.id} />
 							<input type="hidden" name="intent" value="updateStatus" />
 							<div className="flex-1">
@@ -444,7 +453,9 @@ export default function Admin() {
 							</div>
 						</statusUpdateFetcher.Form>
 						{statusUpdateFetcher.data?.error && (
-							<p className="mt-2 text-sm text-red-600">{statusUpdateFetcher.data.error}</p>
+							<p className="mt-2 text-sm text-red-600">
+								{statusUpdateFetcher.data.error}
+							</p>
 						)}
 					</>
 				)}
