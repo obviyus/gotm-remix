@@ -145,16 +145,26 @@ export default function Nominate() {
 	const [deletingNomination, setDeletingNomination] =
 		useState<Nomination | null>(null);
 
+	// Track short and long nominations
+	const shortNomination = userNominations.find((n) => n.short);
+	const longNomination = userNominations.find((n) => !n.short);
+	const hasReachedNominationLimit = shortNomination && longNomination;
+
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		submit(e.currentTarget);
 	};
 
 	const handleGameSelect = (game: Game, existingNomination?: Nomination) => {
+		if (hasReachedNominationLimit && !existingNomination) {
+			// Don't allow new nominations if limit reached
+			return;
+		}
+
 		if (existingNomination) {
 			// If game is already nominated, go straight to pitch dialog
 			setEditingNomination(existingNomination);
-			setEditPitch("");
+			setEditPitch(existingNomination.pitch || "");
 			setIsEditOpen(true);
 		} else {
 			// Otherwise show the nomination dialog
@@ -407,25 +417,107 @@ export default function Nominate() {
 				</div>
 			)}
 
-			<Form method="post" onSubmit={handleSearch} className="mb-8">
-				<div className="flex gap-4">
-					<input
-						type="search"
-						name="query"
-						value={searchTerm}
-						onChange={(e) => setSearchTerm(e.target.value)}
-						placeholder="Search for games..."
-						className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 pl-6 pr-4"
-					/>
-					<button
-						type="submit"
-						disabled={isSearching}
-						className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{isSearching ? "Searching..." : "Search"}
-					</button>
+			{!hasReachedNominationLimit && (
+				<div>
+					<div className="mb-4">
+						<h3 className="text-lg font-medium text-gray-900">
+							Nomination Status:
+						</h3>
+						<ul className="mt-2 space-y-1 text-sm text-gray-600">
+							<li className="flex items-center">
+								<span
+									className={
+										shortNomination ? "text-green-600" : "text-gray-600"
+									}
+								>
+									{shortNomination ? "✓" : "○"} Short Game (
+									{shortNomination ? "Nominated" : "Available"})
+								</span>
+							</li>
+							<li className="flex items-center">
+								<span
+									className={
+										longNomination ? "text-green-600" : "text-gray-600"
+									}
+								>
+									{longNomination ? "✓" : "○"} Long Game (
+									{longNomination ? "Nominated" : "Available"})
+								</span>
+							</li>
+						</ul>
+					</div>
+
+					<Form method="post" onSubmit={handleSearch} className="mb-8">
+						<div className="flex gap-4">
+							<input
+								type="search"
+								name="query"
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								placeholder="Search for games..."
+								className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 pl-6 pr-4"
+							/>
+							<button
+								type="submit"
+								disabled={isSearching}
+								className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isSearching ? "Searching..." : "Search"}
+							</button>
+						</div>
+					</Form>
+					{isSearching ? (
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+							{Array.from({ length: 10 }).map((_, i) => (
+								<GameSkeleton key={`skeleton-${Date.now()}-${i}`} />
+							))}
+						</div>
+					) : games.length > 0 ? (
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+							{games.map((game: Game) => {
+								const existingNomination = allNominations.find(
+									(n) => String(n.game_id) === String(game.id),
+								);
+								const isCurrentUserNomination =
+									existingNomination?.discord_id === userDiscordId;
+
+								return (
+									<GameCard
+										key={game.id}
+										game={game}
+										onNominate={() =>
+											handleGameSelect(game, existingNomination)
+										}
+										variant="search"
+										alreadyNominated={Boolean(existingNomination)}
+										isCurrentUserNomination={isCurrentUserNomination}
+									/>
+								);
+							})}
+						</div>
+					) : hasSearched && searchTerm ? (
+						<div className="text-center py-12">
+							<h3 className="text-lg font-semibold text-gray-900">
+								No results found
+							</h3>
+							<p className="mt-2 text-gray-500">
+								No games found matching "{searchTerm}". Try a different search
+								term.
+							</p>
+						</div>
+					) : (
+						<div className="text-center py-12 bg-gray-100 rounded-lg">
+							<h3 className="text-lg font-semibold text-gray-900">
+								Search for games to nominate
+							</h3>
+							<p className="mt-2 text-gray-500">
+								Type in the search box above to find games. You can nominate one
+								short game and one long game.
+							</p>
+						</div>
+					)}
 				</div>
-			</Form>
+			)}
 
 			{/* Game Length Selection Modal */}
 			<Dialog
@@ -479,22 +571,34 @@ export default function Nominate() {
 							<button
 								type="button"
 								onClick={() => handleGameLength(true)}
-								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+								disabled={Boolean(shortNomination)}
+								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								Short Game
 								<span className="block text-xs text-blue-200">
 									(&lt; 12 hours)
 								</span>
+								{shortNomination && (
+									<span className="block text-xs text-blue-200">
+										Already nominated
+									</span>
+								)}
 							</button>
 							<button
 								type="button"
 								onClick={() => handleGameLength(false)}
-								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+								disabled={Boolean(longNomination)}
+								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								Long Game
 								<span className="block text-xs text-blue-200">
 									(&gt; 12 hours)
 								</span>
+								{longNomination && (
+									<span className="block text-xs text-blue-200">
+										Already nominated
+									</span>
+								)}
 							</button>
 						</div>
 					</DialogPanel>
@@ -588,53 +692,6 @@ export default function Nominate() {
 					</DialogPanel>
 				</div>
 			</Dialog>
-
-			{isSearching ? (
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{Array.from({ length: 10 }).map(() => (
-						<GameSkeleton key={crypto.randomUUID()} />
-					))}
-				</div>
-			) : games.length > 0 ? (
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{games.map((game: Game) => {
-						const existingNomination = allNominations.find(
-							(n) => String(n.game_id) === String(game.id),
-						);
-						const isCurrentUserNomination =
-							existingNomination?.discord_id === userDiscordId;
-
-						return (
-							<GameCard
-								key={game.id}
-								game={game}
-								onNominate={() => handleGameSelect(game, existingNomination)}
-								variant="search"
-								alreadyNominated={Boolean(existingNomination)}
-								isCurrentUserNomination={isCurrentUserNomination}
-							/>
-						);
-					})}
-				</div>
-			) : hasSearched && searchTerm ? (
-				<div className="text-center py-12">
-					<h3 className="text-lg font-semibold text-gray-900">
-						No results found
-					</h3>
-					<p className="mt-2 text-gray-500">
-						No games found matching "{searchTerm}". Try a different search term.
-					</p>
-				</div>
-			) : (
-				<div className="text-center py-12 bg-gray-100 rounded-lg">
-					<h3 className="text-lg font-semibold text-gray-900">
-						Search for games to nominate
-					</h3>
-					<p className="mt-2 text-gray-500">
-						Type in the search box above to find games
-					</p>
-				</div>
-			)}
 		</div>
 	);
 }
