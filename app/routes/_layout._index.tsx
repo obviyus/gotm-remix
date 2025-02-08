@@ -6,6 +6,8 @@ import type { RowDataPacket } from "mysql2";
 import { calculateVotingResults, type Result } from "~/utils/voting.server";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import type { Nomination } from "~/types";
+import SplitLayout, { Column } from "~/components/SplitLayout";
+import GameCard from "~/components/GameCard";
 
 interface Month {
 	id: number;
@@ -129,79 +131,69 @@ export default function Index() {
 	const renderNominationsList = (games: Nomination[]) => (
 		<div className="space-y-4">
 			{games.map((game) => (
-				<div
+				<GameCard
 					key={game.id}
-					className="bg-white rounded-lg p-4 shadow-sm space-y-2"
-				>
-					<div className="flex items-start space-x-3">
-						{game.game_cover && (
-							<img
-								src={game.game_cover}
-								alt=""
-								className="h-16 w-16 object-cover rounded-sm flex-shrink-0"
-							/>
-						)}
-						<div>
-							<h3 className="font-medium">{game.title}</h3>
-							{game.game_year && (
-								<p className="text-sm text-gray-500">{game.game_year}</p>
-							)}
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={() => setSelectedNomination(game)}
-						className="w-full px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
-					>
-						View Pitches ({pitches?.[game.id]?.length || 0})
-					</button>
-				</div>
+					game={{
+						id: game.id,
+						name: game.title,
+						cover: game.game_cover ? { url: game.game_cover } : undefined,
+						first_release_date: game.game_year
+							? new Date(game.game_year).getTime() / 1000
+							: undefined,
+					}}
+					onViewPitches={() => setSelectedNomination(game)}
+					pitchCount={pitches?.[game.id]?.length || 0}
+				/>
 			))}
 		</div>
 	);
 
+	const monthName = new Date(`${month.year}-${month.month}-01`).toLocaleString(
+		"en-US",
+		{
+			month: "long",
+			year: "numeric",
+		},
+	);
+
 	return (
-		<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center space-y-2 mb-8">
-				<h1 className="text-3xl font-bold">
-					{new Date(`${month.year}-${month.month}-01`).toLocaleString("en-US", {
-						month: "long",
-						year: "numeric",
-					})}
-				</h1>
-			</div>
-
+		<>
 			{month.status === "nominating" && nominations ? (
-				<div className="grid md:grid-cols-2 gap-6">
-					{/* Long Games Column */}
-					<div className="bg-white rounded-lg shadow p-4 space-y-4">
-						<div className="flex justify-between items-center">
-							<h2 className="text-2xl font-bold">Long Games</h2>
-							<div className="text-sm text-gray-500">
-								{nominations.long.length} nominations
-							</div>
-						</div>
+				<SplitLayout
+					title={monthName}
+					description="These games have been nominated for this month's Game of the Month."
+				>
+					<Column
+						title="Long Games"
+						statusBadge={{
+							text: `${nominations.long.length} nominations`,
+							isSuccess: nominations.long.length > 0,
+						}}
+					>
 						{renderNominationsList(nominations.long)}
+					</Column>
+
+					<Column
+						title="Short Games"
+						statusBadge={{
+							text: `${nominations.short.length} nominations`,
+							isSuccess: nominations.short.length > 0,
+						}}
+					>
+						{renderNominationsList(nominations.short)}
+					</Column>
+				</SplitLayout>
+			) : (
+				<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
+					<div className="text-center space-y-2 mb-8">
+						<h1 className="text-3xl font-bold">{monthName}</h1>
 					</div>
 
-					{/* Short Games Column */}
-					<div className="bg-white rounded-lg shadow p-4 space-y-4">
-						<div className="flex justify-between items-center">
-							<h2 className="text-2xl font-bold">Short Games</h2>
-							<div className="text-sm text-gray-500">
-								{nominations.short.length} nominations
-							</div>
-						</div>
-						{renderNominationsList(nominations.short)}
-					</div>
-				</div>
-			) : (
-				<div className="space-y-6">
-					<VotingResultsChart
-						canvasId={longGamesCanvasId}
-						results={results?.long || []}
-					/>
-					<div>
+					<div className="space-y-6">
+						<VotingResultsChart
+							canvasId={longGamesCanvasId}
+							results={results?.long || []}
+						/>
 						<VotingResultsChart
 							canvasId={shortGamesCanvasId}
 							results={results?.short || []}
@@ -216,25 +208,28 @@ export default function Index() {
 				onClose={() => setSelectedNomination(null)}
 				className="relative z-50"
 			>
-				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+				<div
+					className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+					aria-hidden="true"
+				/>
 				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6">
-						<DialogTitle className="text-lg font-medium mb-4">
+					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6 shadow-xl ring-1 ring-gray-900/5">
+						<DialogTitle className="text-lg font-medium text-gray-900 mb-4">
 							Pitches for {selectedNomination?.title}
 						</DialogTitle>
-						<div className="space-y-4 max-h-[60vh] overflow-y-auto">
+						<div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
 							{selectedNomination &&
 								pitches?.[selectedNomination.id]?.map((pitch) => (
 									<div
 										key={`${selectedNomination.id}-${pitch.discord_id}`}
-										className="border rounded-lg p-4"
+										className="rounded-lg border border-gray-200 p-4 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors"
 									>
-										<div className="flex items-center justify-between mb-2">
-											<div className="text-sm text-gray-500">
-												From: {pitch.discord_id}
+										<div className="flex items-center mb-2">
+											<div className="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+												{pitch.discord_id}
 											</div>
 										</div>
-										<div className="text-gray-700 whitespace-pre-wrap">
+										<div className="text-gray-700 whitespace-pre-wrap text-sm">
 											{pitch.pitch}
 										</div>
 									</div>
@@ -242,15 +237,17 @@ export default function Index() {
 							{selectedNomination &&
 								(!pitches?.[selectedNomination.id] ||
 									pitches[selectedNomination.id].length === 0) && (
-									<p className="text-gray-500 text-center py-4">
-										No pitches available
-									</p>
+									<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+										<p className="text-sm text-gray-500">
+											No pitches available for this game
+										</p>
+									</div>
 								)}
 						</div>
-						<div className="mt-6 flex justify-end">
+						<div className="mt-6 flex justify-end gap-3">
 							<button
 								type="button"
-								className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
+								className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 transition-colors hover:text-gray-900 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
 								onClick={() => setSelectedNomination(null)}
 							>
 								Close
@@ -259,6 +256,6 @@ export default function Index() {
 					</DialogPanel>
 				</div>
 			</Dialog>
-		</div>
+		</>
 	);
 }

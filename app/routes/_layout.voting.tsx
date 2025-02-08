@@ -12,6 +12,9 @@ import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import type { RowDataPacket } from "mysql2";
 import { getSession } from "~/sessions";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
+import { TrashIcon } from "@heroicons/react/20/solid";
+import SplitLayout, { Column } from "~/components/SplitLayout";
 
 interface LoaderData {
 	monthId: number;
@@ -22,6 +25,7 @@ interface LoaderData {
 	votedLong: boolean;
 	shortRankings: Array<{ nomination_id: number; rank: number }>;
 	longRankings: Array<{ nomination_id: number; rank: number }>;
+	pitches: Record<number, Array<{ discord_id: string; pitch: string }>>;
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -53,14 +57,14 @@ export const loader: LoaderFunction = async ({ request }) => {
 	);
 
 	// Fetch nominations
-	const [shortNoms] = await pool.execute(
+	const [shortNoms] = await pool.execute<RowDataPacket[]>(
 		`SELECT id, game_id, game_name as title, game_year, game_cover, game_url, game_platform_ids 
      FROM nominations 
      WHERE month_id = ? AND jury_selected = 1 AND short = 1`,
 		[monthId],
 	);
 
-	const [longNoms] = await pool.execute(
+	const [longNoms] = await pool.execute<RowDataPacket[]>(
 		`SELECT id, game_id, game_name as title, game_year, game_cover, game_url, game_platform_ids 
      FROM nominations 
      WHERE month_id = ? AND jury_selected = 1 AND short = 0`,
@@ -91,6 +95,37 @@ export const loader: LoaderFunction = async ({ request }) => {
 		);
 	}
 
+	// Fetch pitches for all nominations
+	const allNominationIds = [...shortNoms, ...longNoms].map(
+		(n: RowDataPacket) => n.id,
+	);
+	let pitchesByNomination = {};
+
+	if (allNominationIds.length > 0) {
+		const placeholders = Array(allNominationIds.length).fill("?").join(",");
+		const [pitchRows] = await pool.execute<RowDataPacket[]>(
+			`SELECT nomination_id, discord_id, pitch 
+			 FROM pitches 
+			 WHERE nomination_id IN (${placeholders})`,
+			allNominationIds,
+		);
+
+		// Group pitches by nomination_id
+		pitchesByNomination = pitchRows.reduce(
+			(acc, row) => {
+				if (!acc[row.nomination_id]) {
+					acc[row.nomination_id] = [];
+				}
+				acc[row.nomination_id].push({
+					discord_id: row.discord_id,
+					pitch: row.pitch,
+				});
+				return acc;
+			},
+			{} as Record<number, Array<{ discord_id: string; pitch: string }>>,
+		);
+	}
+
 	return json({
 		monthId,
 		userId: discordId,
@@ -100,6 +135,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		votedLong: Boolean(longVoteRow[0]),
 		shortRankings,
 		longRankings,
+		pitches: pitchesByNomination,
 	});
 };
 
@@ -107,12 +143,13 @@ export default function Voting() {
 	const {
 		monthId,
 		userId,
-		shortNominations,
-		longNominations,
+		shortNominations = [],
+		longNominations = [],
 		votedShort: initialVotedShort,
 		votedLong: initialVotedLong,
-		shortRankings,
-		longRankings,
+		shortRankings = [],
+		longRankings = [],
+		pitches = {},
 	} = useLoaderData<LoaderData>();
 
 	const voteFetcher = useFetcher();
@@ -126,7 +163,7 @@ export default function Voting() {
 			};
 
 			// For long games
-			if (longRankings.length > 0) {
+			if (longRankings?.length > 0) {
 				// Add ranked games in order
 				const rankedLongIds = longRankings
 					.sort((a, b) => a.rank - b.rank)
@@ -140,11 +177,13 @@ export default function Voting() {
 				initialOrder[0].push(...unrankedLongIds);
 			} else {
 				// If no rankings, all games go below divider
-				initialOrder[0].push(...longNominations.map((n) => String(n.id)));
+				initialOrder[0].push(
+					...(longNominations || []).map((n) => String(n.id)),
+				);
 			}
 
 			// For short games
-			if (shortRankings.length > 0) {
+			if (shortRankings?.length > 0) {
 				// Add ranked games in order
 				const rankedShortIds = shortRankings
 					.sort((a, b) => a.rank - b.rank)
@@ -158,7 +197,9 @@ export default function Voting() {
 				initialOrder[1].push(...unrankedShortIds);
 			} else {
 				// If no rankings, all games go below divider
-				initialOrder[1].push(...shortNominations.map((n) => String(n.id)));
+				initialOrder[1].push(
+					...(shortNominations || []).map((n) => String(n.id)),
+				);
 			}
 
 			return initialOrder;
@@ -167,6 +208,8 @@ export default function Voting() {
 
 	const [votedLong, setVotedLong] = useState(initialVotedLong);
 	const [votedShort, setVotedShort] = useState(initialVotedShort);
+	const [selectedNomination, setSelectedNomination] =
+		useState<Nomination | null>(null);
 
 	const deleteVote = async (short: boolean) => {
 		voteFetcher.submit(
@@ -329,38 +372,43 @@ export default function Voting() {
 						{/* Ranked Section */}
 						<div className="space-y-4">
 							{rankedGames.length === 0 && order.length === 0 ? (
-								<div className="bg-gray-50 rounded p-4 text-center text-gray-500">
-									Drag games here to rank them
+								<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+									<p className="text-sm text-gray-500">
+										Drag games here to rank them in order of preference
+									</p>
 								</div>
 							) : (
 								rankedGames.map((game, index) => (
-									<div key={game.id}>
-										<Draggable draggableId={String(game.id)} index={index}>
-											{(provided) => (
-												<GameCard
-													game={{
-														id: game.id,
-														name: game.title,
-														cover: game.game_cover
-															? { url: game.game_cover }
-															: undefined,
-														first_release_date: game.game_year
-															? Number.parseInt(game.game_year)
-															: undefined,
-													}}
-													draggableProps={provided.draggableProps}
-													dragHandleProps={
-														provided.dragHandleProps ?? undefined
-													}
-													innerRef={provided.innerRef}
-													isRanked={true}
-													onUnrank={() =>
-														moveItemBelowDivider(isShort, String(game.id))
-													}
-												/>
-											)}
-										</Draggable>
-									</div>
+									<Draggable
+										key={game.id}
+										draggableId={String(game.id)}
+										index={index}
+									>
+										{(provided) => (
+											<GameCard
+												game={{
+													id: game.id,
+													name: game.title,
+													cover: game.game_cover
+														? { url: game.game_cover }
+														: undefined,
+													first_release_date: game.game_year
+														? Number.parseInt(game.game_year)
+														: undefined,
+												}}
+												draggableProps={provided.draggableProps}
+												dragHandleProps={provided.dragHandleProps ?? undefined}
+												innerRef={provided.innerRef}
+												isRanked={true}
+												onUnrank={() =>
+													moveItemBelowDivider(isShort, String(game.id))
+												}
+												onViewPitches={() => setSelectedNomination(game)}
+												pitchCount={pitches?.[game.id]?.length || 0}
+												showVotingButtons={true}
+											/>
+										)}
+									</Draggable>
 								))
 							)}
 						</div>
@@ -372,10 +420,10 @@ export default function Voting() {
 									ref={provided.innerRef}
 									{...provided.draggableProps}
 									{...provided.dragHandleProps}
-									className="border-t-2 border-dashed border-gray-300 my-4 relative"
+									className="border-t border-gray-200 my-6 relative"
 								>
-									<span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-gray-500">
-										Divider
+									<span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs font-medium text-gray-400 select-none">
+										Drag above to rank
 									</span>
 								</div>
 							)}
@@ -384,41 +432,41 @@ export default function Voting() {
 						{/* Unranked Section */}
 						<div className="space-y-4">
 							{unrankedGames.length === 0 ? (
-								<div className="bg-gray-50 rounded p-4 text-center text-gray-500">
-									Drag games here to unrank them
+								<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+									<p className="text-sm text-gray-500">No unranked games</p>
 								</div>
 							) : (
 								unrankedGames.map((game, index) => (
-									<div key={game.id}>
-										<Draggable
-											draggableId={String(game.id)}
-											index={rankedGames.length + 1 + index}
-										>
-											{(provided) => (
-												<GameCard
-													game={{
-														id: game.id,
-														name: game.title,
-														cover: game.game_cover
-															? { url: game.game_cover }
-															: undefined,
-														first_release_date: game.game_year
-															? Number.parseInt(game.game_year)
-															: undefined,
-													}}
-													draggableProps={provided.draggableProps}
-													dragHandleProps={
-														provided.dragHandleProps ?? undefined
-													}
-													innerRef={provided.innerRef}
-													isRanked={false}
-													onRank={() =>
-														moveItemAboveDivider(isShort, String(game.id))
-													}
-												/>
-											)}
-										</Draggable>
-									</div>
+									<Draggable
+										key={game.id}
+										draggableId={String(game.id)}
+										index={rankedGames.length + 1 + index}
+									>
+										{(provided) => (
+											<GameCard
+												game={{
+													id: game.id,
+													name: game.title,
+													cover: game.game_cover
+														? { url: game.game_cover }
+														: undefined,
+													first_release_date: game.game_year
+														? Number.parseInt(game.game_year)
+														: undefined,
+												}}
+												draggableProps={provided.draggableProps}
+												dragHandleProps={provided.dragHandleProps ?? undefined}
+												innerRef={provided.innerRef}
+												isRanked={false}
+												onRank={() =>
+													moveItemAboveDivider(isShort, String(game.id))
+												}
+												onViewPitches={() => setSelectedNomination(game)}
+												pitchCount={pitches?.[game.id]?.length || 0}
+												showVotingButtons={true}
+											/>
+										)}
+									</Draggable>
 								))
 							)}
 						</div>
@@ -430,62 +478,113 @@ export default function Voting() {
 	};
 
 	return (
-		<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center space-y-2 mb-8">
-				<h1 className="text-3xl font-bold">Drag and Drop the games</h1>
-				<h2 className="text-xl">
-					to sort them in the priority you want them to win
-				</h2>
-				<p className="text-gray-600">
-					Please only vote for games you actually want to play next month :)
-				</p>
-			</div>
+		<SplitLayout
+			title="Drag and Drop the games"
+			subtitle="to sort them in the priority you want them to win"
+			description="Please only vote for games you actually want to play next month :)"
+		>
+			<Column
+				title="Long Games"
+				statusBadge={{
+					text: votedLong ? "Voted" : "Not Voted",
+					isSuccess: votedLong,
+				}}
+				action={
+					votedLong && (
+						<button
+							type="button"
+							className="px-4 py-2 text-sm font-medium rounded-md text-red-600 transition-colors hover:text-red-900 bg-red-50 border border-red-200 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center gap-2"
+							onClick={() => deleteVote(false)}
+						>
+							<TrashIcon className="w-4 h-4" />
+							Clear Long Vote
+						</button>
+					)
+				}
+			>
+				<DragDropContext onDragEnd={onDragEnd}>
+					{renderGames(longNominations, false)}
+				</DragDropContext>
+			</Column>
 
-			<div className="grid md:grid-cols-2 gap-6">
-				{/* Long Games Column */}
-				<div className="bg-white rounded-lg shadow p-4 space-y-4">
-					<div className="flex justify-between items-center">
-						<h2 className="text-2xl font-bold">Long Games</h2>
-						<div>{votedLong ? "✅" : "❌"}</div>
-					</div>
-					<div className="min-h-[60px]">
-						{votedLong && (
+			<Column
+				title="Short Games"
+				statusBadge={{
+					text: votedShort ? "Voted" : "Not Voted",
+					isSuccess: votedShort,
+				}}
+				action={
+					votedShort && (
+						<button
+							type="button"
+							className="px-4 py-2 text-sm font-medium rounded-md text-red-600 transition-colors hover:text-red-900 bg-red-50 border border-red-200 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 flex items-center gap-2"
+							onClick={() => deleteVote(true)}
+						>
+							<TrashIcon className="w-4 h-4" />
+							Clear Short Vote
+						</button>
+					)
+				}
+			>
+				<DragDropContext onDragEnd={onDragEnd}>
+					{renderGames(shortNominations, true)}
+				</DragDropContext>
+			</Column>
+
+			{/* Pitches Dialog */}
+			<Dialog
+				open={selectedNomination !== null}
+				onClose={() => setSelectedNomination(null)}
+				className="relative z-50"
+			>
+				<div
+					className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+					aria-hidden="true"
+				/>
+				<div className="fixed inset-0 flex items-center justify-center p-4">
+					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-white p-6 shadow-xl ring-1 ring-gray-900/5">
+						<DialogTitle className="text-lg font-medium text-gray-900 mb-4">
+							Pitches for {selectedNomination?.title}
+						</DialogTitle>
+						<div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+							{selectedNomination &&
+								pitches?.[selectedNomination.id]?.map((pitch) => (
+									<div
+										key={`${selectedNomination.id}-${pitch.discord_id}`}
+										className="rounded-lg border border-gray-200 p-4 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors"
+									>
+										<div className="flex items-center mb-2">
+											<div className="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+												{pitch.discord_id}
+											</div>
+										</div>
+										<div className="text-gray-700 whitespace-pre-wrap text-sm">
+											{pitch.pitch}
+										</div>
+									</div>
+								))}
+							{selectedNomination &&
+								(!pitches?.[selectedNomination.id] ||
+									pitches[selectedNomination.id].length === 0) && (
+									<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+										<p className="text-sm text-gray-500">
+											No pitches available for this game
+										</p>
+									</div>
+								)}
+						</div>
+						<div className="mt-6 flex justify-end gap-3">
 							<button
 								type="button"
-								className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded"
-								onClick={() => deleteVote(false)}
+								className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 transition-colors hover:text-gray-900 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+								onClick={() => setSelectedNomination(null)}
 							>
-								Unvote Long
+								Close
 							</button>
-						)}
-					</div>
-					<DragDropContext onDragEnd={onDragEnd}>
-						{renderGames(longNominations, false)}
-					</DragDropContext>
+						</div>
+					</DialogPanel>
 				</div>
-
-				{/* Short Games Column */}
-				<div className="bg-white rounded-lg shadow p-4 space-y-4">
-					<div className="flex justify-between items-center">
-						<h2 className="text-2xl font-bold">Short Games</h2>
-						<div>{votedShort ? "✅" : "❌"}</div>
-					</div>
-					<div className="min-h-[60px]">
-						{votedShort && (
-							<button
-								type="button"
-								className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded"
-								onClick={() => deleteVote(true)}
-							>
-								Unvote Short
-							</button>
-						)}
-					</div>
-					<DragDropContext onDragEnd={onDragEnd}>
-						{renderGames(shortNominations, true)}
-					</DragDropContext>
-				</div>
-			</div>
-		</div>
+			</Dialog>
+		</SplitLayout>
 	);
 }
