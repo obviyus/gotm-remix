@@ -12,6 +12,7 @@ import {
 	redirect,
 	type ActionFunction,
 	type LoaderFunction,
+	type ActionFunctionArgs,
 } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
 import { getSession } from "~/sessions";
@@ -125,40 +126,45 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 	});
 };
 
-export const action: ActionFunction = async ({ request }) => {
+export async function action({ request }: ActionFunctionArgs) {
 	const formData = await request.formData();
 	const intent = formData.get("intent");
 
 	switch (intent) {
-		case "updateStatus": {
-			const monthId = formData.get("monthId");
-			const status = formData.get("status");
-
-			if (!monthId || !status) {
-				return json({ error: "Missing required fields" }, { status: 400 });
-			}
-
-			await pool.execute("UPDATE months SET status = ? WHERE id = ?", [
-				status,
-				monthId,
-			]);
-
-			return json({ success: true });
-		}
-
 		case "createMonth": {
 			const year = Number(formData.get("year"));
 			const month = Number(formData.get("month"));
+			const status = formData.get("status") as string;
 
-			if (!year || !month) {
-				return json({ error: "Invalid year or month" }, { status: 400 });
+			if (!year || !month || !status) {
+				return json({ error: "Missing required fields" }, { status: 400 });
 			}
 
 			try {
+				// Check if there's already an active month when trying to set an active status
+				if (["nominating", "jury", "voting"].includes(status)) {
+					const [activeMonths] = await pool.execute<RowDataPacket[]>(
+						`SELECT id, year, month, status 
+						 FROM months 
+						 WHERE status IN ('nominating', 'jury', 'voting')`,
+					);
+
+					if (activeMonths.length > 0) {
+						return json(
+							{
+								error:
+									"Another month is already active. Only one month can be in nominating/jury/voting status at a time.",
+							},
+							{ status: 400 },
+						);
+					}
+				}
+
 				await pool.execute(
-					"INSERT INTO months (year, month, status) VALUES (?, ?, 'ready')",
-					[year, month],
+					"INSERT INTO months (year, month, status) VALUES (?, ?, ?)",
+					[year, month, status],
 				);
+
 				return json({ success: true });
 			} catch (error) {
 				if (
@@ -170,6 +176,51 @@ export const action: ActionFunction = async ({ request }) => {
 					return json({ error: "This month already exists" }, { status: 400 });
 				}
 				throw error;
+			}
+		}
+
+		case "updateStatus": {
+			const monthId = formData.get("monthId");
+			const newStatus = formData.get("status") as string;
+
+			if (!monthId || !newStatus) {
+				return json({ error: "Missing required fields" }, { status: 400 });
+			}
+
+			try {
+				// Check if there's already an active month when trying to set an active status
+				if (["nominating", "jury", "voting"].includes(newStatus)) {
+					const [activeMonths] = await pool.execute<RowDataPacket[]>(
+						`SELECT id, year, month, status 
+						 FROM months 
+						 WHERE status IN ('nominating', 'jury', 'voting')
+						 AND id != ?`,
+						[monthId],
+					);
+
+					if (activeMonths.length > 0) {
+						return json(
+							{
+								error:
+									"Another month is already active. Only one month can be in nominating/jury/voting status at a time.",
+							},
+							{ status: 400 },
+						);
+					}
+				}
+
+				await pool.execute("UPDATE months SET status = ? WHERE id = ?", [
+					newStatus,
+					monthId,
+				]);
+
+				return json({ success: true });
+			} catch (error) {
+				console.error("Error updating month status:", error);
+				return json(
+					{ error: "Failed to update month status" },
+					{ status: 500 },
+				);
 			}
 		}
 
@@ -192,29 +243,20 @@ export const action: ActionFunction = async ({ request }) => {
 		default:
 			return json({ error: "Invalid action" }, { status: 400 });
 	}
-};
+}
 
 export default function Admin() {
-	const { months, selectedMonth, nominations, pitches } =
-		useLoaderData<LoaderData>();
-	const [selectedNominationId, setSelectedNominationId] = useState<
-		number | null
-	>(null);
+	const { months, selectedMonth, nominations, pitches } = useLoaderData<LoaderData>();
+	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
 	const navigate = useNavigate();
 	const createMonthFetcher = useFetcher<ActionResponse>();
+	const statusUpdateFetcher = useFetcher<ActionResponse>();
 	const [error, setError] = useState<string | null>(null);
-
-	// Get next month's date
-	const nextMonth = new Date();
-	nextMonth.setMonth(nextMonth.getMonth() + 1);
 
 	// Clear error when submission is successful
 	useEffect(() => {
-		if (
-			createMonthFetcher.state === "idle" &&
-			createMonthFetcher.data?.success
-		) {
+		if (createMonthFetcher.state === "idle" && createMonthFetcher.data?.success) {
 			setError(null);
 			navigate(".", { replace: true });
 		} else if (createMonthFetcher.data?.error) {
@@ -259,12 +301,13 @@ export default function Admin() {
 							selectedMonth.year,
 							selectedMonth.month - 1,
 						).toLocaleString("default", { month: "long", year: "numeric" })}
-						{selectedMonth.year === new Date().getFullYear() &&
-							selectedMonth.month === new Date().getMonth() + 1 && (
-								<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-									Current Month
-								</span>
-							)}
+						{["nominating", "jury", "voting"].includes(
+							selectedMonth.status,
+						) && (
+							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+								Active Month
+							</span>
+						)}
 					</h1>
 
 					<Link
@@ -297,7 +340,9 @@ export default function Admin() {
 								type="number"
 								id="year"
 								name="year"
-								defaultValue={nextMonth.getFullYear()}
+								min="2000"
+								max="2100"
+								required
 								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
 						</div>
@@ -306,7 +351,7 @@ export default function Admin() {
 								htmlFor="month"
 								className="block text-sm font-medium text-gray-700 mb-2"
 							>
-								Month
+								Month (1-12)
 							</label>
 							<input
 								type="number"
@@ -314,14 +359,34 @@ export default function Admin() {
 								name="month"
 								min="1"
 								max="12"
-								defaultValue={nextMonth.getMonth() + 1}
+								required
 								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
 							/>
+						</div>
+						<div className="flex-1">
+							<label
+								htmlFor="status"
+								className="block text-sm font-medium text-gray-700 mb-2"
+							>
+								Initial Status
+							</label>
+							<select
+								id="status"
+								name="status"
+								required
+								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+							>
+								{monthStatuses.map((status) => (
+									<option key={status} value={status} className="py-1">
+										{status.charAt(0).toUpperCase() + status.slice(1)}
+									</option>
+								))}
+							</select>
 						</div>
 						<button
 							type="submit"
 							disabled={createMonthFetcher.state !== "idle"}
-							className={`mt-8 ${
+							className={`self-end ${
 								createMonthFetcher.state !== "idle"
 									? "bg-gray-400 cursor-not-allowed"
 									: "bg-green-600 hover:bg-green-700"
@@ -340,43 +405,48 @@ export default function Admin() {
 			<section className="mb-12">
 				<h2 className="text-2xl font-semibold mb-4">Month Status</h2>
 				{selectedMonth && (
-					<Form method="POST" className="flex items-end gap-4">
-						<input type="hidden" name="monthId" value={selectedMonth.id} />
-						<input type="hidden" name="intent" value="updateStatus" />
-						<div className="flex-1">
-							<label
-								htmlFor="status"
-								className="block text-sm font-medium text-gray-700 mb-2"
-							>
-								Status for{" "}
-								{new Date(
-									selectedMonth.year,
-									selectedMonth.month - 1,
-								).toLocaleString("default", {
-									month: "long",
-									year: "numeric",
-								})}
-							</label>
-							<select
-								id="status"
-								name="status"
-								value={selectedMonth.status}
-								onChange={(e) => {
-									const form = e.target.form;
-									if (form) {
-										form.requestSubmit();
-									}
-								}}
-								className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-							>
-								{monthStatuses.map((status) => (
-									<option key={status} value={status} className="py-1">
-										{status.charAt(0).toUpperCase() + status.slice(1)}
-									</option>
-								))}
-							</select>
-						</div>
-					</Form>
+					<>
+						<statusUpdateFetcher.Form method="POST" className="flex items-end gap-4">
+							<input type="hidden" name="monthId" value={selectedMonth.id} />
+							<input type="hidden" name="intent" value="updateStatus" />
+							<div className="flex-1">
+								<label
+									htmlFor="status"
+									className="block text-sm font-medium text-gray-700 mb-2"
+								>
+									Status for{" "}
+									{new Date(
+										selectedMonth.year,
+										selectedMonth.month - 1,
+									).toLocaleString("default", {
+										month: "long",
+										year: "numeric",
+									})}
+								</label>
+								<select
+									id="status"
+									name="status"
+									value={selectedMonth.status}
+									onChange={(e) => {
+										const form = e.target.form;
+										if (form) {
+											form.requestSubmit();
+										}
+									}}
+									className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								>
+									{monthStatuses.map((status) => (
+										<option key={status} value={status} className="py-1">
+											{status.charAt(0).toUpperCase() + status.slice(1)}
+										</option>
+									))}
+								</select>
+							</div>
+						</statusUpdateFetcher.Form>
+						{statusUpdateFetcher.data?.error && (
+							<p className="mt-2 text-sm text-red-600">{statusUpdateFetcher.data.error}</p>
+						)}
+					</>
 				)}
 			</section>
 

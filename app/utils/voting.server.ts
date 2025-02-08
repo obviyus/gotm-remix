@@ -7,7 +7,7 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 export interface Month {
 	id: number;
-	month: string;
+	month: number;
 	year: number;
 }
 

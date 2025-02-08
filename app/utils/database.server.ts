@@ -12,34 +12,45 @@ export const pool = mysql.createPool({
 	timezone: "Z",
 });
 
-export const getCurrentMonth = async () => {
-  const now = new Date();
-  const utcYear = now.getUTCFullYear();
-  const utcMonth = now.getUTCMonth() + 1; // JavaScript months are 0-based
+const isActiveStatus = (status: string) => {
+  return ["nominating", "jury", "voting"].includes(status);
+};
 
+export const hasActiveMonth = async () => {
   const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT id 
+     FROM months 
+     WHERE status IN ('nominating', 'jury', 'voting')
+     LIMIT 1`
+  );
+  
+  return rows.length > 0;
+};
+
+export const getCurrentMonth = async () => {
+  // Get the current active month (nominating/jury/voting)
+  const [activeRows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, year, month, status 
      FROM months 
-     WHERE year = ? AND month = ?
-     LIMIT 1`,
-    [utcYear, utcMonth]
+     WHERE status IN ('nominating', 'jury', 'voting')
+     LIMIT 1`
   );
-
-  if (!rows || rows.length === 0) {
-    // If no month exists for current UTC date, fall back to latest
-    const [latestRows] = await pool.execute<RowDataPacket[]>(
-      `SELECT id, year, month, status 
-       FROM months 
-       ORDER BY year DESC, month DESC 
-       LIMIT 1`
-    );
-    
-    if (!latestRows || latestRows.length === 0) {
-      throw new Response("No months found", { status: 404 });
-    }
-    
-    return latestRows[0];
+  
+  if (activeRows && activeRows.length > 0) {
+    return activeRows[0];
   }
-
-  return rows[0];
+  
+  // If no active month, fall back to latest month
+  const [latestRows] = await pool.execute<RowDataPacket[]>(
+    `SELECT id, year, month, status 
+     FROM months 
+     ORDER BY year DESC, month DESC 
+     LIMIT 1`
+  );
+  
+  if (!latestRows || latestRows.length === 0) {
+    throw new Response("No months found", { status: 404 });
+  }
+  
+  return latestRows[0];
 };
