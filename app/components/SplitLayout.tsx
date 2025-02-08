@@ -34,7 +34,7 @@ export function Column({ title, statusBadge, action, children }: ColumnProps) {
 					</span>
 				)}
 			</div>
-			<div className="min-h-[60px]">{action}</div>
+			<div className="py-2">{action}</div>
 			{children}
 		</div>
 	);
