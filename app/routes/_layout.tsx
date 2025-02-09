@@ -106,8 +106,8 @@ export default function Layout() {
 
 						{/* Desktop navigation */}
 						<div className="hidden md:flex md:items-center md:justify-center w-full max-w-full mx-auto overflow-x-auto">
-							<div className="flex items-center justify-center flex-nowrap space-x-2 sm:space-x-3 md:space-x-4 lg:space-x-8 px-2">
-								<div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+							<div className="flex items-center justify-center flex-nowrap gap-2 sm:gap-3 md:gap-4 lg:gap-8 px-2">
+								<div className="flex items-center gap-2 sm:gap-3 md:gap-4">
 									{navLinks
 										.filter(
 											(link) => link.path === "/" || link.path === "/history",
@@ -127,10 +127,10 @@ export default function Layout() {
 								</div>
 
 								{centerItem && (
-									<div className="flex items-center border-x border-zinc-800 mx-2 sm:mx-3 md:mx-4">
+									<div className="flex items-center border-x border-zinc-800 px-2 sm:px-3 md:px-4">
 										<Link
 											to={centerItem.path}
-											className={`${getLinkClassName(centerItem.path)} mx-2 sm:mx-3 md:mx-4`}
+											className={getLinkClassName(centerItem.path)}
 										>
 											<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-[0.8rem] md:text-sm">
 												{centerItem.label}
@@ -139,7 +139,7 @@ export default function Layout() {
 									</div>
 								)}
 
-								<div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+								<div className="flex items-center gap-2 sm:gap-3 md:gap-4">
 									{navLinks
 										.filter(
 											(link) =>
