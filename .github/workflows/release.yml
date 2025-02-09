@@ -6,23 +6,6 @@ on:
       - "master"
 
 jobs:
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm i -g semantic-release @semantic-release/changelog @semantic-release/git
-          semantic-release
-
   publish:
     name: Build Docker Image
     runs-on: ubuntu-latest
