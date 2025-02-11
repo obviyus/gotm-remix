@@ -9,6 +9,7 @@ export type Game = {
     summary?: string;
     pitch?: string;
     short?: boolean;
+    game_url?: string;
 };
 
 export interface Nomination {
@@ -49,6 +50,7 @@ export interface NominationFormData {
         first_release_date?: number;
         game_year?: string;
         summary?: string;
+        url?: string;
     };
     monthId: string;
     short: boolean;
