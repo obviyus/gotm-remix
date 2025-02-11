@@ -3,7 +3,11 @@ import { useLoaderData } from "@remix-run/react";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo } from "react";
 import type { Month, Result } from "~/utils/voting.server";
-import { getMonth, calculateVotingResults } from "~/utils/voting.server";
+import {
+	getMonth,
+	calculateVotingResults,
+	getGameUrls,
+} from "~/utils/voting.server";
 
 type LoaderData = {
 	month: Month;
@@ -11,6 +15,7 @@ type LoaderData = {
 		long: Result[];
 		short: Result[];
 	};
+	gameUrls: Record<string, string>;
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -19,17 +24,20 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 		throw new Response("Invalid month ID", { status: 400 });
 	}
 
-	const month = await getMonth(monthId);
-	const results = {
-		long: await calculateVotingResults(monthId, false),
-		short: await calculateVotingResults(monthId, true),
-	};
+	const [month, results, gameUrls] = await Promise.all([
+		getMonth(monthId),
+		Promise.all([
+			calculateVotingResults(monthId, false),
+			calculateVotingResults(monthId, true),
+		]).then(([long, short]) => ({ long, short })),
+		getGameUrls(monthId),
+	]);
 
-	return Response.json({ month, results });
+	return Response.json({ month, results, gameUrls });
 };
 
 export default function HistoryMonth() {
-	const { month, results } = useLoaderData<LoaderData>();
+	const { month, results, gameUrls } = useLoaderData<LoaderData>();
 
 	const longGamesCanvasId = useMemo(
 		() => `longGamesChart-${month.month}-${month.year}`,
@@ -55,10 +63,12 @@ export default function HistoryMonth() {
 				<VotingResultsChart
 					canvasId={longGamesCanvasId}
 					results={results.long}
+					gameUrls={gameUrls}
 				/>
 				<VotingResultsChart
 					canvasId={shortGamesCanvasId}
 					results={results.short}
+					gameUrls={gameUrls}
 				/>
 			</div>
 		</div>

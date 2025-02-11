@@ -17,6 +17,7 @@ interface SankeyDataPoint {
 interface VotingResultsChartProps {
 	canvasId: string;
 	results: SankeyDataPoint[];
+	gameUrls?: Record<string, string>;
 }
 
 const COLOR_PALETTE = [
@@ -79,6 +80,7 @@ const getWinner = (results: SankeyDataPoint[]): string | null => {
 export function VotingResultsChart({
 	canvasId,
 	results,
+	gameUrls = {},
 }: VotingResultsChartProps) {
 	const chartRef = useRef<ChartJS | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -220,13 +222,31 @@ export function VotingResultsChart({
 	}, [results]);
 
 	const chartTitle = canvasId.startsWith("long") ? "Long" : "Short";
+	const winner = getWinner(results);
+	const winnerUrl = winner ? gameUrls[winner] : null;
 
 	return (
 		<div className="rounded-xl bg-zinc-800 p-4 shadow-lg transition-shadow hover:shadow-xl sm:p-6 ring-1 ring-zinc-700">
 			<div className="flex items-center justify-between mb-4 sm:mb-6">
 				<h2 className="text-xl font-bold tracking-tight text-zinc-100 sm:text-2xl">
 					{chartTitle} Winner
-					{getWinner(results) ? ` 🏆 ${getWinner(results)}` : ""}
+					{winner ? (
+						<>
+							{" 🏆 "}
+							{winnerUrl ? (
+								<a
+									href={winnerUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-blue-400 hover:text-purple-300 transition-colors"
+								>
+									{winner}
+								</a>
+							) : (
+								winner
+							)}
+						</>
+					) : null}
 				</h2>
 			</div>
 			<div className="relative h-[24rem] w-full sm:h-[28rem] overflow-x-auto">

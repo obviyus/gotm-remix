@@ -387,3 +387,20 @@ export const invalidateVotingCache = (monthId: number, short: boolean) => {
 	const cacheKey = `${monthId}-${short}`;
 	resultsCache.delete(cacheKey);
 };
+
+export const getGameUrls = async (monthId: number): Promise<Record<string, string>> => {
+	const [nominations] = await pool.execute<RowDataPacket[]>(
+		'SELECT game_name, game_url FROM nominations WHERE month_id = ? AND jury_selected = 1',
+		[monthId],
+	);
+
+	return nominations.reduce(
+		(acc, nom) => {
+			if (nom.game_url) {
+				acc[nom.game_name] = nom.game_url;
+			}
+			return acc;
+		},
+		{} as Record<string, string>,
+	);
+};

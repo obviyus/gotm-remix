@@ -3,7 +3,11 @@ import { pool, getCurrentMonth } from "~/utils/database.server";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
 import type { RowDataPacket } from "mysql2";
-import { calculateVotingResults, type Result } from "~/utils/voting.server";
+import {
+	calculateVotingResults,
+	getGameUrls,
+	type Result,
+} from "~/utils/voting.server";
 import type { Nomination } from "~/types";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import GameCard from "~/components/GameCard";
@@ -27,6 +31,7 @@ type LoaderData = {
 		short: Nomination[];
 	};
 	pitches: Record<number, Array<{ discord_id: string; pitch: string }>>;
+	gameUrls?: Record<string, string>;
 };
 
 export const loader = async () => {
@@ -95,28 +100,30 @@ export const loader = async () => {
 		month.status === "over" ||
 		month.status === "playing"
 	) {
-		// Calculate both results in parallel
-		const [longResults, shortResults] = await Promise.all([
-			calculateVotingResults(month.id, false),
-			calculateVotingResults(month.id, true),
+		// Calculate results and get URLs in parallel
+		const [results, gameUrls] = await Promise.all([
+			Promise.all([
+				calculateVotingResults(month.id, false),
+				calculateVotingResults(month.id, true),
+			]).then(([long, short]) => ({ long, short })),
+			getGameUrls(month.id),
 		]);
 
 		return json<LoaderData>({
 			month,
-			results: {
-				long: longResults,
-				short: shortResults,
-			},
+			results,
+			gameUrls,
 			pitches: {}, // Add empty pitches for non-nominating states
 		});
 	}
 
 	// Default case: just return the month info
-	return json<LoaderData>({ month, pitches: {} });
+	return json<LoaderData>({ month, pitches: {}, gameUrls: {} });
 };
 
 export default function Index() {
-	const { month, results, nominations, pitches } = useLoaderData<LoaderData>();
+	const { month, results, nominations, pitches, gameUrls } =
+		useLoaderData<LoaderData>();
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
@@ -201,10 +208,12 @@ export default function Index() {
 						<VotingResultsChart
 							canvasId={longGamesCanvasId}
 							results={results?.long || []}
+							gameUrls={gameUrls}
 						/>
 						<VotingResultsChart
 							canvasId={shortGamesCanvasId}
 							results={results?.short || []}
+							gameUrls={gameUrls}
 						/>
 					</div>
 				</div>
