@@ -4,10 +4,10 @@ import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
 import type { RowDataPacket } from "mysql2";
 import { calculateVotingResults, type Result } from "~/utils/voting.server";
-import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import type { Nomination } from "~/types";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import GameCard from "~/components/GameCard";
+import PitchesModal from "~/components/PitchesModal";
 
 interface Month {
 	id: number;
@@ -26,7 +26,7 @@ type LoaderData = {
 		long: Nomination[];
 		short: Nomination[];
 	};
-	pitches?: Record<number, Array<{ discord_id: string; pitch: string }>>;
+	pitches: Record<number, Array<{ discord_id: string; pitch: string }>>;
 };
 
 export const loader = async () => {
@@ -107,17 +107,19 @@ export const loader = async () => {
 				long: longResults,
 				short: shortResults,
 			},
+			pitches: {}, // Add empty pitches for non-nominating states
 		});
 	}
 
 	// Default case: just return the month info
-	return json<LoaderData>({ month });
+	return json<LoaderData>({ month, pitches: {} });
 };
 
 export default function Index() {
 	const { month, results, nominations, pitches } = useLoaderData<LoaderData>();
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
+	const [isViewingPitches, setIsViewingPitches] = useState(false);
 
 	const longGamesCanvasId = useMemo(
 		() => `longGamesChart-${month.month}-${month.year}`,
@@ -143,8 +145,12 @@ export default function Index() {
 						game_year: game.game_year ?? undefined,
 						game_url: game.game_url ?? undefined,
 					}}
-					onViewPitches={() => setSelectedNomination(game)}
+					onViewPitches={() => {
+						setSelectedNomination(game);
+						setIsViewingPitches(true);
+					}}
 					pitchCount={pitches?.[game.id]?.length || 0}
+					showPitchesButton={true}
 				/>
 			))}
 		</div>
@@ -204,60 +210,15 @@ export default function Index() {
 				</div>
 			)}
 
-			{/* Pitches Dialog */}
-			<Dialog
-				open={selectedNomination !== null}
-				onClose={() => setSelectedNomination(null)}
-				className="relative z-50"
-			>
-				<div
-					className="fixed inset-0 bg-black/30 backdrop-blur-sm"
-					aria-hidden="true"
-				/>
-				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="mx-auto max-w-2xl w-full rounded-xl bg-zinc-800 p-6 shadow-xl ring-1 ring-zinc-700">
-						<DialogTitle className="text-lg font-medium text-zinc-100 mb-4">
-							Pitches for {selectedNomination?.title}
-						</DialogTitle>
-						<div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-							{selectedNomination &&
-								pitches?.[selectedNomination.id]?.map((pitch) => (
-									<div
-										key={`${selectedNomination.id}-${pitch.discord_id}`}
-										className="rounded-lg border border-zinc-700 p-4 bg-zinc-800/50 hover:bg-zinc-700 hover:border-zinc-600 transition-colors"
-									>
-										<div className="flex items-center mb-2">
-											<div className="text-sm text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-700">
-												{pitch.discord_id}
-											</div>
-										</div>
-										<div className="text-zinc-300 whitespace-pre-wrap text-sm">
-											{pitch.pitch}
-										</div>
-									</div>
-								))}
-							{selectedNomination &&
-								(!pitches?.[selectedNomination.id] ||
-									pitches[selectedNomination.id].length === 0) && (
-									<div className="rounded-lg border border-dashed border-zinc-700 p-8 text-center">
-										<p className="text-sm text-zinc-400">
-											No pitches available for this game
-										</p>
-									</div>
-								)}
-						</div>
-						<div className="mt-6 flex justify-end gap-3">
-							<button
-								type="button"
-								className="px-4 py-2 text-sm font-medium rounded-lg text-zinc-300 transition-colors hover:text-zinc-100 bg-zinc-700 hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-800"
-								onClick={() => setSelectedNomination(null)}
-							>
-								Close
-							</button>
-						</div>
-					</DialogPanel>
-				</div>
-			</Dialog>
+			<PitchesModal
+				isOpen={isViewingPitches}
+				onClose={() => {
+					setSelectedNomination(null);
+					setIsViewingPitches(false);
+				}}
+				nomination={selectedNomination}
+				pitches={selectedNomination ? pitches[selectedNomination.id] || [] : []}
+			/>
 		</>
 	);
 }

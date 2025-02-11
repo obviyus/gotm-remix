@@ -29,6 +29,7 @@ interface GameCardProps {
 	onViewPitches?: () => void;
 	pitchCount?: number;
 	showVotingButtons?: boolean;
+	showPitchesButton?: boolean;
 	buttonText?: string;
 }
 
@@ -49,6 +50,7 @@ export default function GameCard({
 	onViewPitches,
 	pitchCount = 0,
 	showVotingButtons = false,
+	showPitchesButton = false,
 	buttonText,
 }: GameCardProps) {
 	const getCoverUrl = (cover: Game["cover"]) => {
@@ -151,6 +153,23 @@ export default function GameCard({
 								</button>
 							)}
 						</div>
+					)}
+
+					{showPitchesButton && onViewPitches && (
+						<button
+							type="button"
+							onClick={onViewPitches}
+							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-zinc-200 bg-zinc-500/10 hover:bg-zinc-500/20 transition-all duration-300 backdrop-blur-sm border border-zinc-500/20 hover:border-zinc-500/30"
+						>
+							<ChatBubbleBottomCenterTextIcon className="w-4 h-4" />
+							{pitchCount > 0 ? (
+								<>
+									View {pitchCount} {pitchCount === 1 ? "Pitch" : "Pitches"}
+								</>
+							) : (
+								"No Pitches Yet"
+							)}
+						</button>
 					)}
 
 					{onNominate && (
