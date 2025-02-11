@@ -1,7 +1,16 @@
+import stringSimilarity from 'string-similarity';
+
 type TwitchAuth = {
 	access_token: string;
 	expires_in: number;
 	token_type: string;
+};
+
+type IGDBGame = {
+	name: string;
+	cover?: { url: string };
+	first_release_date?: number;
+	summary?: string;
 };
 
 let cachedToken: string | null = null;
@@ -44,10 +53,19 @@ export async function searchGames(query: string) {
 			"Content-Type": "application/json",
 		},
 		body: `search "${query}";
-              fields name, cover.url, first_release_date, summary;
-              limit 10;
-              where version_parent = null;`,
+			  fields name, cover.url, first_release_date, summary;
+			  where version_parent = null;
+			  limit 100;`,
 	});
 
-	return response.json();
+	const games = (await response.json()) as IGDBGame[];
+
+	// Sort games by name similarity to the search query and return top 10
+	return games
+		.sort((a: IGDBGame, b: IGDBGame) => {
+			const similarityA = stringSimilarity.compareTwoStrings(query.toLowerCase(), a.name.toLowerCase());
+			const similarityB = stringSimilarity.compareTwoStrings(query.toLowerCase(), b.name.toLowerCase());
+			return similarityB - similarityA;
+		})
+		.slice(0, 10);
 }
