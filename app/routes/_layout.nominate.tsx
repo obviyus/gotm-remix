@@ -90,8 +90,6 @@ export const loader: LoaderFunction = async ({ request }) => {
 		userNominations = allNominations.filter((n) => n.discord_id === discordId);
 	}
 
-	console.log(allNominations);
-
 	return json<LoaderData>({
 		games: [],
 		monthId,
@@ -111,7 +109,6 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	const games = await searchGames(query);
-	console.log(games);
 	return json({ games });
 }
 
@@ -494,7 +491,6 @@ export default function Nominate() {
 					) : games.length > 0 ? (
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 							{games.map((game) => {
-								console.log(game);
 								const existingNomination = allNominations.find(
 									(n) => n.game_id === game.id,
 								);
