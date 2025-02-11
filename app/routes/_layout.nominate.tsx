@@ -17,6 +17,7 @@ import { pool, getCurrentMonth } from "~/utils/database.server";
 import { getSession } from "~/sessions";
 import type { RowDataPacket } from "mysql2";
 import type { NominationFormData } from "~/types";
+import PitchesModal from "~/components/PitchesModal";
 
 interface Game {
 	id: number;
@@ -26,6 +27,7 @@ interface Game {
 	};
 	first_release_date?: number;
 	summary?: string;
+	game_url?: string;
 }
 
 interface Nomination extends RowDataPacket {
@@ -88,6 +90,8 @@ export const loader: LoaderFunction = async ({ request }) => {
 		userNominations = allNominations.filter((n) => n.discord_id === discordId);
 	}
 
+	console.log(allNominations);
+
 	return json<LoaderData>({
 		games: [],
 		monthId,
@@ -107,6 +111,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	const games = await searchGames(query);
+	console.log(games);
 	return json({ games });
 }
 
@@ -149,6 +154,10 @@ export default function Nominate() {
 	const shortNomination = userNominations.find((n) => n.short);
 	const longNomination = userNominations.find((n) => !n.short);
 	const hasReachedNominationLimit = shortNomination && longNomination;
+
+	const [selectedNomination, setSelectedNomination] =
+		useState<Nomination | null>(null);
+	const [isViewingPitches, setIsViewingPitches] = useState(false);
 
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -248,6 +257,7 @@ export default function Nominate() {
 				first_release_date: selectedGame.first_release_date,
 				game_year: gameYear,
 				summary: selectedGame.summary,
+				url: selectedGame.game_url,
 			},
 			monthId: monthId?.toString() ?? "",
 			short: isShort,
@@ -353,23 +363,19 @@ export default function Nominate() {
 	}
 
 	const GameSkeleton = () => (
-		<div className="flex flex-row rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm shadow-sm animate-pulse">
-			<div className="relative w-1/3" style={{ aspectRatio: "2/3" }}>
-				<div className="absolute inset-0 bg-zinc-800 rounded-l-lg" />
+		<div className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 flex h-52 min-w-0">
+			<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
+				<div className="absolute inset-0 bg-zinc-800 animate-pulse" />
 			</div>
-			<div className="flex-1 p-2 flex flex-col">
-				<div className="flex-1">
-					<div className="flex justify-between items-start gap-x-1">
-						<div className="h-5 bg-zinc-800 rounded w-3/4" />
-						<div className="h-3 bg-zinc-800 rounded w-12 shrink-0" />
-					</div>
-					<div className="space-y-1 mt-1">
-						<div className="h-3 bg-zinc-800 rounded w-full" />
-						<div className="h-3 bg-zinc-800 rounded w-2/3" />
+			<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
+				<div className="min-w-0 space-y-2">
+					<div className="flex justify-between items-start gap-2">
+						<div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse" />
+						<div className="h-4 bg-zinc-800 rounded w-12 shrink-0 animate-pulse" />
 					</div>
 				</div>
-				<div className="pt-2">
-					<div className="h-7 bg-zinc-800 rounded w-full" />
+				<div className="flex flex-col gap-2 mt-auto min-w-0">
+					<div className="h-9 bg-zinc-800 rounded w-full animate-pulse" />
 				</div>
 			</div>
 		</div>
@@ -383,7 +389,7 @@ export default function Nominate() {
 			{userNominations.length > 0 && (
 				<div className="mb-8">
 					<h2 className="text-xl font-semibold mb-4">Your Nominations</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 						{userNominations.map((nomination) => (
 							<GameCard
 								game={{
@@ -395,11 +401,21 @@ export default function Nominate() {
 									short: nomination.short,
 									pitch: nomination.pitch,
 									game_year: nomination.game_year,
+									game_url: nomination.game_url,
 								}}
 								key={nomination.id}
 								variant="nomination"
 								onEdit={handleEdit}
 								onDelete={handleDelete}
+								onViewPitches={() => {
+									setSelectedNomination(nomination);
+									setIsViewingPitches(true);
+								}}
+								pitchCount={
+									allNominations.filter((n) => n.game_id === nomination.game_id)
+										.length
+								}
+								showVotingButtons={false}
 							/>
 						))}
 					</div>
@@ -470,16 +486,17 @@ export default function Nominate() {
 						</div>
 					</Form>
 					{isSearching ? (
-						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 							{Array.from({ length: 10 }).map((_, i) => (
 								<GameSkeleton key={`skeleton-${Date.now()}-${i}`} />
 							))}
 						</div>
 					) : games.length > 0 ? (
-						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-							{games.map((game: Game) => {
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+							{games.map((game) => {
+								console.log(game);
 								const existingNomination = allNominations.find(
-									(n) => String(n.game_id) === String(game.id),
+									(n) => n.game_id === game.id,
 								);
 								const isCurrentUserNomination =
 									existingNomination?.discord_id === userDiscordId;
@@ -487,19 +504,34 @@ export default function Nominate() {
 								return (
 									<GameCard
 										key={game.id}
-										game={game}
-										onNominate={() =>
-											handleGameSelect(game, existingNomination)
-										}
+										game={{
+											id: game.id,
+											name: game.name,
+											cover: game.cover,
+											first_release_date: game.first_release_date,
+											summary: game.summary,
+											game_url: game.game_url,
+										}}
+										onNominate={() => {
+											if (existingNomination) {
+												// If game is already nominated, go straight to pitch dialog
+												setEditingNomination(existingNomination);
+												setEditPitch("");
+												setIsEditOpen(true);
+											} else {
+												handleGameSelect(game);
+											}
+										}}
 										variant="search"
 										alreadyNominated={Boolean(existingNomination)}
 										isCurrentUserNomination={isCurrentUserNomination}
+										buttonText={existingNomination ? "Add Pitch" : "Nominate"}
 									/>
 								);
 							})}
 						</div>
 					) : hasSearched && searchTerm ? (
-						<div className="text-center py-12">
+						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
 							<h3 className="text-lg font-semibold text-zinc-200">
 								No results found
 							</h3>
@@ -720,6 +752,42 @@ export default function Nominate() {
 					</DialogPanel>
 				</div>
 			</Dialog>
+
+			{/* Add PitchesModal */}
+			<PitchesModal
+				isOpen={isViewingPitches}
+				onClose={() => {
+					setIsViewingPitches(false);
+					setSelectedNomination(null);
+				}}
+				nomination={
+					selectedNomination
+						? {
+								id: selectedNomination.id,
+								game_id: selectedNomination.game_id,
+								title: selectedNomination.game_name,
+								game_name: selectedNomination.game_name,
+								game_cover: selectedNomination.game_cover,
+								game_year: selectedNomination.game_year,
+								game_url: selectedNomination.game_url,
+								game_platform_ids: selectedNomination.game_platform_ids,
+								jury_selected: selectedNomination.jury_selected,
+								month_id: selectedNomination.month_id,
+								short: selectedNomination.short,
+							}
+						: null
+				}
+				pitches={
+					selectedNomination
+						? allNominations
+								.filter((n) => n.game_id === selectedNomination.game_id)
+								.map((n) => ({
+									discord_id: n.discord_id,
+									pitch: n.pitch || "",
+								}))
+						: []
+				}
+			/>
 		</div>
 	);
 }

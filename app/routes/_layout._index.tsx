@@ -141,6 +141,7 @@ export default function Index() {
 							? new Date(game.game_year).getTime() / 1000
 							: undefined,
 						game_year: game.game_year ?? undefined,
+						game_url: game.game_url ?? undefined,
 					}}
 					onViewPitches={() => setSelectedNomination(game)}
 					pitchCount={pitches?.[game.id]?.length || 0}

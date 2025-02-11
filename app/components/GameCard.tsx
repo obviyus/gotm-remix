@@ -8,7 +8,7 @@ import {
 	ArrowUpIcon,
 	PencilSquareIcon,
 	TrashIcon,
-	StarIcon,
+	LinkIcon,
 } from "@heroicons/react/20/solid";
 import type { Game } from "~/types";
 
@@ -29,6 +29,7 @@ interface GameCardProps {
 	onViewPitches?: () => void;
 	pitchCount?: number;
 	showVotingButtons?: boolean;
+	buttonText?: string;
 }
 
 export default function GameCard({
@@ -48,6 +49,7 @@ export default function GameCard({
 	onViewPitches,
 	pitchCount = 0,
 	showVotingButtons = false,
+	buttonText,
 }: GameCardProps) {
 	const getCoverUrl = (cover: Game["cover"]) => {
 		if (!cover) return null;
@@ -156,43 +158,69 @@ export default function GameCard({
 							type="button"
 							onClick={() => onNominate(game)}
 							disabled={alreadyNominated && isCurrentUserNomination}
-							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-zinc-400 disabled:border-zinc-400/20"
+							className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+								alreadyNominated && !isCurrentUserNomination
+									? "text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
+									: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+							} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-zinc-400 disabled:border-zinc-400/20`}
 						>
 							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105 group-disabled:transform-none">
 								{alreadyNominated
 									? isCurrentUserNomination
 										? "Already nominated"
-										: "Add Your Pitch"
-									: "Nominate"}
+										: buttonText || "Add Pitch"
+									: buttonText || "Nominate"}
 							</span>
 						</button>
 					)}
 
-					{(onEdit || onDelete) && (
-						<div className="flex items-center justify-end gap-2">
-							{onEdit && (
-								<button
-									type="button"
-									onClick={() => onEdit(game)}
-									className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
-									title={game.pitch ? "Edit pitch" : "Add pitch"}
+					{(onEdit || onDelete || game.game_url) && (
+						<div
+							className={
+								variant === "nomination" ? "grid grid-cols-3 gap-1.5" : "w-full"
+							}
+						>
+							{game.game_url && (
+								<a
+									href={game.game_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-purple-500 shadow-sm shadow-purple-500/20 border border-purple-400/20 hover:bg-purple-500/10 hover:border-purple-400/30 hover:shadow-purple-500/40 after:absolute after:inset-0 after:bg-purple-400/0 hover:after:bg-purple-400/5 after:transition-colors w-full"
+									title="View on IGDB"
 								>
 									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-										<PencilSquareIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+										<LinkIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+										{variant === "nomination" ? "" : "IGDB"}
 									</span>
-								</button>
+								</a>
 							)}
-							{onDelete && (
-								<button
-									type="button"
-									onClick={() => onDelete(game)}
-									className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-									title="Delete nomination"
-								>
-									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-										<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
-									</span>
-								</button>
+							{variant === "nomination" && (
+								<>
+									{onEdit && (
+										<button
+											type="button"
+											onClick={() => onEdit(game)}
+											className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
+											title={game.pitch ? "Edit pitch" : "Add pitch"}
+										>
+											<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+												<PencilSquareIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+											</span>
+										</button>
+									)}
+									{onDelete && (
+										<button
+											type="button"
+											onClick={() => onDelete(game)}
+											className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+											title="Delete nomination"
+										>
+											<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+												<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+											</span>
+										</button>
+									)}
+								</>
 							)}
 						</div>
 					)}

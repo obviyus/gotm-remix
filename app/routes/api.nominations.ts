@@ -58,14 +58,14 @@ export async function action({ request }: ActionFunctionArgs) {
 
             const pitch = data.pitch?.toString() || null;
 
-            // Verify nomination exists and belongs to user
+            // Only verify that the nomination exists, not that it belongs to the user
             const [nomination] = await pool.execute(
-                "SELECT id FROM nominations WHERE id = ? AND discord_id = ?",
-                [nominationId, discordId]
+                "SELECT id FROM nominations WHERE id = ?",
+                [nominationId]
             );
 
             if (!Array.isArray(nomination) || nomination.length === 0) {
-                return json({ error: "Nomination not found or unauthorized" }, { status: 404 });
+                return json({ error: "Nomination not found" }, { status: 404 });
             }
 
             // Start a transaction for updating the pitch
@@ -73,16 +73,16 @@ export async function action({ request }: ActionFunctionArgs) {
             await connection.beginTransaction();
 
             try {
-                // Delete existing pitch
+                // Delete existing pitch from this user
                 await connection.execute(
-                    "DELETE FROM pitches WHERE nomination_id = ?",
-                    [nominationId]
+                    "DELETE FROM pitches WHERE nomination_id = ? AND discord_id = ?",
+                    [nominationId, discordId]
                 );
 
                 // Insert new pitch if provided
                 if (pitch) {
                     await connection.execute(
-                        "INSERT INTO pitches (nomination_id, discord_id, pitch) VALUES (?, ?, ?)",
+                        "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
                         [nominationId, discordId, pitch]
                     );
                 }
@@ -153,8 +153,8 @@ export async function action({ request }: ActionFunctionArgs) {
             const [result] = await connection.execute<ResultSetHeader>(
                 `INSERT INTO nominations (
                     month_id, game_id, discord_id, short,
-                    game_name, game_year, game_cover, jury_selected
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    game_name, game_year, game_cover, game_url, jury_selected
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     monthId,
                     game.id,
@@ -163,6 +163,7 @@ export async function action({ request }: ActionFunctionArgs) {
                     game.name,
                     game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear().toString() : null,
                     game.cover?.url.replace("t_thumb", "t_cover_big") || null,
+                    game.url || null,
                     0 // Not jury selected by default
                 ]
             );
@@ -170,8 +171,8 @@ export async function action({ request }: ActionFunctionArgs) {
             // If there's a pitch, insert it
             if (pitch) {
                 await connection.execute(
-                    `INSERT INTO pitches (nomination_id, discord_id, pitch) 
-                     VALUES (?, ?, ?)`,
+                    `INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at)
+                     VALUES (?, ?, ?, NOW(), NOW())`,
                     [result.insertId, discordId, pitch]
                 );
             }
