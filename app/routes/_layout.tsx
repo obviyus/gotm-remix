@@ -8,7 +8,7 @@ import type { RowDataPacket } from "mysql2";
 
 interface LoaderData {
 	monthStatus: string;
-	isJuryMember: boolean;
+	isAdmin: boolean;
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -19,35 +19,33 @@ export const loader: LoaderFunction = async ({ request }) => {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
-	let isJuryMember = false;
+	let isAdmin = false;
 	if (discordId) {
 		const [juryRows] = await pool.execute<RowDataPacket[]>(
-			"SELECT id FROM jury_members WHERE discord_id = ? AND active = 1",
+			"SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1;",
 			[discordId],
 		);
-		isJuryMember = juryRows.length > 0;
+		isAdmin = juryRows.length > 0;
 	}
 
 	return json<LoaderData>({
 		monthStatus: currentMonth?.status || "ready",
-		isJuryMember,
+		isAdmin,
 	});
 };
 
 export default function Layout() {
 	const location = useLocation();
-	const { monthStatus, isJuryMember } = useLoaderData<LoaderData>();
+	const { monthStatus, isAdmin } = useLoaderData<LoaderData>();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const getLinkClassName = (path: string, isMobile = false) => {
 		const isActive = location.pathname === path;
-		return `${
-			isMobile ? "block w-full" : "w-[6.5rem] md:w-[7rem] lg:w-[8rem] min-w-max"
-		} items-center justify-center gap-2 px-2 sm:px-3 md:px-4 py-2 text-[0.8rem] md:text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden whitespace-nowrap ${
-			isActive
+		return `${isMobile ? "block w-full" : "w-[6.5rem] md:w-[7rem] lg:w-[8rem] min-w-max"
+			} items-center justify-center gap-2 px-2 sm:px-3 md:px-4 py-2 text-[0.8rem] md:text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden whitespace-nowrap ${isActive
 				? "text-white shadow-sm shadow-blue-600/50 border border-blue-500/50 bg-blue-600/20 border-blue-500/60 shadow-blue-600/60 after:absolute after:inset-0 after:bg-blue-500/20"
 				: "text-white shadow-sm shadow-zinc-500/30 border border-zinc-400/30 hover:bg-zinc-500/20 hover:border-zinc-300/50 hover:shadow-zinc-400/60 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-300/20 after:transition-colors"
-		} flex`;
+			} flex`;
 	};
 
 	const getCenterItem = () => {
@@ -74,7 +72,7 @@ export default function Layout() {
 		{ path: "/jury", label: "Jury Members" },
 		{ path: "/privacy", label: "Privacy" },
 		// Only show admin link for jury members
-		...(isJuryMember ? [{ path: "/admin", label: "Admin" }] : []),
+		...(isAdmin ? [{ path: "/admin", label: "Admin" }] : []),
 	];
 
 	const activeTab =
@@ -169,11 +167,10 @@ export default function Layout() {
 
 				{/* Mobile menu, show/hide based on menu state */}
 				<div
-					className={`md:hidden fixed top-16 left-0 right-0 bg-zinc-900 border-b border-zinc-800 shadow-lg z-50 transition-all duration-200 ease-in-out ${
-						isMobileMenuOpen
-							? "opacity-100 translate-y-0"
-							: "opacity-0 -translate-y-2"
-					}`}
+					className={`md:hidden fixed top-16 left-0 right-0 bg-zinc-900 border-b border-zinc-800 shadow-lg z-50 transition-all duration-200 ease-in-out ${isMobileMenuOpen
+						? "opacity-100 translate-y-0"
+						: "opacity-0 -translate-y-2"
+						}`}
 					style={{
 						pointerEvents: isMobileMenuOpen ? "auto" : "none",
 					}}
