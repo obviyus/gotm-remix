@@ -78,7 +78,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
 	// Check if user is a jury member
 	const [juryRows] = await pool.execute<RowDataPacket[]>(
-		"SELECT id FROM jury_members WHERE discord_id = ? AND active = 1",
+		"SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1;",
 		[discordId],
 	);
 
