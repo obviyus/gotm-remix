@@ -12,12 +12,17 @@ import type { Nomination } from "~/types";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
+import ThemeCard from "~/components/ThemeCard";
 
 interface Month {
 	id: number;
 	month: string;
 	year: number;
 	status: string;
+	theme?: {
+		name: string;
+		description: string | null;
+	};
 }
 
 type LoaderData = {
@@ -36,6 +41,22 @@ type LoaderData = {
 
 export const loader = async () => {
 	const month = (await getCurrentMonth()) as Month;
+
+	// Fetch theme information for the month
+	const [themeRows] = await pool.execute<RowDataPacket[]>(
+		`SELECT t.name, t.description
+		 FROM months m
+		 LEFT JOIN themes t ON m.theme_id = t.id
+		 WHERE m.id = ?`,
+		[month.id],
+	);
+
+	if (themeRows.length > 0) {
+		month.theme = {
+			name: themeRows[0].name,
+			description: themeRows[0].description,
+		};
+	}
 
 	if (month.status === "nominating") {
 		// Fetch nominations
@@ -173,37 +194,37 @@ export default function Index() {
 
 	return (
 		<>
-			{month.status === "nominating" && nominations ? (
-				<SplitLayout
-					title={monthName}
-					description="These games have been nominated for this month's Game of the Month."
-				>
-					<Column
-						title="Long Games"
-						statusBadge={{
-							text: `${nominations.long.length} nominations`,
-							isSuccess: nominations.long.length > 0,
-						}}
-					>
-						{renderNominationsList(nominations.long)}
-					</Column>
+			<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
+				<div className="text-center space-y-2 mb-8">
+					{month.theme && <ThemeCard theme={month.theme} month={{ year: month.year, month: Number(month.month) }} />}
+				</div>
 
-					<Column
-						title="Short Games"
-						statusBadge={{
-							text: `${nominations.short.length} nominations`,
-							isSuccess: nominations.short.length > 0,
-						}}
+				{month.status === "nominating" && nominations ? (
+					<SplitLayout
+						title="Current Nominations"
+						description="These games have been nominated for this month's Game of the Month."
 					>
-						{renderNominationsList(nominations.short)}
-					</Column>
-				</SplitLayout>
-			) : (
-				<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-					<div className="text-center space-y-2 mb-8">
-						<h1 className="text-3xl font-bold">{monthName}</h1>
-					</div>
+						<Column
+							title="Long Games"
+							statusBadge={{
+								text: `${nominations.long.length} nominations`,
+								isSuccess: nominations.long.length > 0,
+							}}
+						>
+							{renderNominationsList(nominations.long)}
+						</Column>
 
+						<Column
+							title="Short Games"
+							statusBadge={{
+								text: `${nominations.short.length} nominations`,
+								isSuccess: nominations.short.length > 0,
+							}}
+						>
+							{renderNominationsList(nominations.short)}
+						</Column>
+					</SplitLayout>
+				) : (
 					<div className="space-y-6">
 						<VotingResultsChart
 							canvasId={longGamesCanvasId}
@@ -216,8 +237,8 @@ export default function Index() {
 							gameUrls={gameUrls}
 						/>
 					</div>
-				</div>
-			)}
+				)}
+			</div>
 
 			<PitchesModal
 				isOpen={isViewingPitches}

@@ -1,4 +1,5 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo } from "react";
@@ -8,6 +9,9 @@ import {
 	calculateVotingResults,
 	getGameUrls,
 } from "~/utils/voting.server";
+import { pool } from "~/utils/database.server";
+import type { RowDataPacket } from "mysql2";
+import ThemeCard from "~/components/ThemeCard";
 
 type LoaderData = {
 	month: Month;
@@ -24,16 +28,32 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 		throw new Response("Invalid month ID", { status: 400 });
 	}
 
-	const [month, results, gameUrls] = await Promise.all([
+	// Get theme information along with other data
+	const [month, results, gameUrls, themeData] = await Promise.all([
 		getMonth(monthId),
 		Promise.all([
 			calculateVotingResults(monthId, false),
 			calculateVotingResults(monthId, true),
 		]).then(([long, short]) => ({ long, short })),
 		getGameUrls(monthId),
+		pool.execute<RowDataPacket[]>(
+			`SELECT t.name, t.description
+			 FROM months m
+			 LEFT JOIN themes t ON m.theme_id = t.id
+			 WHERE m.id = ?`,
+			[monthId],
+		),
 	]);
 
-	return Response.json({ month, results, gameUrls });
+	// Add theme to month if it exists
+	if (themeData[0].length > 0) {
+		(month as Month).theme = {
+			name: themeData[0][0].name,
+			description: themeData[0][0].description,
+		};
+	}
+
+	return json({ month, results, gameUrls });
 };
 
 export default function HistoryMonth() {
@@ -50,14 +70,9 @@ export default function HistoryMonth() {
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-			<header className="mb-6">
-				<h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
-					{new Date(`${month.year}-${month.month}-01`).toLocaleString("en-US", {
-						month: "long",
-						year: "numeric",
-					})}
-				</h1>
-			</header>
+			<div className="text-center space-y-2 mb-8">
+				{month.theme && <ThemeCard theme={month.theme} month={{ year: month.year, month: month.month }} />}
+			</div>
 
 			<div className="space-y-6">
 				<VotingResultsChart

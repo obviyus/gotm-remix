@@ -9,6 +9,10 @@ export interface Month {
 	id: number;
 	month: number;
 	year: number;
+	theme?: {
+		name: string;
+		description: string | null;
+	};
 }
 
 export type Result = {
