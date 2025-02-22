@@ -46,6 +46,7 @@ interface LoaderData {
 	monthStatus?: string;
 	userNominations: Nomination[];
 	allNominations: Nomination[];
+	previousWinners: string[];
 }
 
 interface MonthRow extends RowDataPacket {
@@ -68,8 +69,13 @@ export const loader: LoaderFunction = async ({ request }) => {
 	}
 
 	const monthRow = await getCurrentMonth();
-
 	const monthId = monthRow.status === "nominating" ? monthRow.id : undefined;
+
+	// Fetch all previous GOTM winners
+	const [winners] = await pool.execute<RowDataPacket[]>(
+		'SELECT DISTINCT game_id FROM winners',
+	);
+	const previousWinners = winners.map(w => w.game_id);
 
 	// Fetch user's nominations for the current month if in nominating phase
 	let userNominations: Nomination[] = [];
@@ -97,6 +103,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		userDiscordId: discordId,
 		userNominations,
 		allNominations,
+		previousWinners,
 	});
 };
 
@@ -120,6 +127,7 @@ export default function Nominate() {
 		userNominations,
 		allNominations,
 		userDiscordId,
+		previousWinners,
 	} = useLoaderData<LoaderData>();
 	const actionData = useActionData<typeof action>();
 	const games = actionData?.games || initialGames;
@@ -241,8 +249,8 @@ export default function Nominate() {
 		// Convert first_release_date to a year string
 		const gameYear = selectedGame.first_release_date
 			? new Date(selectedGame.first_release_date * 1000)
-					.getFullYear()
-					.toString()
+				.getFullYear()
+				.toString()
 			: undefined;
 
 		// Build the nomination data with type checking
@@ -496,6 +504,7 @@ export default function Nominate() {
 								);
 								const isCurrentUserNomination =
 									existingNomination?.discord_id === userDiscordId;
+								const isPreviousWinner = previousWinners.includes(game.id.toString());
 
 								return (
 									<GameCard
@@ -510,18 +519,25 @@ export default function Nominate() {
 										}}
 										onNominate={() => {
 											if (existingNomination) {
-												// If game is already nominated, go straight to pitch dialog
 												setEditingNomination(existingNomination);
 												setEditPitch("");
 												setIsEditOpen(true);
-											} else {
+											} else if (!isPreviousWinner) {
 												handleGameSelect(game);
 											}
 										}}
 										variant="search"
 										alreadyNominated={Boolean(existingNomination)}
 										isCurrentUserNomination={isCurrentUserNomination}
-										buttonText={existingNomination ? "Add Pitch" : "Nominate"}
+										isPreviousWinner={isPreviousWinner}
+										buttonText={
+											isPreviousWinner
+												? "Previous GOTM"
+												: existingNomination
+													? "Add Pitch"
+													: "Nominate"
+										}
+										buttonDisabled={Boolean(existingNomination) || isPreviousWinner}
 									/>
 								);
 							})}
@@ -618,11 +634,10 @@ export default function Nominate() {
 								type="button"
 								onClick={() => handleGameLength(true)}
 								disabled={Boolean(shortNomination)}
-								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-									shortNomination
-										? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
-										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-								}`}
+								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${shortNomination
+									? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
+									: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+									}`}
 							>
 								<span className="relative z-10 flex flex-col items-center justify-center gap-1 transition-transform group-hover/btn:scale-105">
 									Short Game
@@ -636,11 +651,10 @@ export default function Nominate() {
 								type="button"
 								onClick={() => handleGameLength(false)}
 								disabled={Boolean(longNomination)}
-								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-									longNomination
-										? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
-										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-								}`}
+								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${longNomination
+									? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
+									: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+									}`}
 							>
 								<span className="relative z-10 flex flex-col items-center justify-center gap-1 transition-transform group-hover/btn:scale-105">
 									Long Game
@@ -759,28 +773,28 @@ export default function Nominate() {
 				nomination={
 					selectedNomination
 						? {
-								id: selectedNomination.id,
-								game_id: selectedNomination.game_id,
-								title: selectedNomination.game_name,
-								game_name: selectedNomination.game_name,
-								game_cover: selectedNomination.game_cover,
-								game_year: selectedNomination.game_year,
-								game_url: selectedNomination.game_url,
-								game_platform_ids: selectedNomination.game_platform_ids,
-								jury_selected: selectedNomination.jury_selected,
-								month_id: selectedNomination.month_id,
-								short: selectedNomination.short,
-							}
+							id: selectedNomination.id,
+							game_id: selectedNomination.game_id,
+							title: selectedNomination.game_name,
+							game_name: selectedNomination.game_name,
+							game_cover: selectedNomination.game_cover,
+							game_year: selectedNomination.game_year,
+							game_url: selectedNomination.game_url,
+							game_platform_ids: selectedNomination.game_platform_ids,
+							jury_selected: selectedNomination.jury_selected,
+							month_id: selectedNomination.month_id,
+							short: selectedNomination.short,
+						}
 						: null
 				}
 				pitches={
 					selectedNomination
 						? allNominations
-								.filter((n) => n.game_id === selectedNomination.game_id)
-								.map((n) => ({
-									discord_id: n.discord_id,
-									pitch: n.pitch || "",
-								}))
+							.filter((n) => n.game_id === selectedNomination.game_id)
+							.map((n) => ({
+								discord_id: n.discord_id,
+								pitch: n.pitch || "",
+							}))
 						: []
 				}
 			/>
