@@ -1,5 +1,8 @@
 import { type LoaderFunction, redirect } from "@remix-run/node";
 import { getSession, commitSession } from "~/sessions";
+import { getCurrentMonth } from "~/utils/database.server";
+
+type MonthStatus = "ready" | "nominating" | "jury" | "voting" | "playing" | "over";
 
 export const loader: LoaderFunction = async ({ request }) => {
 	const url = new URL(request.url);
@@ -54,7 +57,16 @@ export const loader: LoaderFunction = async ({ request }) => {
 		session.set("discordId", user.id);
 		session.set("accessToken", access_token);
 
-		return redirect("/voting", {
+		// Get current month status and determine redirect path
+		const currentMonth = await getCurrentMonth();
+		const status = currentMonth.status as MonthStatus;
+
+		// Only redirect to specific pages for nominating and voting phases
+		const redirectPath = status === "nominating" ? "/nominate"
+			: status === "voting" ? "/voting"
+				: "/"; // Default to home page for all other statuses
+
+		return redirect(redirectPath, {
 			headers: {
 				"Set-Cookie": await commitSession(session),
 			},
