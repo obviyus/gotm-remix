@@ -22,7 +22,7 @@ export default function ThemeCard({ theme, month }: ThemeCardProps) {
                             <span className="text-4xl font-bold text-zinc-100 tracking-wider">
                                 {monthName}
                             </span>
-                            <span className="text-xl font-medium text-zinc-400/80">
+                            <span className="text-xl font-medium text-zinc-400">
                                 {month.year}
                             </span>
                             <span className="px-4 py-1 rounded-full bg-blue-600 text-zinc-100">
