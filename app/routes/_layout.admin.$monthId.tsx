@@ -42,11 +42,25 @@ interface Pitch extends RowDataPacket {
 	pitch: string;
 }
 
+interface ThemeCategory extends RowDataPacket {
+	id: number;
+	name: string;
+}
+
+interface Theme extends RowDataPacket {
+	id: number;
+	theme_category_id: number;
+	name: string;
+	description: string | null;
+}
+
 interface LoaderData {
 	months: Month[];
 	selectedMonth: Month | null;
 	nominations: Nomination[];
 	pitches: Record<number, Pitch[]>;
+	themeCategories: ThemeCategory[];
+	themes: Theme[];
 }
 
 interface ActionResponse {
@@ -118,11 +132,22 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 		);
 	}
 
+	// Get theme categories and themes
+	const [themeCategories] = await pool.execute<ThemeCategory[]>(
+		"SELECT id, name FROM theme_categories ORDER BY name"
+	);
+
+	const [themes] = await pool.execute<Theme[]>(
+		"SELECT id, theme_category_id, name, description FROM themes ORDER BY name"
+	);
+
 	return json<LoaderData>({
 		months: monthRows,
 		selectedMonth,
 		nominations,
 		pitches,
+		themeCategories,
+		themes,
 	});
 };
 
@@ -135,8 +160,11 @@ export async function action({ request }: ActionFunctionArgs) {
 			const year = Number(formData.get("year"));
 			const month = Number(formData.get("month"));
 			const status = formData.get("status") as string;
+			const themeCategoryId = Number(formData.get("themeCategoryId"));
+			const themeName = formData.get("themeName") as string;
+			const themeDescription = formData.get("themeDescription") as string;
 
-			if (!year || !month || !status) {
+			if (!year || !month || !status || !themeCategoryId || !themeName) {
 				return json({ error: "Missing required fields" }, { status: 400 });
 			}
 
@@ -160,10 +188,21 @@ export async function action({ request }: ActionFunctionArgs) {
 					}
 				}
 
-				await pool.execute(
-					"INSERT INTO months (year, month, status) VALUES (?, ?, ?)",
-					[year, month, status],
+				// Create theme first
+				const [themeResult] = await pool.execute(
+					"INSERT INTO themes (theme_category_id, name, description) VALUES (?, ?, ?)",
+					[themeCategoryId, themeName, themeDescription]
 				);
+
+				if ('insertId' in themeResult) {
+					const themeId = themeResult.insertId;
+
+					// Then create month with the new theme
+					await pool.execute(
+						"INSERT INTO months (year, month, status, theme_id) VALUES (?, ?, ?, ?)",
+						[year, month, status, themeId],
+					);
+				}
 
 				return json({ success: true });
 			} catch (error) {
@@ -246,7 +285,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Admin() {
-	const { months, selectedMonth, nominations, pitches } =
+	const { months, selectedMonth, nominations, pitches, themeCategories, themes } =
 		useLoaderData<LoaderData>();
 	const [selectedNominationId, setSelectedNominationId] = useState<
 		number | null
@@ -256,6 +295,7 @@ export default function Admin() {
 	const createMonthFetcher = useFetcher<ActionResponse>();
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
 	const [error, setError] = useState<string | null>(null);
+	const [selectedThemeCategoryId, setSelectedThemeCategoryId] = useState<number | null>(null);
 
 	// Clear error when submission is successful
 	useEffect(() => {
@@ -292,12 +332,11 @@ export default function Admin() {
 				<div className="flex justify-between items-center mb-8">
 					<Link
 						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) + 1]?.id}`}
-						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-							months.findIndex((m) => m.id === selectedMonth.id) ===
+						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${months.findIndex((m) => m.id === selectedMonth.id) ===
 							months.length - 1
-								? "pointer-events-none opacity-50"
-								: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
-						}`}
+							? "pointer-events-none opacity-50"
+							: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
+							}`}
 					>
 						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
 							← Previous Month
@@ -312,19 +351,18 @@ export default function Admin() {
 						{["nominating", "jury", "voting"].includes(
 							selectedMonth.status,
 						) && (
-							<span className="inline-flex items-center p-2 px-4 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
-								Active Month
-							</span>
-						)}
+								<span className="inline-flex items-center p-2 px-4 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
+									Active Month
+								</span>
+							)}
 					</h1>
 
 					<Link
 						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) - 1]?.id}`}
-						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-							months.findIndex((m) => m.id === selectedMonth.id) === 0
-								? "pointer-events-none opacity-50"
-								: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
-						}`}
+						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${months.findIndex((m) => m.id === selectedMonth.id) === 0
+							? "pointer-events-none opacity-50"
+							: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
+							}`}
 					>
 						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
 							Next Month →
@@ -340,76 +378,122 @@ export default function Admin() {
 				</h2>
 				<createMonthFetcher.Form method="POST">
 					<input type="hidden" name="intent" value="createMonth" />
-					<div className="flex items-center gap-4">
-						<div className="flex-1">
-							<label
-								htmlFor="year"
-								className="block text-sm font-medium text-zinc-400 mb-2"
-							>
-								Year
+					<div className="flex flex-col gap-4">
+						<div className="flex items-center gap-4">
+							<div className="flex-1">
+								<label
+									htmlFor="year"
+									className="block text-sm font-medium text-zinc-400 mb-2"
+								>
+									Year
+								</label>
+								<input
+									type="number"
+									id="year"
+									name="year"
+									min="2000"
+									max="2100"
+									required
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								/>
+							</div>
+							<div className="flex-1">
+								<label
+									htmlFor="month"
+									className="block text-sm font-medium text-zinc-400 mb-2"
+								>
+									Month (1-12)
+								</label>
+								<input
+									type="number"
+									id="month"
+									name="month"
+									min="1"
+									max="12"
+									required
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								/>
+							</div>
+							<div className="flex-1">
+								<label
+									htmlFor="status"
+									className="block text-sm font-medium text-zinc-400 mb-2"
+								>
+									Initial Status
+								</label>
+								<select
+									id="status"
+									name="status"
+									required
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								>
+									{monthStatuses.map((status) => (
+										<option key={status} value={status} className="py-1">
+											{status.charAt(0).toUpperCase() + status.slice(1)}
+										</option>
+									))}
+								</select>
+							</div>
+						</div>
+						<div className="flex items-center gap-4">
+							<div className="flex-1">
+								<label htmlFor="themeCategory" className="block text-sm font-medium text-zinc-400 mb-2">
+									Theme Category
+								</label>
+								<select
+									id="themeCategory"
+									name="themeCategoryId"
+									required
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								>
+									<option value="">Select a category</option>
+									{themeCategories.map((category) => (
+										<option key={category.id} value={category.id}>
+											{category.name}
+										</option>
+									))}
+								</select>
+							</div>
+							<div className="flex-1">
+								<label htmlFor="themeName" className="block text-sm font-medium text-zinc-400 mb-2">
+									Theme Name
+								</label>
+								<input
+									type="text"
+									id="themeName"
+									name="themeName"
+									required
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									placeholder="Enter theme name"
+								/>
+							</div>
+						</div>
+						<div>
+							<label htmlFor="themeDescription" className="block text-sm font-medium text-zinc-400 mb-2">
+								Theme Description
 							</label>
-							<input
-								type="number"
-								id="year"
-								name="year"
-								min="2000"
-								max="2100"
-								required
+							<textarea
+								id="themeDescription"
+								name="themeDescription"
+								rows={3}
 								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								placeholder="Enter theme description (optional)"
 							/>
 						</div>
-						<div className="flex-1">
-							<label
-								htmlFor="month"
-								className="block text-sm font-medium text-zinc-400 mb-2"
-							>
-								Month (1-12)
-							</label>
-							<input
-								type="number"
-								id="month"
-								name="month"
-								min="1"
-								max="12"
-								required
-								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-							/>
-						</div>
-						<div className="flex-1">
-							<label
-								htmlFor="status"
-								className="block text-sm font-medium text-zinc-400 mb-2"
-							>
-								Initial Status
-							</label>
-							<select
-								id="status"
-								name="status"
-								required
-								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-							>
-								{monthStatuses.map((status) => (
-									<option key={status} value={status} className="py-1">
-										{status.charAt(0).toUpperCase() + status.slice(1)}
-									</option>
-								))}
-							</select>
-						</div>
-						<button
-							type="submit"
-							disabled={createMonthFetcher.state !== "idle"}
-							className={`self-end inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-								createMonthFetcher.state !== "idle"
+						<div className="flex justify-end">
+							<button
+								type="submit"
+								disabled={createMonthFetcher.state !== "idle"}
+								className={`self-end inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${createMonthFetcher.state !== "idle"
 									? "opacity-50 cursor-not-allowed"
 									: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-							}`}
-						>
-							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								{createMonthFetcher.state !== "idle"
-									? "Creating..."
-									: "Create Month"}
-							</span>
-						</button>
+									}`}
+							>
+								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+									{createMonthFetcher.state !== "idle" ? "Creating..." : "Create Month"}
+								</span>
+							</button>
+						</div>
 					</div>
 					{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
 				</createMonthFetcher.Form>
@@ -537,11 +621,10 @@ export default function Admin() {
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap">
 												<span
-													className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-														nomination.short
-															? "bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
-															: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
-													}`}
+													className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${nomination.short
+														? "bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
+														: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
+														}`}
 												>
 													{nomination.short ? "Short" : "Long"}
 												</span>
@@ -574,18 +657,16 @@ export default function Admin() {
 													/>
 													<button
 														type="submit"
-														className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-															nomination.jury_selected
-																? "bg-blue-500"
-																: "bg-zinc-700"
-														}`}
+														className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${nomination.jury_selected
+															? "bg-blue-500"
+															: "bg-zinc-700"
+															}`}
 													>
 														<span
-															className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-																nomination.jury_selected
-																	? "translate-x-5"
-																	: "translate-x-0"
-															}`}
+															className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${nomination.jury_selected
+																? "translate-x-5"
+																: "translate-x-0"
+																}`}
 														/>
 													</button>
 												</form>
