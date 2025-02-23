@@ -113,7 +113,10 @@ export default function History() {
 														<div key={winner.game_id} className="flex items-start space-x-3">
 															{winner.game_cover && (
 																<img
-																	src={winner.game_cover}
+																	src={winner.game_cover.replace(
+																		"/t_thumb/",
+																		"/t_cover_big/",
+																	)}
 																	alt={winner.game_name}
 																	className="w-12 h-16 object-cover rounded-md group-hover:shadow-md transition-all duration-300"
 																/>
