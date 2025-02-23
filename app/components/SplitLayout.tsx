@@ -24,11 +24,10 @@ export function Column({ title, statusBadge, action, children }: ColumnProps) {
 				<h2 className="text-2xl font-bold text-zinc-100">{title}</h2>
 				{statusBadge && (
 					<span
-						className={`inline-flex items-center rounded-full px-2.5 py-1.5 text-sm font-medium ${
-							statusBadge.isSuccess
-								? "bg-green-950 text-green-400 ring-1 ring-inset ring-green-800"
-								: "bg-zinc-800 text-zinc-400 ring-1 ring-inset ring-zinc-700"
-						}`}
+						className={`inline-flex items-center rounded-full px-2.5 py-1.5 text-sm font-medium ${statusBadge.isSuccess
+							? "bg-green-950 text-green-400 ring-1 ring-inset ring-green-800"
+							: "bg-zinc-800 text-zinc-400 ring-1 ring-inset ring-zinc-700"
+							}`}
 					>
 						{statusBadge.text}
 					</span>
@@ -47,7 +46,7 @@ export default function SplitLayout({
 	children,
 }: SplitLayoutProps) {
 	return (
-		<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<div className="mx-auto">
 			<div className="text-center space-y-2 mb-8">
 				<h1 className="text-3xl font-bold text-zinc-100">{title}</h1>
 				{subtitle && <h2 className="text-xl text-zinc-200">{subtitle}</h2>}

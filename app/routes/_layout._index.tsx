@@ -194,7 +194,7 @@ export default function Index() {
 
 	return (
 		<>
-			<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
+			<div className="mx-auto">
 				<div className="text-center space-y-2 mb-8">
 					{month.theme && <ThemeCard theme={month.theme} month={{ year: month.year, month: Number(month.month) }} />}
 				</div>
