@@ -1,19 +1,6 @@
 import type { RowDataPacket } from "mysql2";
-import { pool } from "./database.server";
-
-// Cache structure to store voting results
-const resultsCache = new Map<string, { results: Result[], timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
-
-export interface Month {
-	id: number;
-	month: number;
-	year: number;
-	theme?: {
-		name: string;
-		description: string | null;
-	};
-}
+import { pool } from "~/server/database.server";
+import type { Nomination, Ranking, Vote } from "~/types";
 
 export type Result = {
 	source: string;
@@ -21,45 +8,29 @@ export type Result = {
 	weight: string;
 };
 
-export type Nomination = {
-	id: number;
-	game_name: string;
-	month_id: number;
-	short: boolean;
-};
-
-export type Vote = {
-	id: number;
-	month_id: number;
-	short: boolean;
-};
-
-export type Ranking = {
-	nomination_id: number;
-	rank: number;
-};
-
-export const getMonth = async (monthId: number): Promise<Month> => {
-	const [rows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id, month, year
-         FROM months
-         WHERE id = ?;`,
-		[monthId],
-	);
-	const month = rows[0] as Month;
-	if (!month) {
-		throw new Response("Month not found", { status: 404 });
-	}
-	return month;
-};
+// Cache structure to store voting results
+const resultsCache = new Map<
+	string,
+	{ results: Result[]; timestamp: number }
+>();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 export const getNominationsAndVotes = async (
 	monthId: number,
 	short: boolean,
-): Promise<{ nominations: Nomination[], votes: Vote[] }> => {
-	const [nominationsResult, votesResult] = await Promise.all([
+): Promise<{ nominations: Nomination[]; votes: Vote[] }> => {
+	const [[nominationsResult], [votesResult]] = await Promise.all([
 		pool.execute<RowDataPacket[]>(
-			`SELECT id, game_name, month_id, short
+			`SELECT id,
+                    game_id,
+                    discord_id,
+                    short,
+                    game_name,
+                    game_year,
+                    game_cover,
+                    game_url,
+                    game_platform_ids,
+                    jury_selected
              FROM nominations
              WHERE month_id = ?
                AND jury_selected = 1
@@ -72,17 +43,40 @@ export const getNominationsAndVotes = async (
              FROM votes v
              WHERE v.month_id = ?
                AND v.short = ?
-               AND EXISTS (
-                 SELECT 1 FROM rankings r 
-                 WHERE r.vote_id = v.id
-               )`,
+               AND EXISTS (SELECT 1
+                           FROM rankings r
+                           WHERE r.vote_id = v.id)`,
 			[monthId, short],
 		),
 	]);
 
 	return {
-		nominations: nominationsResult[0] as Nomination[],
-		votes: votesResult[0] as Vote[],
+		nominations: nominationsResult.map(
+			(row) =>
+				({
+					id: row.id,
+					gameId: row.game_id,
+					short: row.short,
+					jurySelected: row.jury_selected,
+					monthId: monthId,
+					gameName: row.game_name,
+					gameYear: row.game_year,
+					gameCover: row.game_cover,
+					gameUrl: row.game_url,
+					gamePlatformIds: row.game_platform_ids,
+					discordId: row.discord_id,
+					pitches: [],
+				}) as Nomination,
+		),
+		votes: votesResult.map(
+			(row) =>
+				({
+					id: row.id,
+					monthId: row.month_id,
+					short: row.short,
+					discordId: "",
+				}) as Vote,
+		),
 	};
 };
 
@@ -92,7 +86,7 @@ export const getRankingsForVotes = async (
 	if (voteIds.length === 0) return new Map();
 
 	// Handle empty array case for MySQL
-	const placeholders = Array(voteIds.length).fill('?').join(',');
+	const placeholders = Array(voteIds.length).fill("?").join(",");
 	const [rankings] = await pool.execute<RowDataPacket[]>(
 		`SELECT vote_id, nomination_id, \`rank\`
          FROM rankings
@@ -108,7 +102,8 @@ export const getRankingsForVotes = async (
 			rankingsMap.set(voteId, []);
 		}
 		rankingsMap.get(voteId)?.push({
-			nomination_id: row.nomination_id,
+			voteId: row.vote_id,
+			nominationId: row.nomination_id,
 			rank: row.rank,
 		});
 	}
@@ -118,11 +113,10 @@ export const getRankingsForVotes = async (
 export const buildInMemoryRankings = async (
 	votes: Vote[],
 ): Promise<Map<number, Ranking[]>> => {
-    if (votes.length === 0) return new Map();
-    
-    // Use the existing getRankingsForVotes function instead
-    const rankingsMap = await getRankingsForVotes(votes.map(v => v.id));
-    return rankingsMap;
+	if (votes.length === 0) return new Map();
+
+	// Use the existing getRankingsForVotes function instead
+	return await getRankingsForVotes(votes.map((v) => v.id));
 };
 
 export const getCurrentVoteCount = (
@@ -136,7 +130,7 @@ export const getCurrentVoteCount = (
 
 	for (const [, rankings] of voteRankingsMap) {
 		if (rankings.length > 0) {
-			const topNomId = rankings[0].nomination_id;
+			const topNomId = rankings[0].nominationId;
 			if (topNomId in voteCount) {
 				voteCount[topNomId]++;
 			}
@@ -151,7 +145,7 @@ export const eliminateNominationFromRankings = (
 	voteRankingsMap: Map<number, Ranking[]>,
 ) => {
 	for (const [voteId, rankings] of voteRankingsMap.entries()) {
-		let filtered = rankings.filter((r) => r.nomination_id !== loserId);
+		let filtered = rankings.filter((r) => r.nominationId !== loserId);
 		filtered = filtered.map((r, idx) => ({ ...r, rank: idx + 1 }));
 		voteRankingsMap.set(voteId, filtered);
 	}
@@ -170,9 +164,9 @@ export const transferVotes = (
 		const rankings = voteRankingsMap.get(vote.id) ?? [];
 		if (rankings.length === 0) continue;
 
-		if (rankings[0].nomination_id === loserId) {
-			if (rankings.length > 1 && remainingIds.has(rankings[1].nomination_id)) {
-				const nextTopId = rankings[1].nomination_id;
+		if (rankings[0].nominationId === loserId) {
+			if (rankings.length > 1 && remainingIds.has(rankings[1].nominationId)) {
+				const nextTopId = rankings[1].nominationId;
 				transferred.set(nextTopId, (transferred.get(nextTopId) || 0) + 1);
 			}
 		}
@@ -194,7 +188,7 @@ export const calculateWeightedScores = async (
 		let sum = 0;
 		for (const vote of votes) {
 			const ranks = voteRankingsMap.get(vote.id) ?? [];
-			const found = ranks.find((r) => r.nomination_id === nom.id);
+			const found = ranks.find((r) => r.nominationId === nom.id);
 			if (found) {
 				sum += rankWeights[found.rank - 1] || 0;
 			}
@@ -226,10 +220,10 @@ export const runRounds = async (
 		voteRankingsMap,
 	);
 
-	for (const nom of nominations) {
-		const vertexId = `${nom.game_name}_${round}`;
+	for (const nomination of nominations) {
+		const vertexId = `${nomination.gameName}_${round}`;
 		graph.set(vertexId, {
-			votes: currentVoteCount[nom.id],
+			votes: currentVoteCount[nomination.id],
 			edges: new Map(),
 		});
 	}
@@ -261,9 +255,9 @@ export const runRounds = async (
 
 		eliminateNominationFromRankings(loser.id, voteRankingsMap);
 
-		for (const nom of remaining) {
-			const winnerId = nom.id;
-			const winnerName = nom.game_name;
+		for (const nomination of remaining) {
+			const winnerId = nomination.id;
+			const winnerName = nomination.gameName;
 			const votesTransferred = transferred.get(winnerId) || 0;
 
 			const nextRoundVertexId = `${winnerName}_${round + 1}`;
@@ -274,7 +268,7 @@ export const runRounds = async (
 			nextRoundVertex.votes =
 				(currentVoteCount[winnerId] || 0) + votesTransferred;
 
-			const loserVertexId = `${loser.game_name}_${round}`;
+			const loserVertexId = `${loser.gameName}_${round}`;
 			const loserVertex = graph.get(loserVertexId) || {
 				votes: 0,
 				edges: new Map(),
@@ -311,14 +305,14 @@ export const runRounds = async (
 		const finalCount =
 			getCurrentVoteCount([finalNom], voteRankingsMap)[finalNom.id] || 0;
 
-		const finalVertexId = `${finalNom.game_name}_${round + 1}`;
+		const finalVertexId = `${finalNom.gameName}_${round + 1}`;
 		const finalVertex = graph.get(finalVertexId) || {
 			votes: 0,
 			edges: new Map(),
 		};
 		finalVertex.votes = finalCount;
 
-		const prevVertexId = `${finalNom.game_name}_${round}`;
+		const prevVertexId = `${finalNom.gameName}_${round}`;
 		const prevVertex = graph.get(prevVertexId) || {
 			votes: 0,
 			edges: new Map(),
@@ -353,27 +347,35 @@ export const calculateVotingResults = async (
 	try {
 		const cacheKey = `${monthId}-${short}`;
 		const cached = resultsCache.get(cacheKey);
-		
+
 		if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
 			return cached.results;
 		}
 
 		const { nominations, votes } = await getNominationsAndVotes(monthId, short);
-		console.log(`[Voting] Found ${votes.length} votes for ${short ? 'short' : 'long'} games`);
+		console.log(
+			`[Voting] Found ${votes.length} votes for ${short ? "short" : "long"} games`,
+		);
 
 		if (votes.length === 0) {
 			const emptyResults: Result[] = [];
-			resultsCache.set(cacheKey, { results: emptyResults, timestamp: Date.now() });
+			resultsCache.set(cacheKey, {
+				results: emptyResults,
+				timestamp: Date.now(),
+			});
 			return emptyResults;
 		}
 
-		const voteRankingsMap = await getRankingsForVotes(votes.map(v => v.id));		
+		const voteRankingsMap = await getRankingsForVotes(votes.map((v) => v.id));
 		const initialCounts = getCurrentVoteCount(nominations, voteRankingsMap);
 		const viable = nominations.filter((n) => initialCounts[n.id] > 0);
 
 		if (viable.length === 0) {
 			const emptyResults: Result[] = [];
-			resultsCache.set(cacheKey, { results: emptyResults, timestamp: Date.now() });
+			resultsCache.set(cacheKey, {
+				results: emptyResults,
+				timestamp: Date.now(),
+			});
 			return emptyResults;
 		}
 
@@ -381,7 +383,7 @@ export const calculateVotingResults = async (
 		resultsCache.set(cacheKey, { results, timestamp: Date.now() });
 		return results;
 	} catch (error) {
-		console.error('[Voting] Error calculating results:', error);
+		console.error("[Voting] Error calculating results:", error);
 		return [];
 	}
 };
@@ -392,9 +394,11 @@ export const invalidateVotingCache = (monthId: number, short: boolean) => {
 	resultsCache.delete(cacheKey);
 };
 
-export const getGameUrls = async (monthId: number): Promise<Record<string, string>> => {
+export const getGameUrls = async (
+	monthId: number,
+): Promise<Record<string, string>> => {
 	const [nominations] = await pool.execute<RowDataPacket[]>(
-		'SELECT game_name, game_url FROM nominations WHERE month_id = ? AND jury_selected = 1',
+		"SELECT game_name, game_url FROM nominations WHERE month_id = ? AND jury_selected = 1",
 		[monthId],
 	);
 

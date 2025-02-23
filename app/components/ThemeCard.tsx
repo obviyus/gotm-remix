@@ -1,15 +1,6 @@
-interface ThemeCardProps {
-    theme: {
-        name: string;
-        description: string | null;
-    };
-    month: {
-        year: number;
-        month: number;
-    };
-}
+import type { Month } from "~/types";
 
-export default function ThemeCard({ theme, month }: ThemeCardProps) {
+export default function ThemeCard(month: Month) {
     const monthName = new Date(month.year, month.month - 1).toLocaleString('default', { month: 'long' });
 
     return (
@@ -26,13 +17,13 @@ export default function ThemeCard({ theme, month }: ThemeCardProps) {
                                 {month.year}
                             </span>
                             <span className="px-4 py-1 rounded-full bg-blue-600">
-                                {theme.name}
+                                {month.theme.name}
                             </span>
                         </div>
 
-                        {theme.description && (
+                        {month.theme.description && (
                             <p className="text-lg leading-relaxed whitespace-pre-wrap">
-                                {theme.description}
+                                {month.theme.description}
                             </p>
                         )}
                     </div>
