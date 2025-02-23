@@ -5,22 +5,24 @@ import {
 	Scripts,
 	ScrollRestoration,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { MetaFunction } from "@remix-run/react";
 
 import "./tailwind.css";
 
-export const links: LinksFunction = () => [
-	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
-	{
-		rel: "preconnect",
-		href: "https://fonts.gstatic.com",
-		crossOrigin: "anonymous",
-	},
-	{
-		rel: "stylesheet",
-		href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-	},
-];
+export const meta: MetaFunction = () => {
+	return [
+		{ title: "PG GOTM" },
+		{ name: "description", content: "Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month." },
+		{ name: "theme-color", content: "#18181B" },  // zinc-900 color
+		{ property: "og:title", content: "PG Game of the Month" },
+		{ property: "og:description", content: "Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month." },
+		{ property: "og:type", content: "website" },
+		{ property: "og:url", content: "https://pg-gotm.com" },
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:title", content: "PG GOTM" },
+		{ name: "twitter:description", content: "Vote for and discover the PG Discord Game of the Month!" },
+	];
+};
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
