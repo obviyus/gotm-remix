@@ -19,19 +19,19 @@ export default function ThemeCard({ theme, month }: ThemeCardProps) {
                     <div className="flex flex-col items-center text-center space-y-8">
                         {/* Month and Year */}
                         <div className="flex flex-col items-center gap-3">
-                            <span className="text-4xl font-bold text-zinc-100 tracking-wider">
+                            <span className="text-4xl font-bold tracking-wider">
                                 {monthName}
                             </span>
-                            <span className="text-xl font-medium text-zinc-400">
+                            <span className="text-xl font-bold">
                                 {month.year}
                             </span>
-                            <span className="px-4 py-1 rounded-full bg-blue-600 text-zinc-100">
+                            <span className="px-4 py-1 rounded-full bg-blue-600">
                                 {theme.name}
                             </span>
                         </div>
 
                         {theme.description && (
-                            <p className="text-zinc-400/90 text-lg leading-relaxed whitespace-pre-wrap text-left">
+                            <p className="text-lg leading-relaxed whitespace-pre-wrap">
                                 {theme.description}
                             </p>
                         )}
