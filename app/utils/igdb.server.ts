@@ -11,25 +11,43 @@ let cachedToken: string | null = null;
 let tokenExpiry: number | null = null;
 
 async function getIGDBToken() {
-	if (cachedToken && tokenExpiry && Date.now() < tokenExpiry) {
+	// Add a buffer of 5 minutes before token expiry to handle clock skew
+	if (cachedToken && tokenExpiry && (Date.now() + 300000) < tokenExpiry) {
 		return cachedToken;
 	}
 
-	const response = await fetch("https://id.twitch.tv/oauth2/token", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			client_id: process.env.TWITCH_CLIENT_ID,
-			client_secret: process.env.TWITCH_CLIENT_SECRET,
-			grant_type: "client_credentials",
-		}),
-	});
+	try {
+		const response = await fetch("https://id.twitch.tv/oauth2/token", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				client_id: process.env.TWITCH_CLIENT_ID,
+				client_secret: process.env.TWITCH_CLIENT_SECRET,
+				grant_type: "client_credentials",
+			}),
+		});
 
-	const data = (await response.json()) as TwitchAuth;
-	cachedToken = data.access_token;
-	tokenExpiry = Date.now() + data.expires_in * 1000;
+		if (!response.ok) {
+			console.error('Twitch Auth Error:', {
+				status: response.status,
+				statusText: response.statusText,
+				headers: Object.fromEntries(response.headers.entries()),
+			});
+			const errorText = await response.text();
+			console.error('Twitch Auth Error Response:', errorText);
+			throw new Error(`Twitch auth error: ${response.status} ${response.statusText}`);
+		}
 
-	return cachedToken;
+		const data = (await response.json()) as TwitchAuth;
+		cachedToken = data.access_token;
+		// Store expiry as absolute timestamp
+		tokenExpiry = Date.now() + (data.expires_in * 1000);
+
+		return cachedToken;
+	} catch (error) {
+		console.error('Failed to get IGDB token:', error);
+		throw new Error('Failed to authenticate with IGDB');
+	}
 }
 
 export async function searchGames(query: string): Promise<Game[]> {
@@ -52,14 +70,23 @@ export async function searchGames(query: string): Promise<Game[]> {
 			  limit 100;`,
 	});
 
-	const games = (await response.json()) as Array<{
-		id: number;
-		name: string;
-		cover?: { url: string };
-		first_release_date?: number;
-		summary?: string;
-		url?: string;
-	}>;
+	if (!response.ok) {
+		console.error('IGDB API Error:', {
+			status: response.status,
+			statusText: response.statusText,
+			headers: Object.fromEntries(response.headers.entries()),
+		});
+		const errorText = await response.text();
+		console.error('IGDB API Error Response:', errorText);
+		throw new Error(`IGDB API error: ${response.status} ${response.statusText}`);
+	}
+
+	const games = await response.json();
+
+	if (!Array.isArray(games)) {
+		console.error('IGDB API returned unexpected response:', games);
+		throw new Error('IGDB API returned invalid response format');
+	}
 
 	// Sort games by name similarity to the search query and return top 10
 	return games
