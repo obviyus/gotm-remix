@@ -32,11 +32,6 @@ export default function PitchesModal({
 									key={`${nomination?.id}-${pitch.discord_id}-${index}`}
 									className="rounded-lg border border-gray-700 p-4 bg-gray-800/50 hover:bg-gray-800 hover:border-gray-600 transition-colors"
 								>
-									<div className="flex items-center mb-2">
-										<div className="text-sm text-gray-300 bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700">
-											{pitch.discord_id}
-										</div>
-									</div>
 									<div className="text-gray-300 whitespace-pre-wrap text-sm">
 										{pitch.pitch}
 									</div>
