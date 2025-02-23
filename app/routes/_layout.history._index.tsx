@@ -15,6 +15,10 @@ interface Month {
 	year: number;
 	status: string;
 	winners: Winner[];
+	theme?: {
+		name: string;
+		description: string | null;
+	};
 }
 
 export const loader = async () => {
@@ -22,6 +26,7 @@ export const loader = async () => {
 
 	const [rows] = await pool.execute<RowDataPacket[]>(
 		`SELECT m.id, m.month, m.year, m.status,
+            t.name as theme_name, t.description as theme_description,
             COALESCE(
                 JSON_ARRAYAGG(
                     CASE WHEN w.game_id IS NOT NULL THEN
@@ -37,14 +42,19 @@ export const loader = async () => {
             ) as winners
         FROM months m
         LEFT JOIN winners w ON m.id = w.month_id
+        LEFT JOIN themes t ON m.theme_id = t.id
         WHERE m.status IN ('playing', 'over', 'voting')
-        GROUP BY m.id, m.month, m.year, m.status
+        GROUP BY m.id, m.month, m.year, m.status, t.name, t.description
         ORDER BY m.year DESC, m.month DESC;`
 	);
 
 	const months = rows.map(row => ({
 		...row,
-		winners: row.winners.filter(Boolean)
+		winners: row.winners.filter(Boolean),
+		theme: row.theme_name ? {
+			name: row.theme_name,
+			description: row.theme_description
+		} : undefined
 	})) as Month[];
 
 	return { months };
@@ -90,6 +100,13 @@ export default function History() {
 													month: "long",
 												})}
 											</h2>
+											{month.theme && (
+												<div className="mb-4">
+													<span className="px-3 py-1 rounded-full text-sm bg-blue-600 text-zinc-100 inline-block whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+														{month.theme.name}
+													</span>
+												</div>
+											)}
 											{month.winners && month.winners.length > 0 && (
 												<div className="space-y-4">
 													{month.winners.filter(w => !w.short).map(winner => (
