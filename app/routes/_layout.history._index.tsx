@@ -2,24 +2,52 @@ import { useLoaderData, Link, Outlet } from "@remix-run/react";
 import { pool, getCurrentMonth } from "~/utils/database.server";
 import type { RowDataPacket } from "mysql2";
 
+interface Winner {
+	game_id: string;
+	game_name: string;
+	game_cover: string | null;
+	short: boolean;
+}
+
 interface Month {
 	id: number;
 	month: number;
 	year: number;
 	status: string;
+	winners: Winner[];
 }
 
 export const loader = async () => {
 	const currentMonth = await getCurrentMonth();
 
 	const [rows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id, month, year, status
-     FROM months 
-     WHERE status IN ('playing', 'over', 'voting')
-     ORDER BY year DESC, month DESC;`,
+		`SELECT m.id, m.month, m.year, m.status,
+            COALESCE(
+                JSON_ARRAYAGG(
+                    CASE WHEN w.game_id IS NOT NULL THEN
+                        JSON_OBJECT(
+                            'game_id', w.game_id,
+                            'game_name', w.game_name,
+                            'game_cover', w.game_cover,
+                            'short', w.short
+                        )
+                    END
+                ),
+                JSON_ARRAY()
+            ) as winners
+        FROM months m
+        LEFT JOIN winners w ON m.id = w.month_id
+        WHERE m.status IN ('playing', 'over', 'voting')
+        GROUP BY m.id, m.month, m.year, m.status
+        ORDER BY m.year DESC, m.month DESC;`
 	);
 
-	return { months: rows as Month[] };
+	const months = rows.map(row => ({
+		...row,
+		winners: row.winners.filter(Boolean)
+	})) as Month[];
+
+	return { months };
 };
 
 export default function History() {
@@ -38,29 +66,65 @@ export default function History() {
 		<div className="mx-auto max-w-7xl mt-6 px-4 sm:px-6 lg:px-8">
 			{Object.entries(monthsByYear)
 				.sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
-				.map(([year, yearMonths], index, array) => (
+				.map(([year, yearMonths]) => (
 					<div key={year}>
-						<div className="mb-8">
-							<div className="flex items-center gap-4 mb-4">
-								<div className="h-px flex-1 bg-zinc-600" />
-								<h2 className="text-2xl font-bold text-zinc-100">{year}</h2>
-								<div className="h-px flex-1 bg-zinc-600" />
+						<div className="mb-12">
+							<div className="flex items-center gap-4 mb-8">
+								<div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-600 to-transparent" />
+								<h2 className="text-3xl font-bold text-zinc-100">{year}</h2>
+								<div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-600 to-transparent" />
 							</div>
-							<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 								{yearMonths.map((month) => (
 									<Link
 										key={month.id}
 										to={`/history/${month.id}`}
 										prefetch="viewport"
-										className="block p-4 rounded-lg border transition-all duration-200 ease-in-out
-										bg-zinc-900 border-zinc-600 text-zinc-100
-										hover:border-blue-400 hover:shadow-lg hover:shadow-zinc-900/30"
+										className="group block overflow-hidden rounded-xl border transition-all duration-300 ease-out
+                                            bg-zinc-900/50 border-zinc-800 backdrop-blur-sm
+                                            hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
 									>
-										<h2 className="text-xl font-semibold text-zinc-100">
-											{new Date(month.year, month.month - 1).toLocaleString("default", {
-												month: "long",
-											})}
-										</h2>
+										<div className="p-5">
+											<h2 className="text-2xl font-semibold text-zinc-100 mb-4">
+												{new Date(month.year, month.month - 1).toLocaleString("default", {
+													month: "long",
+												})}
+											</h2>
+											{month.winners && month.winners.length > 0 && (
+												<div className="space-y-4">
+													{month.winners.filter(w => !w.short).map(winner => (
+														<div key={winner.game_id} className="flex items-start space-x-3">
+															{winner.game_cover && (
+																<img
+																	src={winner.game_cover}
+																	alt={winner.game_name}
+																	className="w-12 h-16 object-cover rounded-md group-hover:shadow-md transition-all duration-300"
+																/>
+															)}
+															<div>
+																<div className="text-xs font-medium text-blue-400 mb-1">Long Winner</div>
+																<div className="text-sm font-medium text-zinc-200">{winner.game_name}</div>
+															</div>
+														</div>
+													))}
+													{month.winners.filter(w => w.short).map(winner => (
+														<div key={winner.game_id} className="flex items-start space-x-3">
+															{winner.game_cover && (
+																<img
+																	src={winner.game_cover}
+																	alt={winner.game_name}
+																	className="w-12 h-16 object-cover rounded-md group-hover:shadow-md transition-all duration-300"
+																/>
+															)}
+															<div>
+																<div className="text-xs font-medium text-emerald-400 mb-1">Short Winner</div>
+																<div className="text-sm font-medium text-zinc-200">{winner.game_name}</div>
+															</div>
+														</div>
+													))}
+												</div>
+											)}
+										</div>
 									</Link>
 								))}
 							</div>
