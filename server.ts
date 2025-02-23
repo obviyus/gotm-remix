@@ -3,7 +3,7 @@ import { broadcastDevReady, type ServerBuild } from "@remix-run/node";
 import * as build from "./build/server/index.js";
 // biome-ignore lint/style/useNodejsImportProtocol: using bun
 import { join } from "path";
-import { recalculateAllWinners } from "~/utils/winner.server";
+import { recalculateAllWinners } from "~/server/winner.server";
 
 const remix_build = build as unknown as ServerBuild;
 const handler = createRequestHandler(remix_build, process.env.NODE_ENV);
