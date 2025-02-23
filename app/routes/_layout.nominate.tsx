@@ -506,6 +506,15 @@ export default function Nominate() {
 									existingNomination?.discord_id === userDiscordId;
 								const isPreviousWinner = previousWinners.includes(game.id.toString());
 
+								let buttonText = "Nominate";
+								if (isPreviousWinner) {
+									buttonText = "Previous GOTM";
+								} else if (isCurrentUserNomination) {
+									buttonText = "Edit Pitch";
+								} else if (existingNomination) {
+									buttonText = "Add Pitch";
+								}
+
 								return (
 									<GameCard
 										key={game.id}
@@ -518,11 +527,16 @@ export default function Nominate() {
 											game_url: game.game_url,
 										}}
 										onNominate={() => {
+											if (isPreviousWinner) {
+												return; // Do nothing for previous winners
+											}
 											if (existingNomination) {
+												// If it's the current user's nomination, open edit modal
+												// If it's another user's nomination, allow adding a pitch
 												setEditingNomination(existingNomination);
 												setEditPitch("");
 												setIsEditOpen(true);
-											} else if (!isPreviousWinner) {
+											} else {
 												handleGameSelect(game);
 											}
 										}}
@@ -530,14 +544,8 @@ export default function Nominate() {
 										alreadyNominated={Boolean(existingNomination)}
 										isCurrentUserNomination={isCurrentUserNomination}
 										isPreviousWinner={isPreviousWinner}
-										buttonText={
-											isPreviousWinner
-												? "Previous GOTM"
-												: existingNomination
-													? "Add Pitch"
-													: "Nominate"
-										}
-										buttonDisabled={Boolean(existingNomination) || isPreviousWinner}
+										buttonText={buttonText}
+										buttonDisabled={isPreviousWinner}
 									/>
 								);
 							})}

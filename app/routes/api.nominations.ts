@@ -1,7 +1,7 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { pool } from "~/utils/database.server";
 import { getSession } from "~/sessions";
-import type { ResultSetHeader } from "mysql2";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { NominationFormData } from "~/types";
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -11,6 +11,12 @@ export async function action({ request }: ActionFunctionArgs) {
     if (!discordId) {
         return json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Check for previous GOTM winners
+    const [winners] = await pool.execute<RowDataPacket[]>(
+        'SELECT DISTINCT game_id FROM winners'
+    );
+    const previousWinners = winners.map(w => w.game_id);
 
     if (request.method === "DELETE") {
         const formData = await request.formData();
@@ -58,9 +64,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
             const pitch = data.pitch?.toString() || null;
 
-            // Only verify that the nomination exists, not that it belongs to the user
-            const [nomination] = await pool.execute(
-                "SELECT id FROM nominations WHERE id = ?",
+            // Check if the game is a previous winner
+            const [nomination] = await pool.execute<RowDataPacket[]>(
+                "SELECT n.*, p.discord_id as pitch_discord_id FROM nominations n LEFT JOIN pitches p ON n.id = p.nomination_id WHERE n.id = ?",
                 [nominationId]
             );
 
@@ -68,19 +74,32 @@ export async function action({ request }: ActionFunctionArgs) {
                 return json({ error: "Nomination not found" }, { status: 404 });
             }
 
+            // Check if the game is a previous winner
+            if (previousWinners.includes(nomination[0].game_id.toString())) {
+                return json({ error: "Cannot modify nominations for previous GOTM winners" }, { status: 400 });
+            }
+
+            // Check if the user owns the nomination or is adding a new pitch
+            const isOwner = nomination[0].discord_id === discordId;
+            const hasExistingPitch = nomination[0].pitch_discord_id === discordId;
+
+            if (!isOwner && hasExistingPitch) {
+                return json({ error: "You have already added a pitch to this nomination" }, { status: 400 });
+            }
+
             // Start a transaction for updating the pitch
             const connection = await pool.getConnection();
             await connection.beginTransaction();
 
             try {
-                // Delete existing pitch from this user
-                await connection.execute(
-                    "DELETE FROM pitches WHERE nomination_id = ? AND discord_id = ?",
-                    [nominationId, discordId]
-                );
-
-                // Insert new pitch if provided
-                if (pitch) {
+                if (hasExistingPitch) {
+                    // Update existing pitch
+                    await connection.execute(
+                        "UPDATE pitches SET pitch = ?, updated_at = NOW() WHERE nomination_id = ? AND discord_id = ?",
+                        [pitch, nominationId, discordId]
+                    );
+                } else {
+                    // Add new pitch
                     await connection.execute(
                         "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
                         [nominationId, discordId, pitch]
@@ -89,7 +108,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
                 await connection.commit();
                 connection.release();
-
                 return json({ success: true });
             } catch (error) {
                 await connection.rollback();
@@ -131,15 +149,21 @@ export async function action({ request }: ActionFunctionArgs) {
             return json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        // Check if the game is a previous winner
+        if (previousWinners.includes(game.id.toString())) {
+            return json({ error: "This game has already won GOTM in a previous month" }, { status: 400 });
+        }
+
         // Check if game is already nominated for this month
-        const [existing] = await pool.execute(
-            "SELECT id FROM nominations WHERE month_id = ? AND game_id = ?",
-            [monthId, game.id]
+        const [existing] = await pool.execute<RowDataPacket[]>(
+            "SELECT n.*, p.discord_id as pitch_discord_id FROM nominations n LEFT JOIN pitches p ON n.id = p.nomination_id WHERE n.month_id = ? AND n.game_id = ? AND p.discord_id = ?",
+            [monthId, game.id, discordId]
         );
 
+        // If the user has already pitched this game, prevent them from nominating it again
         if (Array.isArray(existing) && existing.length > 0) {
             return json(
-                { error: "Game already nominated for this month" },
+                { error: "You have already nominated or pitched this game for this month" },
                 { status: 400 }
             );
         }
