@@ -1,5 +1,6 @@
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import type { Nomination } from "~/types";
+import { uniqueNameGenerator } from "~/utils/nameGenerator";
 
 interface PitchesModalProps {
 	isOpen: boolean;
@@ -32,7 +33,12 @@ export default function PitchesModal({
 									key={`${nomination?.id}-${pitch.discord_id}-${index}`}
 									className="rounded-lg border border-gray-700 p-4 bg-gray-800/50 hover:bg-gray-800 hover:border-gray-600 transition-colors"
 								>
-									<div className="text-gray-300 whitespace-pre-wrap text-sm">
+									<div className="flex items-center mb-2">
+										<div className="text-sm bg-blue-600 px-2 py-0.5 rounded-full">
+											{uniqueNameGenerator(pitch.discord_id)}
+										</div>
+									</div>
+									<div className="whitespace-pre-wrap text-sm">
 										{pitch.pitch}
 									</div>
 								</div>
