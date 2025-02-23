@@ -189,7 +189,7 @@ export default function Layout() {
 					</div>
 				</div>
 			</nav>
-			<main className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 flex-1">
+			<main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex-1">
 				<Outlet />
 			</main>
 			<footer className="py-4 border-t border-zinc-800">
