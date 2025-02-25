@@ -1,54 +1,66 @@
-export type Game = {
+export interface Pitch {
     id: number;
-    name: string;
-    cover?: {
-        url: string;
-    };
-    first_release_date?: number;
-    game_year?: string;
-    summary?: string;
-    pitch?: string;
-    short?: boolean;
-    game_url?: string;
-};
+    nominationId: number;
+    pitch: string;
+    discordId: string;
+}
 
 export interface Nomination {
     id: number;
-    game_id: string;
-    title: string;
+    gameId: string;
     short: boolean;
-    jury_selected: boolean;
-    month_id: number;
-    game_name: string;
-    game_year: string | null;
-    game_cover: string | null;
-    game_url: string | null;
-    game_platform_ids: string | null;
-    pitch?: string;
+    jurySelected: boolean;
+    monthId: number;
+    gameName: string;
+    summary?: string;
+    gameYear: string;
+    gameCover?: string;
+    gameUrl: string;
+    gamePlatformIds: string;
+    discordId: string;
+    pitches: Pitch[];
 }
 
 export interface Vote {
     id: number;
-    month_id: number;
-    discord_id: string;
+    monthId: number;
+    discordId: string;
     short: boolean;
 }
 
 export interface Ranking {
-    vote_id: number;
-    nomination_id: number;
+    voteId: number;
+    nominationId: number;
     rank: number;
+}
+
+export interface Theme {
+    id: number;
+    name: string;
+    description: string | null;
+}
+
+export interface ThemeCategory {
+    id: number;
+    name: string;
+}
+
+export interface Month {
+    id: number;
+    month: number;
+    year: number;
+    theme: Theme;
+    status: "nominating" | "jury" | "voting" | "complete" | "playing" | "over" | "ready";
+    winners: Nomination[];
 }
 
 export interface NominationFormData {
     game: {
         id: number;
         name: string;
-        cover?: {
-            url: string;
-        };
-        first_release_date?: number;
-        game_year?: string;
+        cover?: string;
+        firstReleaseDate?: number;
+        gameYear?: string;
         summary?: string;
         url?: string;
     };

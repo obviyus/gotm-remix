@@ -1,5 +1,5 @@
-import stringSimilarity from 'string-similarity';
-import type { Game } from '~/types';
+import stringSimilarity from "string-similarity";
+import type { Nomination } from "~/types";
 
 type TwitchAuth = {
 	access_token: string;
@@ -12,7 +12,7 @@ let tokenExpiry: number | null = null;
 
 async function getIGDBToken() {
 	// Add a buffer of 5 minutes before token expiry to handle clock skew
-	if (cachedToken && tokenExpiry && (Date.now() + 300000) < tokenExpiry) {
+	if (cachedToken && tokenExpiry && Date.now() + 300000 < tokenExpiry) {
 		return cachedToken;
 	}
 
@@ -28,29 +28,31 @@ async function getIGDBToken() {
 		});
 
 		if (!response.ok) {
-			console.error('Twitch Auth Error:', {
+			console.error("Twitch Auth Error:", {
 				status: response.status,
 				statusText: response.statusText,
 				headers: Object.fromEntries(response.headers.entries()),
 			});
 			const errorText = await response.text();
-			console.error('Twitch Auth Error Response:', errorText);
-			throw new Error(`Twitch auth error: ${response.status} ${response.statusText}`);
+			console.error("Twitch Auth Error Response:", errorText);
+			throw new Error(
+				`Twitch auth error: ${response.status} ${response.statusText}`,
+			);
 		}
 
 		const data = (await response.json()) as TwitchAuth;
 		cachedToken = data.access_token;
 		// Store expiry as absolute timestamp
-		tokenExpiry = Date.now() + (data.expires_in * 1000);
+		tokenExpiry = Date.now() + data.expires_in * 1000;
 
 		return cachedToken;
 	} catch (error) {
-		console.error('Failed to get IGDB token:', error);
-		throw new Error('Failed to authenticate with IGDB');
+		console.error("Failed to get IGDB token:", error);
+		throw new Error("Failed to authenticate with IGDB");
 	}
 }
 
-export async function searchGames(query: string): Promise<Game[]> {
+export async function searchGames(query: string): Promise<Nomination[]> {
 	if (!process.env.TWITCH_CLIENT_ID) {
 		throw new Error("TWITCH_CLIENT_ID must be defined");
 	}
@@ -71,38 +73,56 @@ export async function searchGames(query: string): Promise<Game[]> {
 	});
 
 	if (!response.ok) {
-		console.error('IGDB API Error:', {
+		console.error("IGDB API Error:", {
 			status: response.status,
 			statusText: response.statusText,
 			headers: Object.fromEntries(response.headers.entries()),
 		});
 		const errorText = await response.text();
-		console.error('IGDB API Error Response:', errorText);
-		throw new Error(`IGDB API error: ${response.status} ${response.statusText}`);
+		console.error("IGDB API Error Response:", errorText);
+		throw new Error(
+			`IGDB API error: ${response.status} ${response.statusText}`,
+		);
 	}
 
 	const games = await response.json();
 
 	if (!Array.isArray(games)) {
-		console.error('IGDB API returned unexpected response:', games);
-		throw new Error('IGDB API returned invalid response format');
+		console.error("IGDB API returned unexpected response:", games);
+		throw new Error("IGDB API returned invalid response format");
 	}
 
 	// Sort games by name similarity to the search query and return top 10
 	return games
 		.sort((a, b) => {
-			const similarityA = stringSimilarity.compareTwoStrings(query.toLowerCase(), a.name.toLowerCase());
-			const similarityB = stringSimilarity.compareTwoStrings(query.toLowerCase(), b.name.toLowerCase());
+			const similarityA = stringSimilarity.compareTwoStrings(
+				query.toLowerCase(),
+				a.name.toLowerCase(),
+			);
+			const similarityB = stringSimilarity.compareTwoStrings(
+				query.toLowerCase(),
+				b.name.toLowerCase(),
+			);
 			return similarityB - similarityA;
 		})
 		.slice(0, 10)
 		.map((game) => ({
-			id: game.id,
-			name: game.name,
-			cover: game.cover ? { url: game.cover.url.replace("t_thumb", "t_cover_big") } : undefined,
-			first_release_date: game.first_release_date,
-			game_year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear().toString() : undefined,
+			id: 0,
+			short: false,
+			jurySelected: false,
+			monthId: 0,
+			discordId: "",
+			pitches: [],
+			gamePlatformIds: "",
+			gameId: game.id,
+			gameName: game.name,
+			gameCover: game.cover
+				? game.cover.url.replace("t_thumb", "t_cover_big")
+				: undefined,
+			gameYear: new Date(game.first_release_date * 1000)
+				.getFullYear()
+				.toString(),
 			summary: game.summary,
-			game_url: game.url,
+			gameUrl: game.url,
 		}));
 }
