@@ -27,7 +27,7 @@ export const loader = async () => {
     const month = await getCurrentMonth();
     const gameUrls = getGameUrls(month.id);
 
-    if (month.status === "nominating") {
+    if (month.status === "nominating" || month.status === "jury") {
         const nominations = await getNominationsForMonth(month.id);
 
         // Group nominations by type
@@ -140,6 +140,42 @@ export default function Index() {
                             {renderNominationsList(nominations.short)}
                         </Column>
                     </SplitLayout>
+                ) : month.status === "jury" && nominations ? (
+                    <>
+                        <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-6 mb-8 text-center">
+                            <h2 className="text-xl font-bold text-blue-300 mb-2">Jury Selection in Progress</h2>
+                            <p className="text-zinc-200">
+                                Our jury members are currently reviewing all nominations and will select a curated list of games to be included in the voting phase.
+                            </p>
+                            <p className="text-zinc-300 mt-2">
+                                Once the jury has made their selections, the voting phase will begin and you'll be able to rank your favorites.
+                            </p>
+                        </div>
+                        <SplitLayout
+                            title="All Nominations"
+                            description="These games have been nominated for this month's Game of the Month. The jury is currently selecting which games will advance to the voting phase."
+                        >
+                            <Column
+                                title="Long Games"
+                                statusBadge={{
+                                    text: `${nominations.long.length} nominations`,
+                                    isSuccess: nominations.long.length > 0,
+                                }}
+                            >
+                                {renderNominationsList(nominations.long)}
+                            </Column>
+
+                            <Column
+                                title="Short Games"
+                                statusBadge={{
+                                    text: `${nominations.short.length} nominations`,
+                                    isSuccess: nominations.short.length > 0,
+                                }}
+                            >
+                                {renderNominationsList(nominations.short)}
+                            </Column>
+                        </SplitLayout>
+                    </>
                 ) : (
                     <div className="space-y-6">
                         <VotingResultsChart

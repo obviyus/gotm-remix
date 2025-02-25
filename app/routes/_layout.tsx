@@ -56,7 +56,6 @@ export default function Layout() {
             case "voting":
                 return { path: "/voting", label: "Vote" };
             case "jury":
-                return { path: "/", label: "Jury at Work" };
             case "playing":
             case "over":
                 return null;
