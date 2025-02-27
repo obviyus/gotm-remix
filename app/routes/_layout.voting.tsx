@@ -1,5 +1,10 @@
 import { useFetcher, useLoaderData } from "@remix-run/react";
-import { DragDropContext, Draggable, Droppable, type DropResult, } from "@hello-pangea/dnd";
+import {
+    DragDropContext,
+    Draggable,
+    Droppable,
+    type DropResult,
+} from "@hello-pangea/dnd";
 import { json, type LoaderFunction, redirect } from "@remix-run/node";
 import { pool } from "~/server/database.server";
 import type { Nomination } from "~/types";
@@ -11,6 +16,7 @@ import { TrashIcon } from "@heroicons/react/20/solid";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import PitchesModal from "~/components/PitchesModal";
 import { getCurrentMonth } from "~/server/month.server";
+import { getNominationById } from "~/server/nomination.server";
 
 interface LoaderData {
     monthId: number;
@@ -21,7 +27,6 @@ interface LoaderData {
     votedLong: boolean;
     shortRankings: Array<{ nomination_id: number; rank: number }>;
     longRankings: Array<{ nomination_id: number; rank: number }>;
-    pitches: Record<number, Array<{ discord_id: string; pitch: string }>>;
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
@@ -42,7 +47,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
     // Check if user has already voted
     const [shortVoteRow] = await pool.execute<RowDataPacket[]>(
-        `SELECT 1
+        `SELECT id
          FROM votes
          WHERE month_id = ?
            AND discord_id = ?
@@ -51,7 +56,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     );
 
     const [longVoteRow] = await pool.execute<RowDataPacket[]>(
-        `SELECT 1
+        `SELECT id
          FROM votes
          WHERE month_id = ?
            AND discord_id = ?
@@ -60,8 +65,8 @@ export const loader: LoaderFunction = async ({ request }) => {
     );
 
     // Fetch nominations
-    const [shortNoms] = await pool.execute<RowDataPacket[]>(
-        `SELECT id, game_id, game_name as title, game_year, game_cover, game_url, game_platform_ids
+    const [shortNomRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT id
          FROM nominations
          WHERE month_id = ?
            AND jury_selected = 1
@@ -69,13 +74,20 @@ export const loader: LoaderFunction = async ({ request }) => {
         [monthId],
     );
 
-    const [longNoms] = await pool.execute<RowDataPacket[]>(
-        `SELECT id, game_id, game_name as title, game_year, game_cover, game_url, game_platform_ids
+    const [longNomRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT id
          FROM nominations
          WHERE month_id = ?
            AND jury_selected = 1
            AND short = 0`,
         [monthId],
+    );
+
+    const shortNoms = await Promise.all(
+        shortNomRows.map(async (row) => await getNominationById(row.id)),
+    );
+    const longNoms = await Promise.all(
+        longNomRows.map(async (row) => await getNominationById(row.id)),
     );
 
     // Fetch existing rankings if user has voted
@@ -102,36 +114,16 @@ export const loader: LoaderFunction = async ({ request }) => {
         );
     }
 
-    // Fetch pitches for all nominations
-    const allNominationIds = [...shortNoms, ...longNoms].map(
-        (n: RowDataPacket) => n.id,
-    );
-    let pitchesByNomination = {};
-
-    if (allNominationIds.length > 0) {
-        const placeholders = Array(allNominationIds.length).fill("?").join(",");
-        const [pitchRows] = await pool.execute<RowDataPacket[]>(
-            `SELECT nomination_id, discord_id, pitch
-             FROM pitches
-             WHERE nomination_id IN (${placeholders})`,
-            allNominationIds,
-        );
-
-        // Group pitches by nomination_id
-        pitchesByNomination = pitchRows.reduce(
-            (acc, row) => {
-                if (!acc[row.nomination_id]) {
-                    acc[row.nomination_id] = [];
-                }
-                acc[row.nomination_id].push({
-                    discord_id: row.discord_id,
-                    pitch: row.pitch,
-                });
-                return acc;
-            },
-            {} as Record<number, Array<{ discord_id: string; pitch: string }>>,
-        );
-    }
+    console.log({
+        monthId,
+        userId: discordId,
+        shortNominations: shortNoms,
+        longNominations: longNoms,
+        votedShort: Boolean(shortVoteRow[0]),
+        votedLong: Boolean(longVoteRow[0]),
+        shortRankings,
+        longRankings,
+    });
 
     return json({
         monthId,
@@ -142,7 +134,6 @@ export const loader: LoaderFunction = async ({ request }) => {
         votedLong: Boolean(longVoteRow[0]),
         shortRankings,
         longRankings,
-        pitches: pitchesByNomination,
     });
 };
 
@@ -156,7 +147,6 @@ export default function Voting() {
         votedLong: initialVotedLong,
         shortRankings = [],
         longRankings = [],
-        pitches = {},
     } = useLoaderData<LoaderData>();
 
     const voteFetcher = useFetcher();
@@ -404,7 +394,7 @@ export default function Voting() {
                                                     setSelectedNomination(game);
                                                     setIsViewingPitches(true);
                                                 }}
-                                                pitchCount={pitches?.[game.id]?.length || 0}
+                                                pitchCount={game.pitches?.length || 0}
                                                 showVotingButtons={true}
                                             />
                                         )}
@@ -422,8 +412,7 @@ export default function Voting() {
                                     {...provided.dragHandleProps}
                                     className="border-t-2 border-gray-600/60 my-8 relative max-w-3xl mx-auto w-full"
                                 >
-                                    <span
-                                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-6 py-1.5 text-sm font-medium text-gray-200 select-none rounded-full border border-gray-600/60">
+                                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-6 py-1.5 text-sm font-medium text-gray-200 select-none rounded-full border border-gray-600/60">
                                         Drag above to rank
                                     </span>
                                 </div>
@@ -457,7 +446,7 @@ export default function Voting() {
                                                     setSelectedNomination(game);
                                                     setIsViewingPitches(true);
                                                 }}
-                                                pitchCount={pitches?.[game.id]?.length || 0}
+                                                pitchCount={game.pitches?.length || 0}
                                                 showVotingButtons={true}
                                             />
                                         )}
@@ -491,10 +480,8 @@ export default function Voting() {
                             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
                             onClick={() => deleteVote(false)}
                         >
-                            <span
-                                className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-                                <TrashIcon
-                                    className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+                            <span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+                                <TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
                                 Clear Vote
                             </span>
                         </button>
@@ -519,10 +506,8 @@ export default function Voting() {
                             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
                             onClick={() => deleteVote(true)}
                         >
-                            <span
-                                className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-                                <TrashIcon
-                                    className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+                            <span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+                                <TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
                                 Clear Vote
                             </span>
                         </button>
