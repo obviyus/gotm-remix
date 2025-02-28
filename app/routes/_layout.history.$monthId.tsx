@@ -37,18 +37,26 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 	}
 
 	// Get theme information along with other data
-	const [month, results, gameUrls, allNominations, shortWinner, longWinner] =
-		await Promise.all([
-			getMonth(monthId),
-			Promise.all([
-				calculateVotingResults(monthId, false),
-				calculateVotingResults(monthId, true),
-			]).then(([long, short]) => ({ long, short })),
-			getGameUrls(monthId),
-			getNominationsForMonth(monthId),
+	const [month, results, gameUrls, allNominations] = await Promise.all([
+		getMonth(monthId),
+		Promise.all([
+			calculateVotingResults(monthId, false),
+			calculateVotingResults(monthId, true),
+		]).then(([long, short]) => ({ long, short })),
+		getGameUrls(monthId),
+		getNominationsForMonth(monthId),
+	]);
+
+	// Only fetch winners if month status is not "voting"
+	let shortWinner = null;
+	let longWinner = null;
+
+	if (month.status !== "voting") {
+		[shortWinner, longWinner] = await Promise.all([
 			getWinner(monthId, true),
 			getWinner(monthId, false),
 		]);
+	}
 
 	// Group nominations by type
 	const nominations = allNominations.reduce(
@@ -91,19 +99,30 @@ export default function HistoryMonth() {
 		[month],
 	);
 
+	// Only show winners if month status is not "voting"
 	const showWinner =
-		month.status === "over" ||
-		month.status === "complete" ||
-		month.status === "playing";
+		month.status !== "voting" &&
+		(month.status === "over" ||
+			month.status === "complete" ||
+			month.status === "playing");
 
 	// Create arrays of winner game IDs for highlighting
 	const winnerGameIds = [];
-	if (winners.short?.gameId) winnerGameIds.push(winners.short.gameId);
-	if (winners.long?.gameId) winnerGameIds.push(winners.long.gameId);
+	if (showWinner) {
+		if (winners.short?.gameId) winnerGameIds.push(winners.short.gameId);
+		if (winners.long?.gameId) winnerGameIds.push(winners.long.gameId);
+	}
 
 	const renderNominationsList = (games: Nomination[], isShort: boolean) => {
 		// Sort games: winners first, then jury selected, then the rest
 		const sortedGames = [...games].sort((a, b) => {
+			if (!showWinner) {
+				// If not showing winners, just sort by jury selection
+				if (a.jurySelected && !b.jurySelected) return -1;
+				if (!a.jurySelected && b.jurySelected) return 1;
+				return 0;
+			}
+
 			const aIsWinner = isShort
 				? winners.short?.id === a.id
 				: winners.long?.id === a.id;
@@ -121,9 +140,11 @@ export default function HistoryMonth() {
 		return (
 			<div className="space-y-4">
 				{sortedGames.map((game) => {
-					const isWinner = isShort
-						? winners.short?.id === game.id
-						: winners.long?.id === game.id;
+					const isWinner =
+						showWinner &&
+						(isShort
+							? winners.short?.id === game.id
+							: winners.long?.id === game.id);
 
 					return (
 						<GameCard
