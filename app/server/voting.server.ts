@@ -1,5 +1,4 @@
-import type { RowDataPacket } from "mysql2";
-import { pool } from "~/server/database.server";
+import { db } from "~/server/database.server";
 import type { Nomination, Ranking, Vote } from "~/types";
 
 export type Result = {
@@ -19,9 +18,9 @@ export const getNominationsAndVotes = async (
 	monthId: number,
 	short: boolean,
 ): Promise<{ nominations: Nomination[]; votes: Vote[] }> => {
-	const [[nominationsResult], [votesResult]] = await Promise.all([
-		pool.execute<RowDataPacket[]>(
-			`SELECT id,
+	const [nominationsResult, votesResult] = await Promise.all([
+		db.execute({
+			sql: `SELECT id,
                     game_id,
                     discord_id,
                     short,
@@ -29,53 +28,49 @@ export const getNominationsAndVotes = async (
                     game_year,
                     game_cover,
                     game_url,
-                    game_platform_ids,
                     jury_selected
              FROM nominations
-             WHERE month_id = ?
+             WHERE month_id = ?1
                AND jury_selected = 1
-               AND short = ?
+               AND short = ?2
              ORDER BY game_name;`,
-			[monthId, short],
-		),
-		pool.execute<RowDataPacket[]>(
-			`SELECT v.id, v.month_id, v.short
+			args: [monthId, short ? 1 : 0],
+		}),
+		db.execute({
+			sql: `SELECT v.id, v.month_id, v.short
              FROM votes v
-             WHERE v.month_id = ?
-               AND v.short = ?
+             WHERE v.month_id = ?1
+               AND v.short = ?2
                AND EXISTS (SELECT 1
                            FROM rankings r
                            WHERE r.vote_id = v.id)`,
-			[monthId, short],
-		),
+			args: [monthId, short ? 1 : 0],
+		}),
 	]);
 
 	return {
-		nominations: nominationsResult.map(
-			(row) =>
-				({
-					id: row.id,
-					gameId: row.game_id,
-					short: row.short,
-					jurySelected: row.jury_selected,
-					monthId: monthId,
-					gameName: row.game_name,
-					gameYear: row.game_year,
-					gameCover: row.game_cover,
-					gameUrl: row.game_url,
-					gamePlatformIds: row.game_platform_ids,
-					discordId: row.discord_id,
-					pitches: [],
-				}) as Nomination,
+		nominations: nominationsResult.rows.map(
+			(row): Nomination => ({
+				id: Number(row.id),
+				gameId: String(row.game_id),
+				short: Boolean(row.short),
+				jurySelected: Boolean(row.jury_selected),
+				monthId: monthId,
+				gameName: String(row.game_name),
+				gameYear: String(row.game_year),
+				gameCover: String(row.game_cover),
+				gameUrl: String(row.game_url),
+				discordId: String(row.discord_id),
+				pitches: [],
+			}),
 		),
-		votes: votesResult.map(
-			(row) =>
-				({
-					id: row.id,
-					monthId: row.month_id,
-					short: row.short,
-					discordId: "",
-				}) as Vote,
+		votes: votesResult.rows.map(
+			(row): Vote => ({
+				id: Number(row.id),
+				monthId: Number(row.month_id),
+				short: Boolean(row.short),
+				discordId: "",
+			}),
 		),
 	};
 };
@@ -85,26 +80,28 @@ export const getRankingsForVotes = async (
 ): Promise<Map<number, Ranking[]>> => {
 	if (voteIds.length === 0) return new Map();
 
-	// Handle empty array case for MySQL
-	const placeholders = Array(voteIds.length).fill("?").join(",");
-	const [rankings] = await pool.execute<RowDataPacket[]>(
-		`SELECT vote_id, nomination_id, \`rank\`
+	// Create a properly formatted args array for Turso
+	const placeholders = `?${",?".repeat(voteIds.length - 1)}`;
+	const args = voteIds;
+
+	const rankings = await db.execute({
+		sql: `SELECT vote_id, nomination_id, \`rank\`
          FROM rankings
          WHERE vote_id IN (${placeholders})
          ORDER BY vote_id, \`rank\``,
-		[...voteIds], // Spread the array to prevent nested array issues
-	);
+		args,
+	});
 
 	const rankingsMap = new Map<number, Ranking[]>();
-	for (const row of rankings as RowDataPacket[]) {
-		const voteId = row.vote_id;
+	for (const row of rankings.rows) {
+		const voteId = Number(row.vote_id);
 		if (!rankingsMap.has(voteId)) {
 			rankingsMap.set(voteId, []);
 		}
 		rankingsMap.get(voteId)?.push({
-			voteId: row.vote_id,
-			nominationId: row.nomination_id,
-			rank: row.rank,
+			voteId: Number(row.vote_id),
+			nominationId: Number(row.nomination_id),
+			rank: Number(row.rank),
 		});
 	}
 	return rankingsMap;
@@ -397,18 +394,15 @@ export const invalidateVotingCache = (monthId: number, short: boolean) => {
 export const getGameUrls = async (
 	monthId: number,
 ): Promise<Record<string, string>> => {
-	const [nominations] = await pool.execute<RowDataPacket[]>(
-		"SELECT game_name, game_url FROM nominations WHERE month_id = ? AND jury_selected = 1",
-		[monthId],
-	);
+	const nominations = await db.execute({
+		sql: "SELECT game_name, game_url FROM nominations WHERE month_id = ?1 AND jury_selected = 1",
+		args: [monthId],
+	});
 
-	return nominations.reduce(
-		(acc, nom) => {
-			if (nom.game_url) {
-				acc[nom.game_name] = nom.game_url;
-			}
-			return acc;
-		},
-		{} as Record<string, string>,
-	);
+	return nominations.rows.reduce((acc: Record<string, string>, nom) => {
+		if (nom.game_url) {
+			acc[String(nom.game_name)] = String(nom.game_url);
+		}
+		return acc;
+	}, {});
 };

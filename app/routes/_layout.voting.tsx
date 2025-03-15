@@ -6,11 +6,10 @@ import {
 	type DropResult,
 } from "@hello-pangea/dnd";
 import { json, type LoaderFunction, redirect } from "@remix-run/node";
-import { pool } from "~/server/database.server";
+import { db } from "~/server/database.server";
 import type { Nomination } from "~/types";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
-import type { RowDataPacket } from "mysql2";
 import { getSession } from "~/sessions";
 import { TrashIcon } from "@heroicons/react/20/solid";
 import SplitLayout, { Column } from "~/components/SplitLayout";
@@ -46,72 +45,84 @@ export const loader: LoaderFunction = async ({ request }) => {
 	}
 
 	// Check if user has already voted
-	const [shortVoteRow] = await pool.execute<RowDataPacket[]>(
-		`SELECT id
+	const shortVoteResult = await db.execute({
+		sql: `SELECT id
          FROM votes
          WHERE month_id = ?
            AND discord_id = ?
-           AND short = 1;`,
-		[monthId, discordId],
-	);
+           AND short = 1`,
+		args: [monthId, discordId],
+	});
 
-	const [longVoteRow] = await pool.execute<RowDataPacket[]>(
-		`SELECT id
+	const longVoteResult = await db.execute({
+		sql: `SELECT id
          FROM votes
          WHERE month_id = ?
            AND discord_id = ?
-           AND short = 0;`,
-		[monthId, discordId],
-	);
+           AND short = 0`,
+		args: [monthId, discordId],
+	});
 
 	// Fetch nominations
-	const [shortNomRows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id
+	const shortNomResult = await db.execute({
+		sql: `SELECT id
          FROM nominations
          WHERE month_id = ?
            AND jury_selected = 1
            AND short = 1`,
-		[monthId],
-	);
+		args: [monthId],
+	});
 
-	const [longNomRows] = await pool.execute<RowDataPacket[]>(
-		`SELECT id
+	const longNomResult = await db.execute({
+		sql: `SELECT id
          FROM nominations
          WHERE month_id = ?
            AND jury_selected = 1
            AND short = 0`,
-		[monthId],
-	);
+		args: [monthId],
+	});
 
 	const shortNoms = await Promise.all(
-		shortNomRows.map(async (row) => await getNominationById(row.id)),
+		shortNomResult.rows.map(
+			async (row) => await getNominationById(row.id as number),
+		),
 	);
 	const longNoms = await Promise.all(
-		longNomRows.map(async (row) => await getNominationById(row.id)),
+		longNomResult.rows.map(
+			async (row) => await getNominationById(row.id as number),
+		),
 	);
 
 	// Fetch existing rankings if user has voted
-	let shortRankings: RowDataPacket[] = [];
-	let longRankings: RowDataPacket[] = [];
+	let shortRankings: Array<{ nomination_id: number; rank: number }> = [];
+	let longRankings: Array<{ nomination_id: number; rank: number }> = [];
 
-	if (shortVoteRow[0]) {
-		[shortRankings] = await pool.execute<RowDataPacket[]>(
-			`SELECT nomination_id, \`rank\`
+	if (shortVoteResult.rows[0]) {
+		const shortRankResult = await db.execute({
+			sql: `SELECT nomination_id, rank
              FROM rankings
              WHERE vote_id = ?
              ORDER BY \`rank\``,
-			[shortVoteRow[0].id],
-		);
+			args: [shortVoteResult.rows[0].id],
+		});
+		shortRankings = shortRankResult.rows.map((row) => ({
+			nomination_id: row.nomination_id as number,
+			rank: row.rank as number,
+		}));
 	}
 
-	if (longVoteRow[0]) {
-		[longRankings] = await pool.execute<RowDataPacket[]>(
-			`SELECT nomination_id, \`rank\`
+	if (longVoteResult.rows[0]) {
+		const longRankResult = await db.execute({
+			sql: `SELECT nomination_id, rank
              FROM rankings
              WHERE vote_id = ?
              ORDER BY \`rank\``,
-			[longVoteRow[0].id],
-		);
+			args: [longVoteResult.rows[0].id],
+		});
+		longRankings = longRankResult.rows.map((row) => ({
+			nomination_id: row.nomination_id as number,
+			rank: row.rank as number,
+		}));
 	}
 
 	return json({
@@ -119,8 +130,8 @@ export const loader: LoaderFunction = async ({ request }) => {
 		userId: discordId,
 		shortNominations: shortNoms,
 		longNominations: longNoms,
-		votedShort: Boolean(shortVoteRow[0]),
-		votedLong: Boolean(longVoteRow[0]),
+		votedShort: Boolean(shortVoteResult.rows[0]),
+		votedLong: Boolean(longVoteResult.rows[0]),
 		shortRankings,
 		longRankings,
 	});

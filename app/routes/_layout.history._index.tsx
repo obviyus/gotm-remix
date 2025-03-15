@@ -1,19 +1,19 @@
 import { Link, useLoaderData } from "@remix-run/react";
-import { pool } from "~/server/database.server";
-import type { RowDataPacket } from "mysql2";
+import { db } from "~/server/database.server";
 import type { Month } from "~/types";
 import { getMonth } from "~/server/month.server";
 import { getWinner } from "~/server/winner.server";
 
 export const loader = async () => {
-	const [monthIds] = await pool.execute<RowDataPacket[]>(
-		`SELECT id
-        FROM months WHERE status NOT IN ('nominating') ORDER BY id DESC;`,
+	const result = await db.execute(
+		`SELECT id FROM months WHERE status_id NOT IN (
+			SELECT id FROM month_status WHERE status = 'nominating'
+		) ORDER BY id DESC;`,
 	);
 
 	const months: Month[] = await Promise.all(
-		monthIds.map(async (row) => {
-			const month = await getMonth(row.id);
+		result.rows.map(async (row) => {
+			const month = await getMonth(row.id as number);
 
 			// Only fetch winners for months that have completed voting
 			if (month.status === "voting") {
