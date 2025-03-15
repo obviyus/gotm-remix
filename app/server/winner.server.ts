@@ -70,7 +70,7 @@ export async function calculateAndStoreWinner(
 					created_at, 
 					updated_at
 				)
-				VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, unixepoch(), unixepoch())
+				VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, unixepoch(), unixepoch())
 				ON CONFLICT(game_id) DO UPDATE SET 
 					nomination_id = ?3,
 					game_name = ?5,
