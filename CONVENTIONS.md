@@ -6,7 +6,7 @@ When writing code, follow these conventions to ensure consistency and readabilit
 - White simple, maintainable code, always prefer simplicity over cleverness
 - Use descriptive names for variables, functions, and classes
 - Avoid over-using abstractions
-- Use `mysql2` for all database operations
+- Use `libsql` for all database operations
 
 ## Directory Structure
 
