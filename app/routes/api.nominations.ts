@@ -1,7 +1,6 @@
 import { type ActionFunctionArgs, json } from "@remix-run/node";
-import { pool } from "~/server/database.server";
+import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
-import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { NominationFormData } from "~/types";
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -13,31 +12,24 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 
 	// Check for previous GOTM winners
-	const [winners] = await pool.execute<RowDataPacket[]>(
-		`SELECT DISTINCT game_id
-         FROM winners;`,
-	);
-
-	const previousWinners = winners.map((w) => w.game_id);
+	const winners = await db.execute("SELECT DISTINCT game_id FROM winners");
+	const previousWinners = winners.rows.map((w) => (w.game_id ?? "").toString());
 
 	if (request.method === "DELETE") {
 		const formData = await request.formData();
-		const nominationId = formData.get("nominationId");
+		const nominationId = formData.get("nominationId")?.toString();
 
 		if (!nominationId) {
 			return json({ error: "Missing nomination ID" }, { status: 400 });
 		}
 
 		// Verify the nomination belongs to the user
-		const [nomination] = await pool.execute(
-			`SELECT id
-             FROM nominations
-             WHERE id = ?
-               AND discord_id = ?;`,
-			[nominationId, discordId],
-		);
+		const nomination = await db.execute({
+			sql: "SELECT id FROM nominations WHERE id = ? AND discord_id = ?",
+			args: [nominationId, discordId],
+		});
 
-		if (!Array.isArray(nomination) || nomination.length === 0) {
+		if (nomination.rows.length === 0) {
 			return json(
 				{ error: "Nomination not found or unauthorized" },
 				{ status: 404 },
@@ -45,12 +37,10 @@ export async function action({ request }: ActionFunctionArgs) {
 		}
 
 		// Delete the nomination (pitches will be cascade deleted)
-		await pool.execute(
-			`DELETE
-             FROM nominations
-             WHERE id = ?;`,
-			[nominationId],
-		);
+		await db.execute({
+			sql: "DELETE FROM nominations WHERE id = ?",
+			args: [nominationId],
+		});
 
 		return json({ success: true });
 	}
@@ -76,20 +66,21 @@ export async function action({ request }: ActionFunctionArgs) {
 			const pitch = data.pitch?.toString() || null;
 
 			// Check if the game is a previous winner
-			const [nomination] = await pool.execute<RowDataPacket[]>(
-				`SELECT n.*, p.discord_id as pitch_discord_id
-                 FROM nominations n
-                          LEFT JOIN pitches p ON n.id = p.nomination_id
-                 WHERE n.id = ?;`,
-				[nominationId],
-			);
+			const nomination = await db.execute({
+				sql: `SELECT n.*, p.discord_id as pitch_discord_id
+					FROM nominations n
+					LEFT JOIN pitches p ON n.id = p.nomination_id
+					WHERE n.id = ?`,
+				args: [nominationId],
+			});
 
-			if (!Array.isArray(nomination) || nomination.length === 0) {
+			if (nomination.rows.length === 0) {
 				return json({ error: "Nomination not found" }, { status: 404 });
 			}
 
 			// Check if the game is a previous winner
-			if (previousWinners.includes(nomination[0].game_id.toString())) {
+			const gameId = nomination.rows[0].game_id?.toString() ?? "";
+			if (previousWinners.includes(gameId)) {
 				return json(
 					{ error: "Cannot modify nominations for previous GOTM winners" },
 					{ status: 400 },
@@ -97,8 +88,9 @@ export async function action({ request }: ActionFunctionArgs) {
 			}
 
 			// Check if the user owns the nomination or is adding a new pitch
-			const isOwner = nomination[0].discord_id === discordId;
-			const hasExistingPitch = nomination[0].pitch_discord_id === discordId;
+			const isOwner = nomination.rows[0].discord_id === discordId;
+			const hasExistingPitch =
+				nomination.rows[0].pitch_discord_id === discordId;
 
 			if (!isOwner && hasExistingPitch) {
 				return json(
@@ -107,38 +99,21 @@ export async function action({ request }: ActionFunctionArgs) {
 				);
 			}
 
-			// Start a transaction for updating the pitch
-			const connection = await pool.getConnection();
-			await connection.beginTransaction();
-
-			try {
-				if (hasExistingPitch) {
-					// Update existing pitch
-					await connection.execute(
-						`UPDATE pitches
-                         SET pitch      = ?,
-                             updated_at = NOW()
-                         WHERE nomination_id = ?
-                           AND discord_id = ?;`,
-						[pitch, nominationId, discordId],
-					);
-				} else {
-					// Add new pitch
-					await connection.execute(
-						`INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at)
-                         VALUES (?, ?, ?, NOW(), NOW());`,
-						[nominationId, discordId, pitch],
-					);
-				}
-
-				await connection.commit();
-				connection.release();
-				return json({ success: true });
-			} catch (error) {
-				await connection.rollback();
-				connection.release();
-				throw error;
+			if (hasExistingPitch) {
+				// Update existing pitch
+				await db.execute({
+					sql: "UPDATE pitches SET pitch = ?, updated_at = unixepoch() WHERE nomination_id = ? AND discord_id = ?",
+					args: [pitch, nominationId, discordId],
+				});
+			} else {
+				// Add new pitch
+				await db.execute({
+					sql: "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
+					args: [nominationId, discordId, pitch],
+				});
 			}
+
+			return json({ success: true });
 		} catch (error) {
 			console.error("Error processing edit:", error);
 			return json(
@@ -154,7 +129,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		if (contentType?.includes("application/json")) {
 			const body = await request.json();
-			// Handle both direct JSON and stringified JSON in the 'json' field
 			data =
 				typeof body === "string"
 					? JSON.parse(body)
@@ -189,18 +163,13 @@ export async function action({ request }: ActionFunctionArgs) {
 		}
 
 		// Check if game is already nominated for this month
-		const [existing] = await pool.execute<RowDataPacket[]>(
-			`SELECT n.*, p.discord_id as pitch_discord_id
-             FROM nominations n
-                      LEFT JOIN pitches p ON n.id = p.nomination_id
-             WHERE n.month_id = ?
-               AND n.game_id = ?
-               AND p.discord_id = ?;`,
-			[monthId, game.id, discordId],
-		);
+		const existing = await db.execute({
+			sql: "SELECT n.*, p.discord_id as pitch_discord_id FROM nominations n LEFT JOIN pitches p ON n.id = p.nomination_id WHERE n.month_id = ? AND n.game_id = ? AND p.discord_id = ?",
+			args: [monthId, game.id, discordId],
+		});
 
 		// If the user has already pitched this game, prevent them from nominating it again
-		if (Array.isArray(existing) && existing.length > 0) {
+		if (existing.rows.length > 0) {
 			return json(
 				{
 					error:
@@ -210,49 +179,38 @@ export async function action({ request }: ActionFunctionArgs) {
 			);
 		}
 
-		// Start a transaction since we need to insert into multiple tables
-		const connection = await pool.getConnection();
-		await connection.beginTransaction();
+		// Insert the nomination
+		const nomination = await db.execute({
+			sql: "INSERT INTO nominations (month_id, game_id, discord_id, short, game_name, game_year, game_cover, game_url, jury_selected, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())",
+			args: [
+				monthId,
+				game.id,
+				discordId,
+				short ? 1 : 0,
+				game.name,
+				game.firstReleaseDate
+					? new Date(game.firstReleaseDate * 1000).getFullYear().toString()
+					: null,
+				game.cover?.replace("t_thumb", "t_cover_big") || null,
+				game.url || null,
+				0, // Not jury selected by default
+			],
+		});
 
-		try {
-			// Insert the nomination
-			const [result] = await connection.execute<ResultSetHeader>(
-				`INSERT INTO nominations (month_id, game_id, discord_id, short,
-                                          game_name, game_year, game_cover, game_url, jury_selected)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					monthId,
-					game.id,
-					discordId,
-					short,
-					game.name,
-					game.firstReleaseDate
-						? new Date(game.firstReleaseDate * 1000).getFullYear().toString()
-						: null,
-					game.cover?.replace("t_thumb", "t_cover_big") || null,
-					game.url || null,
-					0, // Not jury selected by default
-				],
-			);
-
-			// If there's a pitch, insert it
-			if (pitch) {
-				await connection.execute(
-					`INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at)
-                     VALUES (?, ?, ?, NOW(), NOW());`,
-					[result.insertId, discordId, pitch],
-				);
-			}
-
-			await connection.commit();
-			connection.release();
-
-			return json({ success: true, nominationId: result.insertId });
-		} catch (error) {
-			await connection.rollback();
-			connection.release();
-			throw error;
+		// If there's a pitch, insert it
+		if (pitch && nomination.lastInsertRowid) {
+			await db.execute({
+				sql: "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
+				args: [nomination.lastInsertRowid, discordId, pitch],
+			});
 		}
+
+		return json({
+			success: true,
+			nominationId: nomination.lastInsertRowid
+				? Number(nomination.lastInsertRowid)
+				: null,
+		});
 	} catch (error) {
 		console.error("Error processing nomination:", error);
 		return json(

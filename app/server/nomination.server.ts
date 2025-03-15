@@ -1,13 +1,12 @@
 import type { Nomination } from "~/types";
-import { pool } from "~/server/database.server";
-import type { RowDataPacket } from "mysql2";
+import { db } from "~/server/database.server";
 import { getPitchesForNomination } from "~/server/pitches.server";
 
 export async function getNominationsForMonth(
 	monthId: number,
 ): Promise<Nomination[]> {
-	const [rows] = await pool.query<RowDataPacket[]>(
-		`SELECT id,
+	const result = await db.execute({
+		sql: `SELECT id,
                 game_id,
                 discord_id,
                 short,
@@ -15,39 +14,34 @@ export async function getNominationsForMonth(
                 game_year,
                 game_cover,
                 game_url,
-                game_platform_ids,
                 jury_selected
          FROM nominations
          WHERE month_id = ?`,
-		[monthId],
-	);
+		args: [monthId],
+	});
 
 	return Promise.all(
-		rows.map(
-			async (row) =>
-				({
-					id: row.id,
-					monthId: monthId,
-					gameId: row.game_id,
-					discordId: row.discord_id,
-					short: row.short,
-					gameName: row.game_name,
-					gameYear: row.game_year,
-					gameCover: row.game_cover,
-					gameUrl: row.game_url,
-					gamePlatformIds: row.game_platform_ids,
-					jurySelected: row.jury_selected,
-					pitches: await getPitchesForNomination(row.id),
-				}) as Nomination,
-		),
+		result.rows.map(async (row) => ({
+			id: Number(row.id),
+			monthId: monthId,
+			gameId: String(row.game_id),
+			discordId: String(row.discord_id),
+			short: Boolean(row.short),
+			gameName: String(row.game_name),
+			gameYear: String(row.game_year),
+			gameCover: String(row.game_cover),
+			gameUrl: String(row.game_url),
+			jurySelected: Boolean(row.jury_selected),
+			pitches: await getPitchesForNomination(Number(row.id)),
+		})),
 	);
 }
 
 export async function getNominationById(
 	nominationId: number,
 ): Promise<Nomination> {
-	const [rows] = await pool.query<RowDataPacket[]>(
-		`SELECT id,
+	const result = await db.execute({
+		sql: `SELECT id,
                 month_id,
                 game_id,
                 discord_id,
@@ -56,30 +50,28 @@ export async function getNominationById(
                 game_year,
                 game_cover,
                 game_url,
-                game_platform_ids,
                 jury_selected
          FROM nominations
          WHERE id = ?`,
-		[nominationId],
-	);
+		args: [nominationId],
+	});
 
-	if (rows.length === 0) {
+	if (result.rows.length === 0) {
 		throw new Error(`Nomination with ID ${nominationId} not found`);
 	}
 
-	const row = rows[0];
+	const row = result.rows[0];
 	return {
-		id: row.id,
-		monthId: row.month_id,
-		gameId: row.game_id,
-		discordId: row.discord_id,
-		short: row.short,
-		gameName: row.game_name,
-		gameYear: row.game_year,
-		gameCover: row.game_cover,
-		gameUrl: row.game_url,
-		gamePlatformIds: row.game_platform_ids,
-		jurySelected: row.jury_selected,
-		pitches: await getPitchesForNomination(row.id),
-	} as Nomination;
+		id: Number(row.id),
+		monthId: Number(row.month_id),
+		gameId: String(row.game_id),
+		discordId: String(row.discord_id),
+		short: Boolean(row.short),
+		gameName: String(row.game_name),
+		gameYear: String(row.game_year),
+		gameCover: String(row.game_cover),
+		gameUrl: String(row.game_url),
+		jurySelected: Boolean(row.jury_selected),
+		pitches: await getPitchesForNomination(Number(row.id)),
+	};
 }

@@ -1,21 +1,20 @@
-import type { RowDataPacket } from "mysql2";
 import type { Pitch } from "~/types";
-import { pool } from "~/server/database.server";
+import { db } from "~/server/database.server";
 
 export async function getPitchesForNomination(
 	nominationId: number,
 ): Promise<Pitch[]> {
-	const [rows] = await pool.query<RowDataPacket[]>(
-		`SELECT id, discord_id, pitch
+	const result = await db.execute({
+		sql: `SELECT id, discord_id, pitch
          FROM pitches
          WHERE nomination_id = ?`,
-		[nominationId],
-	);
+		args: [nominationId],
+	});
 
-	return rows.map((row) => ({
-		id: row.id,
+	return result.rows.map((row) => ({
+		id: Number(row.id),
 		nominationId: nominationId,
-		discordId: row.discord_id,
-		pitch: row.pitch,
+		discordId: String(row.discord_id),
+		pitch: String(row.pitch),
 	}));
 }

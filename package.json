@@ -14,6 +14,7 @@
     "@headlessui/react": "^2.2.0",
     "@hello-pangea/dnd": "^17.0.0",
     "@heroicons/react": "^2.2.0",
+    "@libsql/client": "^0.14.0",
     "@remix-run/node": "^2.15.3",
     "@remix-run/react": "^2.15.3",
     "@remix-run/serve": "^2.15.3",
