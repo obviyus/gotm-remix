@@ -1,5 +1,6 @@
 import type { Pitch } from "~/types";
 import { db } from "~/server/database.server";
+import { uniqueNameGenerator } from "~/server/nameGenerator";
 
 export async function getPitchesForNomination(
 	nominationId: number,
@@ -16,5 +17,6 @@ export async function getPitchesForNomination(
 		nominationId: nominationId,
 		discordId: String(row.discord_id),
 		pitch: String(row.pitch),
+		generatedName: uniqueNameGenerator(String(row.discord_id)),
 	}));
 }

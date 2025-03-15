@@ -3,6 +3,7 @@ export interface Pitch {
 	nominationId: number;
 	pitch: string;
 	discordId: string;
+	generatedName: string;
 }
 
 export interface Nomination {
