@@ -107,7 +107,7 @@ export async function searchGames(query: string): Promise<Nomination[]> {
 		})
 		.slice(0, 10)
 		.map((game) => ({
-			id: 0,
+			id: game.id,
 			short: false,
 			jurySelected: false,
 			monthId: 0,

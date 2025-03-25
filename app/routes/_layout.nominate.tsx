@@ -459,7 +459,7 @@ export default function Nominate() {
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 							{games.map((game) => {
 								const existingNomination = allNominations.find(
-									(n) => n.gameId === game.gameId,
+									(n) => n.gameId === game.gameId.toString(),
 								);
 								const isCurrentUserNomination =
 									existingNomination?.discordId === userDiscordId;
