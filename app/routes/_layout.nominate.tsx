@@ -229,7 +229,7 @@ export default function Nominate() {
 		// Build the nomination data with type checking
 		const nominationData: NominationFormData = {
 			game: {
-				id: selectedGame.id,
+				id: Number(selectedGame.gameId),
 				name: selectedGame.gameName,
 				cover: selectedGame.gameCover,
 				gameYear: selectedGame.gameYear,
