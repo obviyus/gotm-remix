@@ -188,9 +188,7 @@ export async function action({ request }: ActionFunctionArgs) {
 				discordId,
 				short ? 1 : 0,
 				game.name,
-				game.firstReleaseDate
-					? new Date(game.firstReleaseDate * 1000).getFullYear().toString()
-					: null,
+				game.gameYear || null,
 				game.cover?.replace("t_thumb", "t_cover_big") || null,
 				game.url || null,
 				0, // Not jury selected by default
