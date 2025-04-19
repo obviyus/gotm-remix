@@ -159,7 +159,7 @@ export default function Index() {
 							</p>
 							<p className="text-zinc-300 mt-2">
 								Once the jury has made their selections, the voting phase will
-								begin and you'll be able to rank your favorites.
+								begin and you&apos;ll be able to rank your favorites.
 							</p>
 						</div>
 						<SplitLayout
