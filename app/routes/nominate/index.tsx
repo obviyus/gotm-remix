@@ -1,14 +1,5 @@
 import { useState } from "react";
-import {
-	Form,
-	Link,
-	useActionData,
-	useFetcher,
-	useLoaderData,
-	useNavigation,
-	useSubmit,
-	redirect,
-} from "react-router";
+import { Link, useFetcher, useLoaderData, redirect } from "react-router";
 import type { ActionFunctionArgs, LoaderFunction } from "react-router";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/server/igdb.server";
@@ -100,14 +91,13 @@ export default function Nominate() {
 		userDiscordId,
 		previousWinners,
 	} = useLoaderData<LoaderData>();
-	const actionData = useActionData<typeof action>();
-	const games = actionData?.games || initialGames;
-	const submit = useSubmit();
+	const search = useFetcher<{ games: Nomination[] }>();
+	const games = search.data?.games || initialGames;
 	const [searchTerm, setSearchTerm] = useState("");
 	const nominate = useFetcher<NominationResponse>();
-	const navigation = useNavigation();
-	const isSearching = navigation.formData?.get("query") != null;
-	const hasSearched = actionData !== undefined; // Track if a search was performed
+	const isSearching =
+		search.state === "submitting" || search.state === "loading";
+	const hasSearched = search.data !== undefined; // Track if a search was performed
 
 	// New state for modal
 	const [isOpen, setIsOpen] = useState(false);
@@ -138,7 +128,10 @@ export default function Nominate() {
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!searchTerm.trim()) return;
-		submit(e.currentTarget);
+		search.submit(
+			{ query: searchTerm },
+			{ method: "post", action: "/nominate" },
+		);
 	};
 
 	const handleGameSelect = (
@@ -428,7 +421,7 @@ export default function Nominate() {
 						</ul>
 					</div>
 
-					<Form method="post" onSubmit={handleSearch} className="mb-8">
+					<search.Form method="post" onSubmit={handleSearch} className="mb-8">
 						<div className="flex gap-4">
 							<input
 								type="search"
@@ -448,7 +441,7 @@ export default function Nominate() {
 								</span>
 							</button>
 						</div>
-					</Form>
+					</search.Form>
 					{isSearching ? (
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 							{Array.from({ length: 10 }).map((_, i) => (
