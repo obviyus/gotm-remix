@@ -1,5 +1,5 @@
-import { createRequestHandler, logDevReady } from "@remix-run/server-runtime";
-import { broadcastDevReady, type ServerBuild } from "@remix-run/node";
+import { createRequestHandler } from "react-router";
+import type { ServerBuild } from "react-router";
 import * as build from "./build/server/index.js";
 // biome-ignore lint/style/useNodejsImportProtocol: using bun
 import { join } from "path";
@@ -10,11 +10,6 @@ const handler = createRequestHandler(remix_build, process.env.NODE_ENV);
 const port = process.env.PORT || 3000;
 
 console.log(`🚀 Server starting on port ${port}`);
-
-if (process.env.NODE_ENV === "development") {
-	broadcastDevReady(remix_build);
-	logDevReady(remix_build);
-}
 
 console.info("Re-calculating winners...");
 await recalculateAllWinners();

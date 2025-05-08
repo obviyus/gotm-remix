@@ -7,9 +7,9 @@ import {
 	useLoaderData,
 	useNavigation,
 	useSubmit,
-} from "@remix-run/react";
-import type { ActionFunctionArgs, LoaderFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+	redirect,
+} from "react-router";
+import type { ActionFunctionArgs, LoaderFunction } from "react-router";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/server/igdb.server";
 import GameCard from "~/components/GameCard";
@@ -67,7 +67,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		userNominations = allNominations.filter((n) => n.discordId === discordId);
 	}
 
-	return json<LoaderData>({
+	return Response.json({
 		games: [],
 		monthId,
 		monthStatus: monthRow.status,
@@ -83,11 +83,11 @@ export async function action({ request }: ActionFunctionArgs) {
 	const query = formData.get("query");
 
 	if (typeof query !== "string") {
-		return json({ games: [] });
+		return Response.json({ games: [] });
 	}
 
 	const games = await searchGames(query);
-	return json({ games });
+	return Response.json({ games });
 }
 
 export default function Nominate() {
@@ -457,7 +457,7 @@ export default function Nominate() {
 						</div>
 					) : games.length > 0 ? (
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-							{games.map((game) => {
+							{games.map((game: Nomination) => {
 								const existingNomination = allNominations.find(
 									(n) => n.gameId === game.gameId.toString(),
 								);

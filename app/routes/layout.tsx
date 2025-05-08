@@ -1,7 +1,7 @@
-import { Link, Outlet, useLoaderData, useLocation } from "@remix-run/react";
+import { Link, Outlet, useLoaderData, useLocation } from "react-router";
 import { useState } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import { json, type LoaderFunction } from "@remix-run/node";
+import type { LoaderFunction } from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";
@@ -28,7 +28,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		isAdmin = result.rows.length > 0;
 	}
 
-	return json<LoaderData>({
+	return Response.json({
 		monthStatus: currentMonth?.status || "ready",
 		isAdmin,
 	});

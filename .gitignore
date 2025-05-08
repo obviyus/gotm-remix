@@ -6,3 +6,5 @@ node_modules
 mysql/
 .idea/
 .aider*
+
+.react-router/

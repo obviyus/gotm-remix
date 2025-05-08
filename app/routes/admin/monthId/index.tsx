@@ -1,11 +1,10 @@
-import { Link, useFetcher, useLoaderData, useNavigate } from "@remix-run/react";
+import { Link, useFetcher, useLoaderData, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import {
 	type ActionFunctionArgs,
-	json,
 	type LoaderFunction,
 	redirect,
-} from "@remix-run/node";
+} from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import PitchesModal from "~/components/PitchesModal";
@@ -104,7 +103,10 @@ export async function action({ request }: ActionFunctionArgs) {
 				typeof status !== "string" ||
 				typeof themeName !== "string"
 			) {
-				return json({ error: "Missing required fields" }, { status: 400 });
+				return Response.json(
+					{ error: "Missing required fields" },
+					{ status: 400 },
+				);
 			}
 
 			try {
@@ -119,7 +121,7 @@ export async function action({ request }: ActionFunctionArgs) {
 					});
 
 					if (activeMonthsResult.rows.length > 0) {
-						return json(
+						return Response.json(
 							{
 								error:
 									"Another month is already active. Only one month can be in nominating / jury / voting status at a time.",
@@ -136,7 +138,10 @@ export async function action({ request }: ActionFunctionArgs) {
 				});
 
 				if (statusResult.rows.length === 0) {
-					return json({ error: `Invalid status: ${status}` }, { status: 400 });
+					return Response.json(
+						{ error: `Invalid status: ${status}` },
+						{ status: 400 },
+					);
 				}
 
 				const statusId = statusResult.rows[0].id;
@@ -159,14 +164,17 @@ export async function action({ request }: ActionFunctionArgs) {
 					args: [year, month, statusId, themeId],
 				});
 
-				return json({ success: true });
+				return Response.json({ success: true });
 			} catch (error) {
 				// Check for unique constraint violation
 				if (
 					error instanceof Error &&
 					error.message.includes("UNIQUE constraint failed")
 				) {
-					return json({ error: "This month already exists" }, { status: 400 });
+					return Response.json(
+						{ error: "This month already exists" },
+						{ status: 400 },
+					);
 				}
 				throw error;
 			}
@@ -177,7 +185,10 @@ export async function action({ request }: ActionFunctionArgs) {
 			const newStatus = formData.get("status");
 
 			if (!monthId || !newStatus || typeof newStatus !== "string") {
-				return json({ error: "Missing required fields" }, { status: 400 });
+				return Response.json(
+					{ error: "Missing required fields" },
+					{ status: 400 },
+				);
 			}
 
 			try {
@@ -192,7 +203,7 @@ export async function action({ request }: ActionFunctionArgs) {
 					});
 
 					if (activeMonthsResult.rows.length > 0) {
-						return json(
+						return Response.json(
 							{
 								error:
 									"Another month is already active. Only one month can be in nominating/jury/voting status at a time.",
@@ -209,7 +220,7 @@ export async function action({ request }: ActionFunctionArgs) {
 				});
 
 				if (statusResult.rows.length === 0) {
-					return json(
+					return Response.json(
 						{ error: `Invalid status: ${newStatus}` },
 						{ status: 400 },
 					);
@@ -223,10 +234,10 @@ export async function action({ request }: ActionFunctionArgs) {
 					args: [statusId, monthId],
 				});
 
-				return json({ success: true });
+				return Response.json({ success: true });
 			} catch (error) {
 				console.error("Error updating month status:", error);
-				return json(
+				return Response.json(
 					{ error: "Failed to update month status" },
 					{ status: 500 },
 				);
@@ -238,7 +249,10 @@ export async function action({ request }: ActionFunctionArgs) {
 			const selected = formData.get("selected") === "true";
 
 			if (!nominationId) {
-				return json({ error: "Missing nomination ID" }, { status: 400 });
+				return Response.json(
+					{ error: "Missing nomination ID" },
+					{ status: 400 },
+				);
 			}
 
 			await db.execute({
@@ -246,11 +260,11 @@ export async function action({ request }: ActionFunctionArgs) {
 				args: [selected ? 1 : 0, nominationId],
 			});
 
-			return json({ success: true });
+			return Response.json({ success: true });
 		}
 
 		default:
-			return json({ error: "Invalid action" }, { status: 400 });
+			return Response.json({ error: "Invalid action" }, { status: 400 });
 	}
 }
 

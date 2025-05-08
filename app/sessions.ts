@@ -1,4 +1,4 @@
-import { createCookieSessionStorage } from "@remix-run/node";
+import { createCookieSessionStorage } from "react-router";
 
 type SessionData = {
 	discordId: string;

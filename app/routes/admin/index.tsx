@@ -1,4 +1,4 @@
-import { type LoaderFunction, redirect } from "@remix-run/node";
+import { type LoaderFunction, redirect } from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";

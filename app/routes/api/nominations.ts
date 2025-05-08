@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json } from "@remix-run/node";
+import type { ActionFunctionArgs } from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import type { NominationFormData } from "~/types";
@@ -8,7 +8,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	const discordId = session.get("discordId");
 
 	if (!discordId) {
-		return json({ error: "Unauthorized" }, { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	// Check for previous GOTM winners
@@ -20,7 +20,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		const nominationId = formData.get("nominationId")?.toString();
 
 		if (!nominationId) {
-			return json({ error: "Missing nomination ID" }, { status: 400 });
+			return Response.json({ error: "Missing nomination ID" }, { status: 400 });
 		}
 
 		// Verify the nomination belongs to the user
@@ -30,7 +30,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		});
 
 		if (nomination.rows.length === 0) {
-			return json(
+			return Response.json(
 				{ error: "Nomination not found or unauthorized" },
 				{ status: 404 },
 			);
@@ -42,7 +42,7 @@ export async function action({ request }: ActionFunctionArgs) {
 			args: [nominationId],
 		});
 
-		return json({ success: true });
+		return Response.json({ success: true });
 	}
 
 	if (request.method === "PATCH") {
@@ -60,7 +60,10 @@ export async function action({ request }: ActionFunctionArgs) {
 						: null;
 
 			if (!nominationId || Number.isNaN(nominationId)) {
-				return json({ error: "Invalid nomination ID" }, { status: 400 });
+				return Response.json(
+					{ error: "Invalid nomination ID" },
+					{ status: 400 },
+				);
 			}
 
 			const pitch = data.pitch?.toString() || null;
@@ -75,13 +78,16 @@ export async function action({ request }: ActionFunctionArgs) {
 			});
 
 			if (nomination.rows.length === 0) {
-				return json({ error: "Nomination not found" }, { status: 404 });
+				return Response.json(
+					{ error: "Nomination not found" },
+					{ status: 404 },
+				);
 			}
 
 			// Check if the game is a previous winner
 			const gameId = nomination.rows[0].game_id?.toString() ?? "";
 			if (previousWinners.includes(gameId)) {
-				return json(
+				return Response.json(
 					{ error: "Cannot modify nominations for previous GOTM winners" },
 					{ status: 400 },
 				);
@@ -93,7 +99,7 @@ export async function action({ request }: ActionFunctionArgs) {
 				nomination.rows[0].pitch_discord_id === discordId;
 
 			if (!isOwner && hasExistingPitch) {
-				return json(
+				return Response.json(
 					{ error: "You have already added a pitch to this nomination" },
 					{ status: 400 },
 				);
@@ -113,10 +119,10 @@ export async function action({ request }: ActionFunctionArgs) {
 				});
 			}
 
-			return json({ success: true });
+			return Response.json({ success: true });
 		} catch (error) {
 			console.error("Error processing edit:", error);
-			return json(
+			return Response.json(
 				{ error: "Failed to process edit. Please try again." },
 				{ status: 500 },
 			);
@@ -151,12 +157,15 @@ export async function action({ request }: ActionFunctionArgs) {
 		const { game, monthId, short, pitch } = data;
 
 		if (!game || !monthId) {
-			return json({ error: "Missing required fields" }, { status: 400 });
+			return Response.json(
+				{ error: "Missing required fields" },
+				{ status: 400 },
+			);
 		}
 
 		// Check if the game is a previous winner
 		if (previousWinners.includes(game.id.toString())) {
-			return json(
+			return Response.json(
 				{ error: "This game has already won GOTM in a previous month" },
 				{ status: 400 },
 			);
@@ -170,7 +179,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		// If the user has already pitched this game, prevent them from nominating it again
 		if (existing.rows.length > 0) {
-			return json(
+			return Response.json(
 				{
 					error:
 						"You have already nominated or pitched this game for this month",
@@ -203,7 +212,7 @@ export async function action({ request }: ActionFunctionArgs) {
 			});
 		}
 
-		return json({
+		return Response.json({
 			success: true,
 			nominationId: nomination.lastInsertRowid
 				? Number(nomination.lastInsertRowid)
@@ -211,7 +220,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		});
 	} catch (error) {
 		console.error("Error processing nomination:", error);
-		return json(
+		return Response.json(
 			{
 				error:
 					"Failed to process nomination. Please make sure all required fields are provided.",

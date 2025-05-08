@@ -1,11 +1,11 @@
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useFetcher, useLoaderData } from "react-router";
 import {
 	DragDropContext,
 	Draggable,
 	Droppable,
 	type DropResult,
 } from "@hello-pangea/dnd";
-import { json, type LoaderFunction, redirect } from "@remix-run/node";
+import { type LoaderFunction, redirect } from "react-router";
 import { db } from "~/server/database.server";
 import type { Nomination } from "~/types";
 import { useState } from "react";
@@ -41,7 +41,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 	const monthId = monthRow.status === "voting" ? monthRow.id : undefined;
 
 	if (!monthId) {
-		return json({ monthId: undefined });
+		return Response.json({ monthId: undefined });
 	}
 
 	// Check if user has already voted
@@ -125,7 +125,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		}));
 	}
 
-	return json({
+	return Response.json({
 		monthId,
 		userId: discordId,
 		shortNominations: shortNoms,

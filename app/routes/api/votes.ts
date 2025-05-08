@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json } from "@remix-run/node";
+import type { ActionFunctionArgs } from "react-router";
 import { db } from "~/server/database.server";
 import { invalidateVotingCache } from "~/server/voting.server";
 
@@ -30,7 +30,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	const { monthId, userId, short } = data;
 
 	if (!monthId || !userId) {
-		return json(
+		return Response.json(
 			{ success: false, error: "Missing monthId or userId" },
 			{ status: 400 },
 		);
@@ -50,7 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		// Invalidate cache after deleting vote
 		invalidateVotingCache(Number(monthId), short);
-		return json({ success: true });
+		return Response.json({ success: true });
 	}
 
 	try {
@@ -97,10 +97,10 @@ export async function action({ request }: ActionFunctionArgs) {
 		// Invalidate cache after successful vote
 		invalidateVotingCache(Number(monthId), short);
 
-		return json({ success: true, voteId });
+		return Response.json({ success: true, voteId });
 	} catch (error) {
 		console.error("Error processing vote:", error);
-		return json(
+		return Response.json(
 			{ success: false, error: "Failed to process vote" },
 			{ status: 500 },
 		);

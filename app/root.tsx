@@ -1,26 +1,31 @@
-import {
-	Links,
-	Meta,
-	Outlet,
-	Scripts,
-	ScrollRestoration,
-} from "@remix-run/react";
-import type { MetaFunction } from "@remix-run/react";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import type { MetaFunction } from "react-router";
 
 import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
 	return [
 		{ title: "PG GOTM" },
-		{ name: "description", content: "Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month." },
-		{ name: "theme-color", content: "#18181B" },  // zinc-900 color
+		{
+			name: "description",
+			content:
+				"Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month.",
+		},
+		{ name: "theme-color", content: "#18181B" }, // zinc-900 color
 		{ property: "og:title", content: "PG Game of the Month" },
-		{ property: "og:description", content: "Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month." },
+		{
+			property: "og:description",
+			content:
+				"Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month.",
+		},
 		{ property: "og:type", content: "website" },
 		{ property: "og:url", content: "https://pg-gotm.com" },
 		{ name: "twitter:card", content: "summary_large_image" },
 		{ name: "twitter:title", content: "PG GOTM" },
-		{ name: "twitter:description", content: "Vote for and discover the PG Discord Game of the Month!" },
+		{
+			name: "twitter:description",
+			content: "Vote for and discover the PG Discord Game of the Month!",
+		},
 	];
 };
 

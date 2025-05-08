@@ -1,4 +1,4 @@
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "react-router";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
 import {

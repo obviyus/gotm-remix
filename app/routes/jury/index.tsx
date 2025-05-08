@@ -1,4 +1,4 @@
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "react-router";
 import { db } from "~/server/database.server";
 
 export const loader = async () => {
