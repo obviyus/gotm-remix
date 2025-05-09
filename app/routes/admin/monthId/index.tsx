@@ -1,26 +1,13 @@
-import { Link, useFetcher, useLoaderData, useNavigate } from "react-router";
+import { Link, useFetcher, useNavigate, redirect } from "react-router";
 import { useEffect, useState } from "react";
-import {
-	type ActionFunctionArgs,
-	type LoaderFunction,
-	redirect,
-} from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import PitchesModal from "~/components/PitchesModal";
-import type { Month, Nomination, Pitch, Theme, ThemeCategory } from "~/types";
+import type { Nomination } from "~/types";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import { getMonth, getThemeCategories } from "~/server/month.server";
 import type { Row, Value } from "@libsql/client";
-
-interface LoaderData {
-	months: Month[];
-	selectedMonth: Month | null;
-	nominations: Nomination[];
-	pitches: Pitch[];
-	themeCategories: ThemeCategory[];
-	themes: Theme[];
-}
+import type { Route } from "./+types";
 
 interface ActionResponse {
 	success?: boolean;
@@ -35,7 +22,7 @@ interface MonthRow extends DBRow {
 	id: number;
 }
 
-export const loader: LoaderFunction = async ({ request, params }) => {
+export async function loader({ request, params }: Route.LoaderArgs) {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
@@ -79,9 +66,9 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 		nominations,
 		themeCategories: await getThemeCategories(),
 	};
-};
+}
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
 	const intent = formData.get("intent");
 
@@ -268,9 +255,8 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 }
 
-export default function Admin() {
-	const { months, selectedMonth, nominations, themeCategories } =
-		useLoaderData<LoaderData>();
+export default function Admin({ loaderData }: Route.ComponentProps) {
+	const { months, selectedMonth, nominations, themeCategories } = loaderData;
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isPitchesModalOpen, setIsPitchesModalOpen] = useState(false);
