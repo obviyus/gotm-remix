@@ -263,6 +263,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const navigate = useNavigate();
 	const createMonthFetcher = useFetcher<ActionResponse>();
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
+	const jurySelectionFetcher = useFetcher<ActionResponse>();
 	const [error, setError] = useState<string | null>(null);
 
 	// Clear error when submission is successful
@@ -277,6 +278,17 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			setError(createMonthFetcher.data.error);
 		}
 	}, [createMonthFetcher.state, createMonthFetcher.data, navigate]);
+
+	const handleToggleJurySelected = (nomination: Nomination) => {
+		jurySelectionFetcher.submit(
+			{
+				intent: "toggleJurySelected",
+				nominationId: nomination.id.toString(),
+				selected: (!nomination.jurySelected).toString(),
+			},
+			{ method: "POST" },
+		);
+	};
 
 	const monthStatuses = [
 		"ready",
@@ -626,39 +638,23 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 												</button>
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap">
-												<form method="POST">
-													<input
-														type="hidden"
-														name="intent"
-														value="toggleJurySelected"
-													/>
-													<input
-														type="hidden"
-														name="nominationId"
-														value={nomination.id}
-													/>
-													<input
-														type="hidden"
-														name="selected"
-														value={(!nomination.jurySelected).toString()}
-													/>
-													<button
-														type="submit"
-														className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+												<button
+													type="button"
+													onClick={() => handleToggleJurySelected(nomination)}
+													className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+														nomination.jurySelected
+															? "bg-blue-500"
+															: "bg-zinc-700"
+													}`}
+												>
+													<span
+														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
 															nomination.jurySelected
-																? "bg-blue-500"
-																: "bg-zinc-700"
+																? "translate-x-5"
+																: "translate-x-0"
 														}`}
-													>
-														<span
-															className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-																nomination.jurySelected
-																	? "translate-x-5"
-																	: "translate-x-0"
-															}`}
-														/>
-													</button>
-												</form>
+													/>
+												</button>
 											</td>
 										</tr>
 									))}
