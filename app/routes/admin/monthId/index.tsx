@@ -290,6 +290,25 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		);
 	};
 
+	// Function to determine if a nomination is being processed
+	const isProcessingNomination = (nominationId: number) => {
+		if (jurySelectionFetcher.state === "idle") return false;
+
+		const formData = jurySelectionFetcher.formData;
+		if (!formData) return false;
+
+		return formData.get("nominationId") === nominationId.toString();
+	};
+
+	// Function to get the optimistic selection state
+	const getNominationSelectedState = (nomination: Nomination) => {
+		const isProcessing = isProcessingNomination(nomination.id);
+		if (!isProcessing) return nomination.jurySelected;
+
+		// Return the optimistic state
+		return jurySelectionFetcher.formData?.get("selected") === "true";
+	};
+
 	const monthStatuses = [
 		"ready",
 		"nominating",
@@ -641,19 +660,30 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 												<button
 													type="button"
 													onClick={() => handleToggleJurySelected(nomination)}
+													disabled={isProcessingNomination(nomination.id)}
 													className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-														nomination.jurySelected
+														isProcessingNomination(nomination.id)
+															? "opacity-70 border-yellow-400/30"
+															: ""
+													} ${
+														getNominationSelectedState(nomination)
 															? "bg-blue-500"
 															: "bg-zinc-700"
 													}`}
 												>
 													<span
 														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-															nomination.jurySelected
+															getNominationSelectedState(nomination)
 																? "translate-x-5"
 																: "translate-x-0"
 														}`}
-													/>
+													>
+														{isProcessingNomination(nomination.id) && (
+															<span className="absolute inset-0 flex items-center justify-center">
+																<span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />
+															</span>
+														)}
+													</span>
 												</button>
 											</td>
 										</tr>
