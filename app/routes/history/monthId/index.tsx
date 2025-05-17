@@ -1,11 +1,9 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import type { Route } from "./+types";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
-import type { Result } from "~/server/voting.server";
 import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
 import ThemeCard from "~/components/ThemeCard";
-import type { Month, Nomination } from "~/types";
+import type { Nomination } from "~/types";
 import { getMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import GameCard from "~/components/GameCard";
@@ -13,24 +11,7 @@ import PitchesModal from "~/components/PitchesModal";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import { getWinner } from "~/server/winner.server";
 
-type LoaderData = {
-	month: Month;
-	results: {
-		long: Result[];
-		short: Result[];
-	};
-	gameUrls: Record<string, string>;
-	nominations: {
-		long: Nomination[];
-		short: Nomination[];
-	};
-	winners: {
-		long: Nomination | null;
-		short: Nomination | null;
-	};
-};
-
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export async function loader({ params }: Route.LoaderArgs) {
 	const monthId = Number(params.monthId);
 	if (Number.isNaN(monthId)) {
 		throw new Response("Invalid month ID", { status: 400 });
@@ -81,11 +62,10 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 			long: longWinner,
 		},
 	};
-};
+}
 
-export default function HistoryMonth() {
-	const { month, results, gameUrls, nominations, winners } =
-		useLoaderData<LoaderData>();
+export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
+	const { month, results, gameUrls, nominations, winners } = loaderData;
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);

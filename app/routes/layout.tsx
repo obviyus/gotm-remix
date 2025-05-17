@@ -1,17 +1,12 @@
-import { Link, Outlet, useLoaderData, useLocation } from "react-router";
+import { Link, Outlet, useLocation } from "react-router";
 import { useState } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import type { LoaderFunction } from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";
+import type { Route } from "./+types/layout";
 
-interface LoaderData {
-	monthStatus: string;
-	isAdmin: boolean;
-}
-
-export const loader: LoaderFunction = async ({ request }) => {
+export async function loader({ request }: Route.LoaderArgs) {
 	// Get latest month's status using getCurrentMonth utility
 	const currentMonth = await getCurrentMonth();
 
@@ -32,11 +27,11 @@ export const loader: LoaderFunction = async ({ request }) => {
 		monthStatus: currentMonth?.status || "ready",
 		isAdmin,
 	});
-};
+}
 
-export default function Layout() {
+export default function Layout({ loaderData }: Route.ComponentProps) {
 	const location = useLocation();
-	const { monthStatus, isAdmin } = useLoaderData<LoaderData>();
+	const { monthStatus, isAdmin } = loaderData;
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const getLinkClassName = (path: string, isMobile = false) => {

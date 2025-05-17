@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useFetcher, useLoaderData, redirect } from "react-router";
+import { Link, useFetcher, redirect } from "react-router";
 import type { Route } from "./+types";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/server/igdb.server";
@@ -11,23 +11,13 @@ import PitchesModal from "~/components/PitchesModal";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 
-interface LoaderData {
-	games: Nomination[];
-	monthId?: number;
-	userDiscordId: string;
-	monthStatus?: string;
-	userNominations: Nomination[];
-	allNominations: Nomination[];
-	previousWinners: string[];
-}
-
 interface NominationResponse {
 	error?: string;
 	success?: boolean;
 	nominationId?: number;
 }
 
-export const loader: Route.Loader = async ({ request }) => {
+export async function loader({ request }: Route.LoaderArgs) {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
@@ -58,7 +48,7 @@ export const loader: Route.Loader = async ({ request }) => {
 		userNominations = allNominations.filter((n) => n.discordId === discordId);
 	}
 
-	return Response.json({
+	return {
 		games: [],
 		monthId,
 		monthStatus: monthRow.status,
@@ -66,10 +56,10 @@ export const loader: Route.Loader = async ({ request }) => {
 		userNominations,
 		allNominations,
 		previousWinners,
-	});
-};
+	};
+}
 
-export async function action({ request }: Route.Action) {
+export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
 	const query = formData.get("query");
 
@@ -81,7 +71,7 @@ export async function action({ request }: Route.Action) {
 	return Response.json({ games });
 }
 
-export default function Nominate() {
+export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const {
 		games: initialGames,
 		monthId,
@@ -90,7 +80,7 @@ export default function Nominate() {
 		allNominations,
 		userDiscordId,
 		previousWinners,
-	} = useLoaderData<LoaderData>();
+	} = loaderData;
 	const search = useFetcher<{ games: Nomination[] }>();
 	const games = search.data?.games || initialGames;
 	const [searchTerm, setSearchTerm] = useState("");

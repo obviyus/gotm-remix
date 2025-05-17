@@ -1,10 +1,11 @@
-import { Link, useLoaderData } from "react-router";
+import { Link } from "react-router";
 import { db } from "~/server/database.server";
 import type { Month } from "~/types";
 import { getMonth } from "~/server/month.server";
 import { getWinner } from "~/server/winner.server";
+import type { Route } from "./+types";
 
-export const loader = async () => {
+export async function loader() {
 	const result = await db.execute(
 		`SELECT id FROM months WHERE status_id NOT IN (
 			SELECT id FROM month_status WHERE status = 'nominating'
@@ -35,10 +36,10 @@ export const loader = async () => {
 	);
 
 	return { months };
-};
+}
 
-export default function History() {
-	const { months } = useLoaderData<{ months: Month[] }>();
+export default function History({ loaderData }: Route.ComponentProps) {
+	const { months } = loaderData;
 
 	// Group months by year
 	const monthsByYear = months.reduce(

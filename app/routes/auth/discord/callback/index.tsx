@@ -1,6 +1,7 @@
-import { type LoaderFunction, redirect } from "react-router";
+import { redirect } from "react-router";
 import { commitSession, getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";
+import type { Route } from "./+types";
 
 type MonthStatus =
 	| "ready"
@@ -10,7 +11,7 @@ type MonthStatus =
 	| "playing"
 	| "over";
 
-export const loader: LoaderFunction = async ({ request }) => {
+export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
 	const error = url.searchParams.get("error");
@@ -84,4 +85,4 @@ export const loader: LoaderFunction = async ({ request }) => {
 		console.error("Discord authentication error:", error);
 		return redirect("/?error=auth_failed");
 	}
-};
+}

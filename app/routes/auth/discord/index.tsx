@@ -1,6 +1,6 @@
-import { type LoaderFunction, redirect } from "react-router";
+import { redirect } from "react-router";
 
-export const loader: LoaderFunction = async () => {
+export async function loader() {
 	if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
 		throw new Error("Discord client ID and redirect URI must be defined");
 	}
@@ -13,4 +13,4 @@ export const loader: LoaderFunction = async () => {
 	});
 
 	return redirect(`https://discord.com/api/oauth2/authorize?${params}`);
-};
+}

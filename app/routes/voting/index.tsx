@@ -1,11 +1,10 @@
-import { useFetcher, useLoaderData } from "react-router";
+import { useFetcher, redirect } from "react-router";
 import {
 	DragDropContext,
 	Draggable,
 	Droppable,
 	type DropResult,
 } from "@hello-pangea/dnd";
-import { type LoaderFunction, redirect } from "react-router";
 import { db } from "~/server/database.server";
 import type { Nomination } from "~/types";
 import { useState } from "react";
@@ -16,19 +15,9 @@ import SplitLayout, { Column } from "~/components/SplitLayout";
 import PitchesModal from "~/components/PitchesModal";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationById } from "~/server/nomination.server";
+import type { Route } from "./+types";
 
-interface LoaderData {
-	monthId: number;
-	userId: string;
-	shortNominations: Nomination[];
-	longNominations: Nomination[];
-	votedShort: boolean;
-	votedLong: boolean;
-	shortRankings: Array<{ nomination_id: number; rank: number }>;
-	longRankings: Array<{ nomination_id: number; rank: number }>;
-}
-
-export const loader: LoaderFunction = async ({ request }) => {
+export async function loader({ request }: Route.LoaderArgs) {
 	// Check for authentication
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
@@ -125,7 +114,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 		}));
 	}
 
-	return Response.json({
+	return {
 		monthId,
 		userId: discordId,
 		shortNominations: shortNoms,
@@ -134,10 +123,10 @@ export const loader: LoaderFunction = async ({ request }) => {
 		votedLong: Boolean(longVoteResult.rows[0]),
 		shortRankings,
 		longRankings,
-	});
-};
+	};
+}
 
-export default function Voting() {
+export default function Voting({ loaderData }: Route.ComponentProps) {
 	const {
 		monthId,
 		userId,
@@ -147,7 +136,7 @@ export default function Voting() {
 		votedLong: initialVotedLong,
 		shortRankings = [],
 		longRankings = [],
-	} = useLoaderData<LoaderData>();
+	} = loaderData;
 
 	const voteFetcher = useFetcher();
 

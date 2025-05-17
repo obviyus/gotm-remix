@@ -1,9 +1,9 @@
-import type { ActionFunctionArgs } from "react-router";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import type { NominationFormData } from "~/types";
+import type { Route } from "./+types/nominations";
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request }: Route.ActionArgs) {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 

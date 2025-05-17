@@ -1,9 +1,10 @@
-import { type LoaderFunction, redirect } from "react-router";
+import type { Route } from "./+types";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";
+import { redirect } from "@remix-run/router";
 
-export const loader: LoaderFunction = async ({ request }) => {
+export async function loader({ request }: Route.LoaderArgs) {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
@@ -23,4 +24,4 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 	const month = await getCurrentMonth();
 	return redirect(`/admin/${month.id}`);
-};
+}

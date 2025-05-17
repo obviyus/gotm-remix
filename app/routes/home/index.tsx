@@ -1,35 +1,18 @@
-import { useLoaderData } from "react-router";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
-import {
-	calculateVotingResults,
-	getGameUrls,
-	type Result,
-} from "~/server/voting.server";
-import type { Month, Nomination } from "~/types";
+import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
+import type { Nomination } from "~/types";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import type { Route } from "./+types";
 
-type LoaderData = {
-	month: Month;
-	results?: {
-		long: Result[];
-		short: Result[];
-	};
-	nominations?: {
-		long: Nomination[];
-		short: Nomination[];
-	};
-	gameUrls: Record<string, string>;
-};
-
-export const loader = async () => {
+export async function loader() {
 	const month = await getCurrentMonth();
-	const gameUrls = getGameUrls(month.id);
+	const gameUrls = await getGameUrls(month.id);
 
 	if (month.status === "nominating" || month.status === "jury") {
 		const nominations = await getNominationsForMonth(month.id);
@@ -75,10 +58,10 @@ export const loader = async () => {
 
 	// Default case: just return the month info
 	return { month, results: undefined, gameUrls };
-};
+}
 
-export default function Index() {
-	const { month, results, nominations, gameUrls } = useLoaderData<LoaderData>();
+export default function Index({ loaderData }: Route.ComponentProps) {
+	const { month, results, nominations, gameUrls } = loaderData;
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);

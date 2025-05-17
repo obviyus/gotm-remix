@@ -1,7 +1,7 @@
-import { useLoaderData } from "react-router";
 import { db } from "~/server/database.server";
+import type { Route } from "./+types";
 
-export const loader = async () => {
+export async function loader() {
 	const result = await db.execute(
 		`SELECT name
          FROM jury_members
@@ -10,10 +10,10 @@ export const loader = async () => {
 	);
 
 	return { juryMembers: result.rows.map((row) => row.name as string) };
-};
+}
 
-export default function Jury() {
-	const { juryMembers } = useLoaderData<{ juryMembers: string[] }>();
+export default function Jury({ loaderData }: Route.ComponentProps) {
+	const { juryMembers } = loaderData;
 
 	return (
 		<div className="mx-auto h-full px-4 py-6 sm:px-6 lg:px-8">
