@@ -27,7 +27,7 @@ interface NominationResponse {
 	nominationId?: number;
 }
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: Route.Loader = async ({ request }) => {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
