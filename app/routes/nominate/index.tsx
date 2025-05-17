@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useFetcher, useLoaderData, redirect } from "react-router";
-import type { ActionFunctionArgs, LoaderFunction } from "react-router";
+import type { Route } from "./+types";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/server/igdb.server";
 import GameCard from "~/components/GameCard";
@@ -69,7 +69,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 	});
 };
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request }: Route.Action) {
 	const formData = await request.formData();
 	const query = formData.get("query");
 
