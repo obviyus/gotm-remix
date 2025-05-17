@@ -14,7 +14,7 @@ import { TrashIcon } from "@heroicons/react/20/solid";
 import SplitLayout, { Column } from "~/components/SplitLayout";
 import PitchesModal from "~/components/PitchesModal";
 import { getCurrentMonth } from "~/server/month.server";
-import { getNominationById } from "~/server/nomination.server";
+import { getNominationsByIds } from "~/server/nomination.server";
 import type { Route } from "./+types";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -52,8 +52,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 		args: [monthId, discordId],
 	});
 
-	// Fetch nominations
-	const shortNomResult = await db.execute({
+	// Fetch nomination IDs
+	const shortNomIds = await db.execute({
 		sql: `SELECT id
          FROM nominations
          WHERE month_id = ?
@@ -62,7 +62,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		args: [monthId],
 	});
 
-	const longNomResult = await db.execute({
+	const longNomIds = await db.execute({
 		sql: `SELECT id
          FROM nominations
          WHERE month_id = ?
@@ -71,16 +71,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 		args: [monthId],
 	});
 
-	const shortNoms = await Promise.all(
-		shortNomResult.rows.map(
-			async (row) => await getNominationById(row.id as number),
-		),
-	);
-	const longNoms = await Promise.all(
-		longNomResult.rows.map(
-			async (row) => await getNominationById(row.id as number),
-		),
-	);
+	// Extract IDs
+	const shortNominationIds = shortNomIds.rows.map((row) => Number(row.id));
+	const longNominationIds = longNomIds.rows.map((row) => Number(row.id));
+
+	// Fetch nominations in batch
+	const shortNoms = await getNominationsByIds(shortNominationIds);
+	const longNoms = await getNominationsByIds(longNominationIds);
 
 	// Fetch existing rankings if user has voted
 	let shortRankings: Array<{ nomination_id: number; rank: number }> = [];
