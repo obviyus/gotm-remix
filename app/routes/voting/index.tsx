@@ -33,82 +33,100 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return Response.json({ monthId: undefined });
 	}
 
-	// Check if user has already voted
-	const shortVoteResult = await db.execute({
-		sql: `SELECT id
+	// Check if user has already voted (in parallel)
+	const [shortVoteResult, longVoteResult] = await Promise.all([
+		db.execute({
+			sql: `SELECT id
          FROM votes
          WHERE month_id = ?
            AND discord_id = ?
            AND short = 1`,
-		args: [monthId, discordId],
-	});
-
-	const longVoteResult = await db.execute({
-		sql: `SELECT id
+			args: [monthId, discordId],
+		}),
+		db.execute({
+			sql: `SELECT id
          FROM votes
          WHERE month_id = ?
            AND discord_id = ?
            AND short = 0`,
-		args: [monthId, discordId],
-	});
+			args: [monthId, discordId],
+		}),
+	]);
 
-	// Fetch nomination IDs
-	const shortNomIds = await db.execute({
-		sql: `SELECT id
+	// Fetch nomination IDs in parallel
+	const [shortNomIds, longNomIds] = await Promise.all([
+		db.execute({
+			sql: `SELECT id
          FROM nominations
          WHERE month_id = ?
            AND jury_selected = 1
            AND short = 1`,
-		args: [monthId],
-	});
-
-	const longNomIds = await db.execute({
-		sql: `SELECT id
+			args: [monthId],
+		}),
+		db.execute({
+			sql: `SELECT id
          FROM nominations
          WHERE month_id = ?
            AND jury_selected = 1
            AND short = 0`,
-		args: [monthId],
-	});
+			args: [monthId],
+		}),
+	]);
 
 	// Extract IDs
 	const shortNominationIds = shortNomIds.rows.map((row) => Number(row.id));
 	const longNominationIds = longNomIds.rows.map((row) => Number(row.id));
 
-	// Fetch nominations in batch
-	const shortNoms = await getNominationsByIds(shortNominationIds);
-	const longNoms = await getNominationsByIds(longNominationIds);
+	// Fetch nominations in batch (in parallel)
+	const [shortNoms, longNoms] = await Promise.all([
+		getNominationsByIds(shortNominationIds),
+		getNominationsByIds(longNominationIds),
+	]);
 
 	// Fetch existing rankings if user has voted
 	let shortRankings: Array<{ nomination_id: number; rank: number }> = [];
 	let longRankings: Array<{ nomination_id: number; rank: number }> = [];
 
+	// Prepare ranking queries for parallel execution
+	const rankingQueries = [];
+	
 	if (shortVoteResult.rows[0]) {
-		const shortRankResult = await db.execute({
-			sql: `SELECT nomination_id, rank
+		rankingQueries.push(
+			db.execute({
+				sql: `SELECT nomination_id, rank
              FROM rankings
              WHERE vote_id = ?
              ORDER BY \`rank\``,
-			args: [shortVoteResult.rows[0].id],
-		});
-		shortRankings = shortRankResult.rows.map((row) => ({
-			nomination_id: row.nomination_id as number,
-			rank: row.rank as number,
-		}));
+				args: [shortVoteResult.rows[0].id],
+			}).then(shortRankResult => {
+				shortRankings = shortRankResult.rows.map((row) => ({
+					nomination_id: row.nomination_id as number,
+					rank: row.rank as number,
+				}));
+			})
+		);
 	}
 
 	if (longVoteResult.rows[0]) {
-		const longRankResult = await db.execute({
-			sql: `SELECT nomination_id, rank
+		rankingQueries.push(
+			db.execute({
+				sql: `SELECT nomination_id, rank
              FROM rankings
              WHERE vote_id = ?
              ORDER BY \`rank\``,
-			args: [longVoteResult.rows[0].id],
-		});
-		longRankings = longRankResult.rows.map((row) => ({
-			nomination_id: row.nomination_id as number,
-			rank: row.rank as number,
-		}));
+				args: [longVoteResult.rows[0].id],
+			}).then(longRankResult => {
+				longRankings = longRankResult.rows.map((row) => ({
+					nomination_id: row.nomination_id as number,
+					rank: row.rank as number,
+				}));
+			})
+		);
+	}
+	
+	// Execute ranking queries in parallel if any exist
+	if (rankingQueries.length > 0) {
+		await Promise.all(rankingQueries);
 	}
 
 	return {
