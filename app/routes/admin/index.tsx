@@ -2,7 +2,7 @@ import type { Route } from "./+types";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";
-import { redirect } from "@remix-run/router";
+import { redirect } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const session = await getSession(request.headers.get("Cookie"));
