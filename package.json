@@ -11,10 +11,10 @@
 		"typecheck": "react-router typegen && tsc"
 	},
 	"dependencies": {
-		"@headlessui/react": "^2.2.3",
+		"@headlessui/react": "^2.2.4",
 		"@hello-pangea/dnd": "^18.0.1",
 		"@heroicons/react": "^2.2.0",
-		"@libsql/client": "^0.15.6",
+		"@libsql/client": "^0.15.7",
 		"@react-router/node": "^7.6.0",
 		"@react-router/serve": "^7.6.0",
 		"dotenv": "^16.5.0",
