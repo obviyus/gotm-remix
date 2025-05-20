@@ -265,6 +265,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
 	const jurySelectionFetcher = useFetcher<ActionResponse>();
 	const [error, setError] = useState<string | null>(null);
+	const [csvCopied, setCsvCopied] = useState(false);
 
 	// Clear error when submission is successful
 	useEffect(() => {
@@ -307,6 +308,68 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 
 		// Return the optimistic state
 		return jurySelectionFetcher.formData?.get("selected") === "true";
+	};
+
+	const handleCopyAsCSV = () => {
+		// Create CSV with tab delimiters for better compatibilty with Google Sheets
+		const header = "Category\tGame Name\tSubmitted Pitches\n";
+		let csvString = header;
+
+		const escapeCSV = (text: string | null | undefined) => {
+			if (text === null || text === undefined) return "";
+
+			// Ensure text is a string and clean it - replace tabs and newlines
+			const strText = String(text)
+				.replace(/\t/g, " ") // Replace tabs with spaces
+				.replace(/\n/g, " ") // Replace newlines with spaces
+				.replace(/\r/g, " ") // Replace carriage returns with spaces
+				.trim(); // Trim any leading/trailing whitespace
+
+			// No need to escape quotes with tab-delimited format
+			return strText;
+		};
+
+		const longGames = nominations.filter((n) => !n.short);
+		const shortGames = nominations.filter((n) => n.short);
+
+		if (longGames.length > 0) {
+			csvString += "Long Games\t\t\n";
+			for (const nomination of longGames) {
+				if (nomination.pitches && nomination.pitches.length > 0) {
+					for (const [index, pitch] of nomination.pitches.entries()) {
+						if (index === 0) {
+							csvString += `\t${escapeCSV(nomination.gameName)}\t${escapeCSV(pitch.pitch)}\n`;
+						} else {
+							csvString += `\t\t${escapeCSV(pitch.pitch)}\n`;
+						}
+					}
+				} else {
+					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
+				}
+			}
+		}
+
+		if (shortGames.length > 0) {
+			csvString += "Short Games\t\t\n";
+			for (const nomination of shortGames) {
+				if (nomination.pitches && nomination.pitches.length > 0) {
+					for (const [index, pitch] of nomination.pitches.entries()) {
+						if (index === 0) {
+							csvString += `\t${escapeCSV(nomination.gameName)}\t${escapeCSV(pitch.pitch)}\n`;
+						} else {
+							csvString += `\t\t${escapeCSV(pitch.pitch)}\n`;
+						}
+					}
+				} else {
+					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
+				}
+			}
+		}
+
+		navigator.clipboard.writeText(csvString).then(() => {
+			setCsvCopied(true);
+			setTimeout(() => setCsvCopied(false), 2000);
+		});
 	};
 
 	const monthStatuses = [
@@ -565,7 +628,21 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			{/* Jury Selection Section */}
 			{selectedMonth && nominations.length > 0 && (
 				<section>
-					<h2 className="text-2xl font-semibold mb-4">Jury Selection</h2>
+					<div className="mb-4 flex items-center justify-between">
+						<h2 className="text-2xl font-semibold text-zinc-200">
+							Jury Selection
+						</h2>
+						<button
+							type="button"
+							onClick={handleCopyAsCSV}
+							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
+						>
+							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+								{csvCopied ? "Copied!" : "Copy as CSV"}
+							</span>
+						</button>
+					</div>
+
 					<div className="bg-black/10 backdrop-blur-sm rounded-lg shadow overflow-hidden border border-white/10">
 						<div className="overflow-x-auto">
 							<table className="min-w-full divide-y divide-white/10">
