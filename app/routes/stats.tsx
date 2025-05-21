@@ -71,7 +71,6 @@ export async function loader() {
       (SELECT COUNT(DISTINCT game_id) FROM nominations) AS unique_games,
       (SELECT COUNT(*) FROM votes) AS total_votes,
       (SELECT COUNT(DISTINCT discord_id) FROM jury_members WHERE active = 1) AS total_jury_members,
-      (SELECT COUNT(*) FROM winners) AS total_winners,
       (SELECT COUNT(DISTINCT discord_id) FROM nominations) AS total_nominators,
       (SELECT COUNT(DISTINCT discord_id) FROM votes) AS total_voters,
       (SELECT COUNT(*) FROM pitches) AS total_pitches
@@ -149,7 +148,6 @@ export async function loader() {
 		unique_games: Number(totalStatsResult.rows[0].unique_games),
 		total_votes: Number(totalStatsResult.rows[0].total_votes),
 		total_jury_members: Number(totalStatsResult.rows[0].total_jury_members),
-		total_winners: Number(totalStatsResult.rows[0].total_winners),
 		total_nominators: Number(totalStatsResult.rows[0].total_nominators),
 		total_voters: Number(totalStatsResult.rows[0].total_voters),
 		total_pitches: Number(totalStatsResult.rows[0].total_pitches),
@@ -394,7 +392,7 @@ function TopGamesChart({ data }: { data: GameStats[] }) {
 					barWidth: "60%",
 					data: data.map((item) => item.count),
 					itemStyle: {
-						color: "#60a5fa",
+						color: "#34d399",
 					},
 				},
 			],
@@ -511,12 +509,14 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 			legend: {
 				data: ["Nominators", "Voters"],
 				textStyle: { color: "#94a3b8" },
+				top: 10,
+				padding: [5, 10],
 			},
 			grid: {
 				left: "6%",
 				right: "6%",
 				bottom: "16%",
-				top: "3%",
+				top: "12%",
 				containLabel: true,
 			},
 			xAxis: {
@@ -538,7 +538,8 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 					data: filteredData.map((item) => item.nominators),
 					smooth: true,
 					lineStyle: { width: 3 },
-					itemStyle: { color: "#c084fc" },
+					itemStyle: { color: "#34d399" },
+					symbolSize: 8,
 				},
 				{
 					name: "Voters",
@@ -546,7 +547,8 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 					data: filteredData.map((item) => item.voters),
 					smooth: true,
 					lineStyle: { width: 3 },
-					itemStyle: { color: "#60a5fa" },
+					itemStyle: { color: "#fbbf24" },
+					symbolSize: 8,
 				},
 			],
 		});
@@ -602,7 +604,7 @@ function TopNominatorsChart({ data }: { data: TopNominatorStats[] }) {
 					barWidth: "60%",
 					data: data.map((item) => item.count),
 					itemStyle: {
-						color: "#f472b6",
+						color: "#fbbf24",
 					},
 				},
 			],
@@ -667,7 +669,7 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 					name: "Selected by Jury",
 					type: "bar",
 					stack: "games",
-					itemStyle: { color: "#22d3ee" },
+					itemStyle: { color: "#34d399" },
 					data: data.map((item) => item.selected),
 				},
 			],
@@ -734,13 +736,13 @@ function JurySelectionPercentageChart({
 					data: data.map((item) => item.selectPercentage),
 					smooth: true,
 					lineStyle: { width: 3 },
-					itemStyle: { color: "#facc15" },
+					itemStyle: { color: "#fbbf24" },
 					markLine: {
 						data: [
 							{
 								type: "average",
 								name: "Average",
-								lineStyle: { color: "#f97316" },
+								lineStyle: { color: "#34d399" },
 							},
 						],
 					},
