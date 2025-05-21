@@ -74,109 +74,121 @@ interface TopScoringNominationStats {
 }
 
 export async function loader() {
-	// Get total stats
-	const totalStatsResult = await db.execute({
-		sql: `SELECT
-      (SELECT COUNT(*) FROM nominations) AS total_nominations,
-      (SELECT COUNT(DISTINCT game_id) FROM nominations) AS unique_games,
-      (SELECT COUNT(*) FROM votes) AS total_votes,
-      (SELECT COUNT(DISTINCT discord_id) FROM jury_members WHERE active = 1) AS total_jury_members,
-      (SELECT COUNT(DISTINCT discord_id) FROM nominations) AS total_nominators,
-      (SELECT COUNT(DISTINCT discord_id) FROM votes) AS total_voters,
-      (SELECT COUNT(*) FROM pitches) AS total_pitches,
-      (SELECT COUNT(*) FROM winners) AS total_winners
-    `,
-	});
+	const [
+		totalStatsResult,
+		topGamesResult,
+		yearStatsResult,
+		monthlyStatsResult,
+		topNominatorsResult,
+		jurySelectionStatsResult,
+		shortVsLongResult,
+		winnersByYearResult,
+		topScoringNominationsResult,
+	] = await Promise.all([
+		// Get total stats
+		db.execute({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM nominations) AS total_nominations,
+				(SELECT COUNT(DISTINCT game_id) FROM nominations) AS unique_games,
+				(SELECT COUNT(*) FROM votes) AS total_votes,
+				(SELECT COUNT(DISTINCT discord_id) FROM jury_members WHERE active = 1) AS total_jury_members,
+				(SELECT COUNT(DISTINCT discord_id) FROM nominations) AS total_nominators,
+				(SELECT COUNT(DISTINCT discord_id) FROM votes) AS total_voters,
+				(SELECT COUNT(*) FROM pitches) AS total_pitches,
+				(SELECT COUNT(*) FROM winners) AS total_winners
+			`,
+		}),
 
-	// Get top 10 most nominated games
-	const topGamesResult = await db.execute({
-		sql: `SELECT game_id AS id, game_name AS name, COUNT(*) AS count
-      FROM nominations
-      GROUP BY game_id, game_name
-      ORDER BY count DESC
-      LIMIT 10`,
-	});
+		// Get top 10 most nominated games
+		db.execute({
+			sql: `SELECT game_id AS id, game_name AS name, COUNT(*) AS count
+				FROM nominations
+				GROUP BY game_id, game_name
+				ORDER BY count DESC
+				LIMIT 10`,
+		}),
 
-	// Get nominations by year
-	const yearStatsResult = await db.execute({
-		sql: `SELECT game_year AS year, COUNT(*) AS count
-      FROM nominations
-      WHERE game_year IS NOT NULL AND game_year != ''
-      GROUP BY game_year
-      ORDER BY game_year ASC`,
-	});
+		// Get nominations by year
+		db.execute({
+			sql: `SELECT game_year AS year, COUNT(*) AS count
+				FROM nominations
+				WHERE game_year IS NOT NULL AND game_year != ''
+				GROUP BY game_year
+				ORDER BY game_year ASC`,
+		}),
 
-	// Get monthly participation stats
-	const monthlyStatsResult = await db.execute({
-		sql: `SELECT 
-      m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
-      (SELECT COUNT(DISTINCT discord_id) FROM nominations WHERE month_id = m.id) AS nominators,
-      (SELECT COUNT(DISTINCT discord_id) FROM votes WHERE month_id = m.id) AS voters
-      FROM months m
-      ORDER BY m.year, m.month`,
-	});
+		// Get monthly participation stats
+		db.execute({
+			sql: `SELECT 
+				m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
+				(SELECT COUNT(DISTINCT discord_id) FROM nominations WHERE month_id = m.id) AS nominators,
+				(SELECT COUNT(DISTINCT discord_id) FROM votes WHERE month_id = m.id) AS voters
+				FROM months m
+				ORDER BY m.year, m.month`,
+		}),
 
-	// Get top nominators
-	const topNominatorsResult = await db.execute({
-		sql: `WITH nominator_counts AS (
-      SELECT discord_id, COUNT(*) AS count
-      FROM nominations
-      GROUP BY discord_id
-      ORDER BY count DESC
-      LIMIT 10
-    )
-    SELECT 
-      nc.discord_id,
-      nc.count
-    FROM nominator_counts nc`,
-	});
+		// Get top nominators
+		db.execute({
+			sql: `WITH nominator_counts AS (
+				SELECT discord_id, COUNT(*) AS count
+				FROM nominations
+				GROUP BY discord_id
+				ORDER BY count DESC
+				LIMIT 10
+			)
+			SELECT 
+				nc.discord_id,
+				nc.count
+			FROM nominator_counts nc`,
+		}),
 
-	// Get nomination vs jury selection stats
-	const jurySelectionStatsResult = await db.execute({
-		sql: `SELECT 
-      m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
-      COUNT(CASE WHEN jury_selected = 1 THEN 1 END) AS selected,
-      COUNT(*) AS total
-      FROM nominations n
-      JOIN months m ON n.month_id = m.id
-      GROUP BY n.month_id
-      ORDER BY m.year, m.month`,
-	});
+		// Get nomination vs jury selection stats
+		db.execute({
+			sql: `SELECT 
+				m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
+				COUNT(CASE WHEN jury_selected = 1 THEN 1 END) AS selected,
+				COUNT(*) AS total
+				FROM nominations n
+				JOIN months m ON n.month_id = m.id
+				GROUP BY n.month_id
+				ORDER BY m.year, m.month`,
+		}),
 
-	// Short vs Long game stats
-	const shortVsLongResult = await db.execute({
-		sql: `SELECT 
-      short, 
-      COUNT(*) AS count, 
-      COUNT(DISTINCT discord_id) AS unique_nominators
-      FROM nominations
-      GROUP BY short`,
-	});
+		// Short vs Long game stats
+		db.execute({
+			sql: `SELECT 
+				short, 
+				COUNT(*) AS count, 
+				COUNT(DISTINCT discord_id) AS unique_nominators
+				FROM nominations
+				GROUP BY short`,
+		}),
 
-	// Winners by release year stats
-	const winnersByYearResult = await db.execute({
-		sql: `SELECT 
-      game_year AS year, 
-      COUNT(*) AS count 
-      FROM winners
-      WHERE game_year IS NOT NULL AND game_year != ''
-      GROUP BY game_year
-      ORDER BY game_year ASC`,
-	});
+		// Winners by release year stats
+		db.execute({
+			sql: `SELECT 
+				game_year AS year, 
+				COUNT(*) AS count 
+				FROM winners
+				WHERE game_year IS NOT NULL AND game_year != ''
+				GROUP BY game_year
+				ORDER BY game_year ASC`,
+		}),
 
-	// Top scoring nominations
-	const topScoringNominationsResult = await db.execute({
-		sql: `SELECT 
-      n.game_name, 
-      COUNT(r.vote_id) AS count
-    FROM nominations n
-    JOIN rankings r ON r.nomination_id = n.id
-    WHERE r.rank = 1 -- Only count rank 1 (first place) votes
-    GROUP BY n.game_name
-    HAVING count >= 2 -- At least 2 first-place votes
-    ORDER BY count DESC
-    LIMIT 10`,
-	});
+		// Top scoring nominations
+		db.execute({
+			sql: `SELECT 
+				n.game_name, 
+				COUNT(r.vote_id) AS count
+			FROM nominations n
+			JOIN rankings r ON r.nomination_id = n.id
+			WHERE r.rank = 1 -- Only count rank 1 (first place) votes
+			GROUP BY n.game_name
+			HAVING count >= 2 -- At least 2 first-place votes
+			ORDER BY count DESC
+			LIMIT 10`,
+		}),
+	]);
 
 	// Format results as needed for frontend charts
 	const totalStats = {
