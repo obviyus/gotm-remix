@@ -12,6 +12,7 @@ import {
 	LegendComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
+import cache from "~/utils/cache.server";
 import type { Route } from "./+types/stats";
 
 echarts.use([
@@ -73,7 +74,39 @@ interface TopScoringNominationStats {
 	count: number;
 }
 
-export async function loader() {
+// Type for stats loader data
+type StatsLoaderData = {
+	totalStats: {
+		total_nominations: number;
+		unique_games: number;
+		total_votes: number;
+		total_jury_members: number;
+		total_nominators: number;
+		total_voters: number;
+		total_pitches: number;
+		total_winners: number;
+	};
+	topGames: GameStats[];
+	yearStats: YearStats[];
+	monthlyStats: MonthlyParticipationStats[];
+	topNominators: TopNominatorStats[];
+	jurySelectionStats: JurySelectionStatsType[];
+	shortVsLong: ShortVsLongStatsType[];
+	winnersByYear: WinnerByYearStats[];
+	topScoringNominations: TopScoringNominationStats[];
+};
+
+export async function loader(): Promise<StatsLoaderData> {
+	const CACHE_KEY = "stats_page_data";
+	// TTL set to 1 day (24 hours in milliseconds)
+	const TTL = 24 * 60 * 60 * 1000;
+
+	// Try to get data from cache
+	const cachedData = cache.get<StatsLoaderData>(CACHE_KEY);
+	if (cachedData) {
+		return cachedData;
+	}
+
 	const [
 		totalStatsResult,
 		topGamesResult,
@@ -249,7 +282,7 @@ export async function loader() {
 		count: Number(row.count),
 	}));
 
-	return {
+	const result: StatsLoaderData = {
 		totalStats,
 		topGames,
 		yearStats,
@@ -260,6 +293,11 @@ export async function loader() {
 		winnersByYear,
 		topScoringNominations,
 	};
+
+	// Store results in cache with 1 day TTL
+	cache.set(CACHE_KEY, result, TTL);
+
+	return result;
 }
 
 export default function StatsPage({ loaderData }: Route.ComponentProps) {

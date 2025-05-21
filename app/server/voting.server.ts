@@ -1,5 +1,6 @@
 import { db } from "~/server/database.server";
 import type { Nomination, Ranking, Vote } from "~/types";
+import globalCache from "~/utils/cache.server";
 
 export type Result = {
 	source: string;
@@ -7,12 +8,8 @@ export type Result = {
 	weight: string;
 };
 
-// Cache structure to store voting results
-const resultsCache = new Map<
-	string,
-	{ results: Result[]; timestamp: number }
->();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+// Cache TTL - 1 hour
+const CACHE_TTL = 1000 * 60 * 60;
 
 export const getNominationsAndVotes = async (
 	monthId: number,
@@ -342,11 +339,11 @@ export const calculateVotingResults = async (
 	short: boolean,
 ): Promise<Result[]> => {
 	try {
-		const cacheKey = `${monthId}-${short}`;
-		const cached = resultsCache.get(cacheKey);
+		const cacheKey = `voting-results-${monthId}-${short}`;
+		const cached = globalCache.get<Result[]>(cacheKey);
 
-		if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-			return cached.results;
+		if (cached) {
+			return cached;
 		}
 
 		const { nominations, votes } = await getNominationsAndVotes(monthId, short);
@@ -356,10 +353,7 @@ export const calculateVotingResults = async (
 
 		if (votes.length === 0) {
 			const emptyResults: Result[] = [];
-			resultsCache.set(cacheKey, {
-				results: emptyResults,
-				timestamp: Date.now(),
-			});
+			globalCache.set(cacheKey, emptyResults, CACHE_TTL);
 			return emptyResults;
 		}
 
@@ -369,15 +363,12 @@ export const calculateVotingResults = async (
 
 		if (viable.length === 0) {
 			const emptyResults: Result[] = [];
-			resultsCache.set(cacheKey, {
-				results: emptyResults,
-				timestamp: Date.now(),
-			});
+			globalCache.set(cacheKey, emptyResults, CACHE_TTL);
 			return emptyResults;
 		}
 
 		const results = await runRounds(viable, votes);
-		resultsCache.set(cacheKey, { results, timestamp: Date.now() });
+		globalCache.set(cacheKey, results, CACHE_TTL);
 		return results;
 	} catch (error) {
 		console.error("[Voting] Error calculating results:", error);
@@ -387,8 +378,8 @@ export const calculateVotingResults = async (
 
 // Function to invalidate cache when votes change
 export const invalidateVotingCache = (monthId: number, short: boolean) => {
-	const cacheKey = `${monthId}-${short}`;
-	resultsCache.delete(cacheKey);
+	const cacheKey = `voting-results-${monthId}-${short}`;
+	globalCache.delete(cacheKey);
 };
 
 export const getGameUrls = async (
