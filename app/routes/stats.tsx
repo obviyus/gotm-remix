@@ -1,6 +1,5 @@
 import { useRef, useEffect } from "react";
 import { db } from "~/server/database.server";
-import { uniqueNameGenerator } from "~/server/nameGenerator";
 import * as echarts from "echarts/core";
 import { BarChart, PieChart, LineChart } from "echarts/charts";
 import {
@@ -29,10 +28,12 @@ echarts.use([
 ]);
 
 // Type definitions
-interface GameStats {
+interface TopGamesFinalistStats {
 	id: string;
 	name: string;
-	count: number;
+	finalistNominations: number;
+	nonFinalistNominations: number;
+	totalNominations: number;
 }
 
 interface YearStats {
@@ -44,11 +45,6 @@ interface MonthlyParticipationStats {
 	monthYear: string;
 	nominators: number;
 	voters: number;
-}
-
-interface TopNominatorStats {
-	generatedName: string;
-	count: number;
 }
 
 interface JurySelectionStatsType {
@@ -86,10 +82,9 @@ type StatsLoaderData = {
 		total_pitches: number;
 		total_winners: number;
 	};
-	topGames: GameStats[];
+	topGamesFinalist: TopGamesFinalistStats[];
 	yearStats: YearStats[];
 	monthlyStats: MonthlyParticipationStats[];
-	topNominators: TopNominatorStats[];
 	jurySelectionStats: JurySelectionStatsType[];
 	shortVsLong: ShortVsLongStatsType[];
 	winnersByYear: WinnerByYearStats[];
@@ -109,14 +104,13 @@ export async function loader(): Promise<StatsLoaderData> {
 
 	const [
 		totalStatsResult,
-		topGamesResult,
 		yearStatsResult,
 		monthlyStatsResult,
-		topNominatorsResult,
 		jurySelectionStatsResult,
 		shortVsLongResult,
 		winnersByYearResult,
 		topScoringNominationsResult,
+		topGamesFinalistResult,
 	] = await Promise.all([
 		// Get total stats
 		db.execute({
@@ -130,15 +124,6 @@ export async function loader(): Promise<StatsLoaderData> {
 				(SELECT COUNT(*) FROM pitches) AS total_pitches,
 				(SELECT COUNT(*) FROM winners) AS total_winners
 			`,
-		}),
-
-		// Get top 10 most nominated games
-		db.execute({
-			sql: `SELECT game_id AS id, game_name AS name, COUNT(*) AS count
-				FROM nominations
-				GROUP BY game_id, game_name
-				ORDER BY count DESC
-				LIMIT 10`,
 		}),
 
 		// Get nominations by year
@@ -158,21 +143,6 @@ export async function loader(): Promise<StatsLoaderData> {
 				(SELECT COUNT(DISTINCT discord_id) FROM votes WHERE month_id = m.id) AS voters
 				FROM months m
 				ORDER BY m.year, m.month`,
-		}),
-
-		// Get top nominators
-		db.execute({
-			sql: `WITH nominator_counts AS (
-				SELECT discord_id, COUNT(*) AS count
-				FROM nominations
-				GROUP BY discord_id
-				ORDER BY count DESC
-				LIMIT 10
-			)
-			SELECT 
-				nc.discord_id,
-				nc.count
-			FROM nominator_counts nc`,
 		}),
 
 		// Get nomination vs jury selection stats
@@ -221,6 +191,29 @@ export async function loader(): Promise<StatsLoaderData> {
 			ORDER BY count DESC
 			LIMIT 10`,
 		}),
+
+		// Get top 10 most nominated games with jury selection distinction
+		db.execute({
+			sql: `WITH GameNominationCounts AS (
+					SELECT
+							game_id,
+							game_name,
+							SUM(CASE WHEN jury_selected = 1 THEN 1 ELSE 0 END) as finalist_nominations,
+							SUM(CASE WHEN jury_selected = 0 THEN 1 ELSE 0 END) as non_finalist_nominations,
+							COUNT(*) as total_nominations
+					FROM nominations
+					GROUP BY game_id, game_name
+			)
+			SELECT
+					game_id AS id,
+					game_name AS name,
+					finalist_nominations,
+					non_finalist_nominations,
+					total_nominations
+			FROM GameNominationCounts
+			ORDER BY total_nominations DESC
+			LIMIT 10;`,
+		}),
 	]);
 
 	// Format results as needed for frontend charts
@@ -235,10 +228,12 @@ export async function loader(): Promise<StatsLoaderData> {
 		total_winners: Number(totalStatsResult.rows[0].total_winners),
 	};
 
-	const topGames = topGamesResult.rows.map((row) => ({
+	const topGamesFinalist = topGamesFinalistResult.rows.map((row) => ({
 		id: String(row.id),
 		name: String(row.name),
-		count: Number(row.count),
+		finalistNominations: Number(row.finalist_nominations),
+		nonFinalistNominations: Number(row.non_finalist_nominations),
+		totalNominations: Number(row.total_nominations),
 	}));
 
 	const yearStats = yearStatsResult.rows.map((row) => ({
@@ -250,11 +245,6 @@ export async function loader(): Promise<StatsLoaderData> {
 		monthYear: String(row.monthYear),
 		nominators: Number(row.nominators),
 		voters: Number(row.voters),
-	}));
-
-	const topNominators = topNominatorsResult.rows.map((row) => ({
-		generatedName: uniqueNameGenerator(String(row.discord_id)),
-		count: Number(row.count),
 	}));
 
 	const jurySelectionStats = jurySelectionStatsResult.rows.map((row) => ({
@@ -284,10 +274,9 @@ export async function loader(): Promise<StatsLoaderData> {
 
 	const result: StatsLoaderData = {
 		totalStats,
-		topGames,
+		topGamesFinalist, // Added to result
 		yearStats,
 		monthlyStats,
-		topNominators,
 		jurySelectionStats,
 		shortVsLong,
 		winnersByYear,
@@ -303,10 +292,9 @@ export async function loader(): Promise<StatsLoaderData> {
 export default function StatsPage({ loaderData }: Route.ComponentProps) {
 	const {
 		totalStats,
-		topGames,
+		topGamesFinalist,
 		yearStats,
 		monthlyStats,
-		topNominators,
 		jurySelectionStats,
 		shortVsLong,
 		winnersByYear,
@@ -350,8 +338,11 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 					Game Insights
 				</h2>
 				<div className="mb-8">
-					<ChartCard title="Top 10 Most Nominated Games" className="h-96">
-						<TopGamesChart data={topGames} />
+					<ChartCard
+						title="Top Nominated Games (Jury Selected vs Not Selected)"
+						className="h-96 p-8"
+					>
+						<TopGamesFinalistChart data={topGamesFinalist} />
 					</ChartCard>
 				</div>
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -383,15 +374,12 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 						value={totalStats.total_jury_members}
 					/>
 				</div>
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<div className="w-full">
 					<ChartCard
 						title="Monthly Participation (Nominators vs Voters)"
 						className="h-96"
 					>
 						<ParticipationChart data={monthlyStats} />
-					</ChartCard>
-					<ChartCard title="Top 10 Nominators" className="h-96">
-						<TopNominatorsChart data={topNominators} />
 					</ChartCard>
 				</div>
 			</section>
@@ -472,68 +460,6 @@ function ChartCard({
 }
 
 // Chart Components
-function TopGamesChart({ data }: { data: GameStats[] }) {
-	const chartRef = useRef<HTMLDivElement>(null);
-	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
-
-	useEffect(() => {
-		if (!chartRef.current) return;
-
-		if (!chartInstanceRef.current) {
-			chartInstanceRef.current = echarts.init(chartRef.current);
-		}
-
-		chartInstanceRef.current.setOption({
-			tooltip: {
-				trigger: "axis",
-				axisPointer: { type: "shadow" },
-			},
-			grid: {
-				left: "6%",
-				right: "6%",
-				bottom: "12%",
-				top: "3%",
-				containLabel: true,
-			},
-			xAxis: {
-				type: "value",
-				axisLabel: { color: "#94a3b8" },
-			},
-			yAxis: {
-				type: "category",
-				data: data.map((item) => item.name),
-				axisTick: { alignWithLabel: true },
-				axisLabel: {
-					color: "#94a3b8",
-					formatter: (value: string) => {
-						return value.length > 30 ? `${value.substring(0, 27)}...` : value;
-					},
-				},
-			},
-			series: [
-				{
-					name: "Nominations",
-					type: "bar",
-					barWidth: "60%",
-					data: data.map((item) => item.count),
-					itemStyle: {
-						color: "#34d399",
-					},
-				},
-			],
-		});
-
-		return () => {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.dispose();
-				chartInstanceRef.current = null;
-			}
-		};
-	}, [data]);
-
-	return <div ref={chartRef} className="w-full h-full" />;
-}
-
 function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -674,63 +600,6 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 					lineStyle: { width: 3 },
 					itemStyle: { color: "#fbbf24" },
 					symbolSize: 8,
-				},
-			],
-		});
-
-		return () => {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.dispose();
-				chartInstanceRef.current = null;
-			}
-		};
-	}, [data]);
-
-	return <div ref={chartRef} className="w-full h-full" />;
-}
-
-function TopNominatorsChart({ data }: { data: TopNominatorStats[] }) {
-	const chartRef = useRef<HTMLDivElement>(null);
-	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
-
-	useEffect(() => {
-		if (!chartRef.current) return;
-
-		if (!chartInstanceRef.current) {
-			chartInstanceRef.current = echarts.init(chartRef.current);
-		}
-
-		chartInstanceRef.current.setOption({
-			tooltip: {
-				trigger: "axis",
-				axisPointer: { type: "shadow" },
-			},
-			grid: {
-				left: "6%",
-				right: "6%",
-				bottom: "12%",
-				top: "3%",
-				containLabel: true,
-			},
-			xAxis: {
-				type: "value",
-				axisLabel: { color: "#94a3b8" },
-			},
-			yAxis: {
-				type: "category",
-				data: data.map((item) => item.generatedName),
-				axisTick: { alignWithLabel: true },
-				axisLabel: { color: "#94a3b8" },
-			},
-			series: [
-				{
-					name: "Nominations",
-					type: "bar",
-					barWidth: "60%",
-					data: data.map((item) => item.count),
-					itemStyle: {
-						color: "#fbbf24",
-					},
 				},
 			],
 		});
@@ -1088,4 +957,123 @@ function TopScoringNominationsChart({
 	}, [data]);
 
 	return <div ref={chartRef} className="w-full h-full" />;
+}
+
+function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
+	const chartRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (chartRef.current && data.length > 0) {
+			const chart = echarts.init(chartRef.current, "dark");
+			const option = {
+				tooltip: {
+					trigger: "axis",
+					axisPointer: {
+						type: "shadow",
+					},
+					backgroundColor: "rgba(31, 41, 55, 0.8)",
+					borderColor: "rgba(55, 65, 81, 1)",
+					textStyle: {
+						color: "#e5e7eb",
+					},
+				},
+				legend: {
+					data: ["Jury Selected", "Not Selected"],
+					textStyle: {
+						color: "#d1d5db",
+					},
+					top: "2%",
+					left: "center",
+					orient: "horizontal",
+				},
+				grid: {
+					left: "5%",
+					right: "5%",
+					bottom: "15%",
+					top: "15%",
+					containLabel: true,
+				},
+				xAxis: [
+					{
+						type: "category",
+						data: data.map((item) => item.name),
+						axisLabel: {
+							color: "#9ca3af",
+							interval: 0,
+							rotate: 30,
+							fontSize: 11,
+							overflow: "truncate",
+							width: 120,
+						},
+						axisLine: {
+							lineStyle: {
+								color: "#4b5563",
+							},
+						},
+					},
+				],
+				yAxis: [
+					{
+						type: "value",
+						name: "Number of Nominations",
+						axisLabel: {
+							color: "#9ca3b8",
+						},
+						nameTextStyle: {
+							color: "#d1d5db",
+						},
+						splitLine: {
+							lineStyle: {
+								color: "#374151",
+							},
+						},
+						axisLine: {
+							lineStyle: {
+								color: "#4b5563",
+							},
+						},
+					},
+				],
+				series: [
+					{
+						name: "Jury Selected",
+						type: "bar",
+						stack: "Total",
+						emphasis: {
+							focus: "series",
+						},
+						data: data.map((item) => item.finalistNominations),
+						itemStyle: {
+							color: "#34d399",
+						},
+					},
+					{
+						name: "Not Selected",
+						type: "bar",
+						stack: "Total",
+						emphasis: {
+							focus: "series",
+						},
+						data: data.map((item) => item.nonFinalistNominations),
+						itemStyle: {
+							color: "#fbbf24",
+						},
+					},
+				],
+				backgroundColor: "transparent",
+			};
+			chart.setOption(option);
+			return () => chart.dispose();
+		}
+	}, [data]);
+
+	if (data.length === 0) {
+		return (
+			<p className="text-center text-gray-400">
+				No data available for this chart.
+			</p>
+		);
+	}
+
+	return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
 }
