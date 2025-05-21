@@ -1,7 +1,7 @@
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import type { NominationFormData } from "~/types";
-import type { Route } from "./+types/nominations";
+import type { Route } from "./+types/api.nominations";
 
 export async function action({ request }: Route.ActionArgs) {
 	const session = await getSession(request.headers.get("Cookie"));

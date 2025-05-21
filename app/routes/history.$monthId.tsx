@@ -1,4 +1,4 @@
-import type { Route } from "./+types";
+import type { Route } from "./+types/history.$monthId";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
 import { calculateVotingResults, getGameUrls } from "~/server/voting.server";

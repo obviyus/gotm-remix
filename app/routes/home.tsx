@@ -8,7 +8,7 @@ import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
-import type { Route } from "./+types";
+import type { Route } from "./+types/home";
 
 export async function loader() {
 	const month = await getCurrentMonth();

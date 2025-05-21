@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useFetcher, redirect } from "react-router";
-import type { Route } from "./+types";
+import type { Route } from "./+types/nominate";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { searchGames } from "~/server/igdb.server";
 import GameCard from "~/components/GameCard";

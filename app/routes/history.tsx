@@ -3,7 +3,7 @@ import { db } from "~/server/database.server";
 import type { Month } from "~/types";
 import { getMonth } from "~/server/month.server";
 import { getWinner } from "~/server/winner.server";
-import type { Route } from "./+types";
+import type { Route } from "./+types/history";
 import { CalendarDaysIcon, TrophyIcon } from "@heroicons/react/24/outline";
 
 export async function loader() {

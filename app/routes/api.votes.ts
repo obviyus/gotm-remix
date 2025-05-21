@@ -1,6 +1,6 @@
 import { db } from "~/server/database.server";
 import { invalidateVotingCache } from "~/server/voting.server";
-import type { Route } from "./+types/votes";
+import type { Route } from "./+types/api.votes";
 
 export async function action({ request }: Route.ActionArgs) {
 	const isJson = request.headers

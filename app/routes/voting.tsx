@@ -15,7 +15,7 @@ import SplitLayout, { Column } from "~/components/SplitLayout";
 import PitchesModal from "~/components/PitchesModal";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
-import type { Route } from "./+types";
+import type { Route } from "./+types/voting";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Check for authentication
@@ -89,41 +89,45 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	// Prepare ranking queries for parallel execution
 	const rankingQueries = [];
-	
+
 	if (shortVoteResult.rows[0]) {
 		rankingQueries.push(
-			db.execute({
-				sql: `SELECT nomination_id, rank
+			db
+				.execute({
+					sql: `SELECT nomination_id, rank
              FROM rankings
              WHERE vote_id = ?
              ORDER BY \`rank\``,
-				args: [shortVoteResult.rows[0].id],
-			}).then(shortRankResult => {
-				shortRankings = shortRankResult.rows.map((row) => ({
-					nomination_id: row.nomination_id as number,
-					rank: row.rank as number,
-				}));
-			})
+					args: [shortVoteResult.rows[0].id],
+				})
+				.then((shortRankResult) => {
+					shortRankings = shortRankResult.rows.map((row) => ({
+						nomination_id: row.nomination_id as number,
+						rank: row.rank as number,
+					}));
+				}),
 		);
 	}
 
 	if (longVoteResult.rows[0]) {
 		rankingQueries.push(
-			db.execute({
-				sql: `SELECT nomination_id, rank
+			db
+				.execute({
+					sql: `SELECT nomination_id, rank
              FROM rankings
              WHERE vote_id = ?
              ORDER BY \`rank\``,
-				args: [longVoteResult.rows[0].id],
-			}).then(longRankResult => {
-				longRankings = longRankResult.rows.map((row) => ({
-					nomination_id: row.nomination_id as number,
-					rank: row.rank as number,
-				}));
-			})
+					args: [longVoteResult.rows[0].id],
+				})
+				.then((longRankResult) => {
+					longRankings = longRankResult.rows.map((row) => ({
+						nomination_id: row.nomination_id as number,
+						rank: row.rank as number,
+					}));
+				}),
 		);
 	}
-	
+
 	// Execute ranking queries in parallel if any exist
 	if (rankingQueries.length > 0) {
 		await Promise.all(rankingQueries);

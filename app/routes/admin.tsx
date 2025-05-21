@@ -1,4 +1,4 @@
-import type { Route } from "./+types";
+import type { Route } from "./+types/admin";
 import { db } from "~/server/database.server";
 import { getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";

@@ -1,5 +1,5 @@
 import { db } from "~/server/database.server";
-import type { Route } from "./+types";
+import type { Route } from "./+types/jury";
 
 export async function loader() {
 	const result = await db.execute(

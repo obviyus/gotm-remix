@@ -106,11 +106,12 @@ export function VotingResultsChart({
 			const isInitialNode = initialNodes.has(nodeName);
 			const isFinalNode = finalNodes.has(nodeName);
 
-			let labelPosition = "inside"; // Default to inside for intermediate nodes
+			let labelPosition: "inside" | "left" | "right" | "top" | "bottom" =
+				"inside"; // Typed as a valid position
 			if (isInitialNode) {
-				labelPosition = "right"; // Keep initial node names outside to the right
+				labelPosition = "right";
 			} else if (isFinalNode) {
-				labelPosition = "left"; // Keep final node names outside to the left
+				labelPosition = "left";
 			}
 
 			const nodeConfig = {

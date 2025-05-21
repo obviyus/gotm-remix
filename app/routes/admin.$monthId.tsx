@@ -7,7 +7,7 @@ import type { Nomination } from "~/types";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import { getMonth, getThemeCategories } from "~/server/month.server";
 import type { Row, Value } from "@libsql/client";
-import type { Route } from "./+types";
+import type { Route } from "./+types/admin.$monthId";
 
 interface ActionResponse {
 	success?: boolean;
