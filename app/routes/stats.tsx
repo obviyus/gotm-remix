@@ -422,6 +422,15 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 			chartInstanceRef.current = echarts.init(chartRef.current);
 		}
 
+		// Filter out invalid year values that might cause NaN
+		const validData = data.filter(
+			(item) =>
+				item.year &&
+				item.year !== "null" &&
+				item.year !== "undefined" &&
+				!Number.isNaN(Number(item.year)),
+		);
+
 		chartInstanceRef.current.setOption({
 			tooltip: {
 				trigger: "axis",
@@ -436,7 +445,7 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 			},
 			xAxis: {
 				type: "category",
-				data: data.map((item) => item.year),
+				data: validData.map((item) => item.year),
 				axisLabel: {
 					color: "#94a3b8",
 					rotate: 45,
@@ -451,7 +460,7 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 					name: "Nominations",
 					type: "bar",
 					barWidth: "60%",
-					data: data.map((item) => item.count),
+					data: validData.map((item) => item.count),
 					itemStyle: {
 						color: "#4ade80",
 					},
@@ -778,27 +787,11 @@ function ShortVsLongChart({ data }: { data: ShortVsLongStatsType[] }) {
 					type: "pie",
 					radius: ["50%", "70%"],
 					avoidLabelOverlap: false,
-					labelLine: {
-						length: 30,
-						length2: 20,
-						lineStyle: { color: "#fff" },
-					},
 					label: {
-						show: true,
-						formatter: "{b}: {c} ({d}%)",
-						fontSize: 14,
-						fontWeight: "bold",
-						color: "#fff",
-						backgroundColor: "rgba(0, 0, 0, 0.5)",
-						padding: [4, 8],
-						borderRadius: 4,
+						show: false,
 					},
-					emphasis: {
-						label: {
-							show: true,
-							fontSize: 16,
-							fontWeight: "bold",
-						},
+					labelLine: {
+						show: false,
 					},
 					data: data.map((item) => ({
 						value: item.count,
