@@ -29,6 +29,9 @@ export default [
 			index("./routes/admin.tsx"),
 			route(":monthId", "./routes/admin.$monthId.tsx"),
 		]),
+
+		// Stats routes
+		route("stats", "./routes/stats.tsx"),
 	]),
 
 	// Auth routes
