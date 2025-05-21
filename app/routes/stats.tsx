@@ -63,6 +63,16 @@ interface ShortVsLongStatsType {
 	uniqueNominators: number;
 }
 
+interface WinnerByYearStats {
+	year: string;
+	count: number;
+}
+
+interface TopScoringNominationStats {
+	game_name: string;
+	count: number;
+}
+
 export async function loader() {
 	// Get total stats
 	const totalStatsResult = await db.execute({
@@ -73,7 +83,8 @@ export async function loader() {
       (SELECT COUNT(DISTINCT discord_id) FROM jury_members WHERE active = 1) AS total_jury_members,
       (SELECT COUNT(DISTINCT discord_id) FROM nominations) AS total_nominators,
       (SELECT COUNT(DISTINCT discord_id) FROM votes) AS total_voters,
-      (SELECT COUNT(*) FROM pitches) AS total_pitches
+      (SELECT COUNT(*) FROM pitches) AS total_pitches,
+      (SELECT COUNT(*) FROM winners) AS total_winners
     `,
 	});
 
@@ -142,6 +153,31 @@ export async function loader() {
       GROUP BY short`,
 	});
 
+	// Winners by release year stats
+	const winnersByYearResult = await db.execute({
+		sql: `SELECT 
+      game_year AS year, 
+      COUNT(*) AS count 
+      FROM winners
+      WHERE game_year IS NOT NULL AND game_year != ''
+      GROUP BY game_year
+      ORDER BY game_year ASC`,
+	});
+
+	// Top scoring nominations
+	const topScoringNominationsResult = await db.execute({
+		sql: `SELECT 
+      n.game_name, 
+      COUNT(r.vote_id) AS count
+    FROM nominations n
+    JOIN rankings r ON r.nomination_id = n.id
+    WHERE r.rank = 1 -- Only count rank 1 (first place) votes
+    GROUP BY n.game_name
+    HAVING count >= 2 -- At least 2 first-place votes
+    ORDER BY count DESC
+    LIMIT 10`,
+	});
+
 	// Format results as needed for frontend charts
 	const totalStats = {
 		total_nominations: Number(totalStatsResult.rows[0].total_nominations),
@@ -151,6 +187,7 @@ export async function loader() {
 		total_nominators: Number(totalStatsResult.rows[0].total_nominators),
 		total_voters: Number(totalStatsResult.rows[0].total_voters),
 		total_pitches: Number(totalStatsResult.rows[0].total_pitches),
+		total_winners: Number(totalStatsResult.rows[0].total_winners),
 	};
 
 	const topGames = topGamesResult.rows.map((row) => ({
@@ -190,6 +227,16 @@ export async function loader() {
 		uniqueNominators: Number(row.unique_nominators),
 	}));
 
+	const winnersByYear = winnersByYearResult.rows.map((row) => ({
+		year: String(row.year),
+		count: Number(row.count),
+	}));
+
+	const topScoringNominations = topScoringNominationsResult.rows.map((row) => ({
+		game_name: String(row.game_name),
+		count: Number(row.count),
+	}));
+
 	return {
 		totalStats,
 		topGames,
@@ -198,6 +245,8 @@ export async function loader() {
 		topNominators,
 		jurySelectionStats,
 		shortVsLong,
+		winnersByYear,
+		topScoringNominations,
 	};
 }
 
@@ -210,6 +259,8 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 		topNominators,
 		jurySelectionStats,
 		shortVsLong,
+		winnersByYear,
+		topScoringNominations,
 	} = loaderData;
 
 	return (
@@ -222,19 +273,23 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 				>
 					Overall Stats
 				</h2>
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
 					<StatCard
 						title="Total Nominations"
 						value={totalStats.total_nominations}
 					/>
 					<StatCard
-						title="Unique Games Nominated"
+						title="Unique Nominations"
 						value={totalStats.unique_games}
 					/>
 					<StatCard title="Total Votes Cast" value={totalStats.total_votes} />
 					<StatCard
 						title="Total Pitches Submitted"
 						value={totalStats.total_pitches}
+					/>
+					<StatCard
+						title="Total Winners Selected"
+						value={totalStats.total_winners}
 					/>
 				</div>
 			</section>
@@ -302,6 +357,26 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 					</ChartCard>
 					<ChartCard title="Monthly Jury Selection Percentage" className="h-96">
 						<JurySelectionPercentageChart data={jurySelectionStats} />
+					</ChartCard>
+				</div>
+			</section>
+
+			{/* Winners Section */}
+			<section aria-labelledby="winners-title">
+				<h2
+					id="winners-title"
+					className="text-2xl font-semibold text-white mb-6"
+				>
+					Winners Insights
+				</h2>
+				<div className="grid grid-cols-1 gap-8 mb-8">
+					<ChartCard title="Games with Most First Place Votes" className="h-96">
+						<TopScoringNominationsChart data={topScoringNominations} />
+					</ChartCard>
+				</div>
+				<div className="grid grid-cols-1 gap-8">
+					<ChartCard title="Winners by Release Year" className="h-96">
+						<WinnersByYearChart data={winnersByYear} />
 					</ChartCard>
 				</div>
 			</section>
@@ -802,6 +877,154 @@ function ShortVsLongChart({ data }: { data: ShortVsLongStatsType[] }) {
 							color: item.type === "Short Games" ? "#34d399" : "#fbbf24",
 						},
 					})),
+				},
+			],
+		});
+
+		return () => {
+			if (chartInstanceRef.current) {
+				chartInstanceRef.current.dispose();
+				chartInstanceRef.current = null;
+			}
+		};
+	}, [data]);
+
+	return <div ref={chartRef} className="w-full h-full" />;
+}
+
+function WinnersByYearChart({ data }: { data: WinnerByYearStats[] }) {
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		// Filter out invalid year values
+		const validData = data.filter(
+			(item) =>
+				item.year &&
+				item.year !== "null" &&
+				item.year !== "undefined" &&
+				!Number.isNaN(Number(item.year)),
+		);
+
+		chartInstanceRef.current.setOption({
+			tooltip: {
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
+			},
+			grid: {
+				left: "6%",
+				right: "6%",
+				bottom: "12%",
+				top: "3%",
+				containLabel: true,
+			},
+			xAxis: {
+				type: "category",
+				data: validData.map((item) => item.year),
+				axisLabel: {
+					color: "#94a3b8",
+					rotate: 45,
+				},
+			},
+			yAxis: {
+				type: "value",
+				axisLabel: { color: "#94a3b8" },
+			},
+			series: [
+				{
+					name: "Winners",
+					type: "bar",
+					barWidth: "60%",
+					data: validData.map((item) => item.count),
+					itemStyle: {
+						color: "#34d399", // Green to match other charts
+					},
+				},
+			],
+		});
+
+		return () => {
+			if (chartInstanceRef.current) {
+				chartInstanceRef.current.dispose();
+				chartInstanceRef.current = null;
+			}
+		};
+	}, [data]);
+
+	return <div ref={chartRef} className="w-full h-full" />;
+}
+
+function TopScoringNominationsChart({
+	data,
+}: { data: TopScoringNominationStats[] }) {
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		// Find max score for better scaling
+		const maxCount = Math.max(...data.map((item) => item.count));
+
+		chartInstanceRef.current.setOption({
+			tooltip: {
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
+				formatter: (params: unknown[]) => {
+					// Type assertion for the ECharts tooltip parameters
+					const item = params[0] as {
+						name: string;
+						value: number;
+					};
+					return `${item.name}<br/>First Place Votes: ${item.value}`;
+				},
+			},
+			grid: {
+				left: "6%",
+				right: "6%",
+				bottom: "16%",
+				top: "3%",
+				containLabel: true,
+			},
+			xAxis: {
+				type: "value",
+				axisLabel: { color: "#94a3b8" },
+				name: "First Place Votes",
+				nameLocation: "middle",
+				nameGap: 30,
+				nameTextStyle: { color: "#94a3b8" },
+				max: maxCount * 1.1, // Add some padding
+			},
+			yAxis: {
+				type: "category",
+				data: data.map((item) => item.game_name),
+				axisTick: { alignWithLabel: true },
+				axisLabel: {
+					color: "#94a3b8",
+					formatter: (value: string) => {
+						return value.length > 25 ? `${value.substring(0, 22)}...` : value;
+					},
+				},
+			},
+			series: [
+				{
+					name: "First Place Votes",
+					type: "bar",
+					barWidth: "60%",
+					data: data.map((item) => item.count),
+					itemStyle: {
+						color: "#fbbf24", // Yellow to be consistent
+					},
 				},
 			],
 		});
