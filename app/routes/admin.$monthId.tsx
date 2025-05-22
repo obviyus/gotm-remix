@@ -266,6 +266,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const jurySelectionFetcher = useFetcher<ActionResponse>();
 	const [error, setError] = useState<string | null>(null);
 	const [csvCopied, setCsvCopied] = useState(false);
+	const [showCreateForm, setShowCreateForm] = useState(false);
 
 	// Clear error when submission is successful
 	useEffect(() => {
@@ -274,6 +275,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			createMonthFetcher.data?.success
 		) {
 			setError(null);
+			setShowCreateForm(false);
 			navigate(".", { replace: true });
 		} else if (createMonthFetcher.data?.error) {
 			setError(createMonthFetcher.data.error);
@@ -383,65 +385,129 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-			{/* Month Navigation */}
+			{/* Header with Month Navigation and Status */}
 			{selectedMonth && (
-				<div className="flex justify-between items-center mb-8">
-					<Link
-						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) + 1]?.id}`}
-						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-							months.findIndex((m) => m.id === selectedMonth.id) ===
-							months.length - 1
-								? "pointer-events-none opacity-50"
-								: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
-						}`}
-					>
-						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+				<div className="mb-8">
+					<div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+						{/* Month title and status */}
+						<div className="flex flex-col sm:flex-row sm:items-center gap-3">
+							<h1 className="text-2xl font-bold text-zinc-200">
+								{new Date(
+									selectedMonth.year,
+									selectedMonth.month - 1,
+								).toLocaleString("default", { month: "long", year: "numeric" })}
+							</h1>
+
+							{["nominating", "jury", "voting"].includes(
+								selectedMonth.status,
+							) && (
+								<span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
+									Active Month
+								</span>
+							)}
+						</div>
+
+						{/* Quick status update */}
+						<statusUpdateFetcher.Form
+							method="POST"
+							className="flex items-center gap-2 w-full sm:w-auto"
+						>
+							<input type="hidden" name="monthId" value={selectedMonth.id} />
+							<input type="hidden" name="intent" value="updateStatus" />
+							<label
+								htmlFor="status"
+								className="text-sm font-medium text-zinc-400 sr-only sm:not-sr-only"
+							>
+								Status:
+							</label>
+							<select
+								id="status"
+								name="status"
+								value={selectedMonth.status}
+								onChange={(e) => e.target.form?.requestSubmit()}
+								className="w-full sm:w-auto rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+							>
+								{monthStatuses.map((status) => (
+									<option key={status} value={status} className="py-1">
+										{status.charAt(0).toUpperCase() + status.slice(1)}
+									</option>
+								))}
+							</select>
+							{statusUpdateFetcher.state !== "idle" && (
+								<span className="text-xs text-zinc-400">Updating...</span>
+							)}
+						</statusUpdateFetcher.Form>
+					</div>
+
+					{/* Month Navigation */}
+					<div className="flex items-center justify-between mt-4">
+						<Link
+							to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) + 1]?.id}`}
+							prefetch="viewport"
+							className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg ${
+								months.findIndex((m) => m.id === selectedMonth.id) ===
+								months.length - 1
+									? "pointer-events-none opacity-50"
+									: "text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10"
+							}`}
+						>
 							← Previous Month
-						</span>
-					</Link>
+						</Link>
 
-					<h1 className="text-2xl font-bold flex items-center gap-2 text-zinc-200">
-						{new Date(
-							selectedMonth.year,
-							selectedMonth.month - 1,
-						).toLocaleString("default", { month: "long", year: "numeric" })}
-						{["nominating", "jury", "voting"].includes(
-							selectedMonth.status,
-						) && (
-							<span className="inline-flex items-center p-2 px-4 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
-								Active Month
-							</span>
-						)}
-					</h1>
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={() => setShowCreateForm(!showCreateForm)}
+								className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-emerald-400 border border-emerald-400/20 hover:bg-emerald-500/10"
+							>
+								{showCreateForm ? "Cancel" : "Create New Month"}
+							</button>
 
-					<Link
-						to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) - 1]?.id}`}
-						className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-							months.findIndex((m) => m.id === selectedMonth.id) === 0
-								? "pointer-events-none opacity-50"
-								: "text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
-						}`}
-					>
-						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+							{nominations.length > 0 && (
+								<button
+									type="button"
+									onClick={handleCopyAsCSV}
+									className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-zinc-200 border border-zinc-400/20 hover:bg-zinc-500/10"
+								>
+									{csvCopied ? "Copied!" : "Export CSV"}
+								</button>
+							)}
+						</div>
+
+						<Link
+							to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) - 1]?.id}`}
+							prefetch="viewport"
+							className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg ${
+								months.findIndex((m) => m.id === selectedMonth.id) === 0
+									? "pointer-events-none opacity-50"
+									: "text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10"
+							}`}
+						>
 							Next Month →
-						</span>
-					</Link>
+						</Link>
+					</div>
+
+					{statusUpdateFetcher.data?.error && (
+						<p className="mt-2 text-sm text-red-400">
+							{statusUpdateFetcher.data.error}
+						</p>
+					)}
 				</div>
 			)}
 
-			{/* Create New Month Section */}
-			<section className="mb-12">
-				<h2 className="text-2xl font-semibold mb-4 text-zinc-200">
-					Create New Month
-				</h2>
-				<createMonthFetcher.Form method="POST">
-					<input type="hidden" name="intent" value="createMonth" />
-					<div className="flex flex-col gap-4">
-						<div className="flex items-center gap-4">
-							<div className="flex-1">
+			{/* Create New Month Form (Collapsible) */}
+			{showCreateForm && (
+				<section className="mb-8 bg-black/20 p-4 rounded-lg border border-white/10">
+					<h2 className="text-lg font-semibold mb-4 text-zinc-200">
+						Create New Month
+					</h2>
+					<createMonthFetcher.Form method="POST">
+						<input type="hidden" name="intent" value="createMonth" />
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+							<div>
 								<label
 									htmlFor="year"
-									className="block text-sm font-medium text-zinc-400 mb-2"
+									className="block text-sm font-medium text-zinc-400 mb-1"
 								>
 									Year
 								</label>
@@ -452,13 +518,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									min="2000"
 									max="2100"
 									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 								/>
 							</div>
-							<div className="flex-1">
+							<div>
 								<label
 									htmlFor="month"
-									className="block text-sm font-medium text-zinc-400 mb-2"
+									className="block text-sm font-medium text-zinc-400 mb-1"
 								>
 									Month (1-12)
 								</label>
@@ -469,13 +535,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									min="1"
 									max="12"
 									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 								/>
 							</div>
-							<div className="flex-1">
+							<div>
 								<label
 									htmlFor="status"
-									className="block text-sm font-medium text-zinc-400 mb-2"
+									className="block text-sm font-medium text-zinc-400 mb-1"
 								>
 									Initial Status
 								</label>
@@ -483,7 +549,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									id="status"
 									name="status"
 									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 								>
 									{monthStatuses.map((status) => (
 										<option key={status} value={status} className="py-1">
@@ -492,12 +558,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									))}
 								</select>
 							</div>
-						</div>
-						<div className="flex items-center gap-4">
-							<div className="flex-1">
+							<div>
 								<label
 									htmlFor="themeCategory"
-									className="block text-sm font-medium text-zinc-400 mb-2"
+									className="block text-sm font-medium text-zinc-400 mb-1"
 								>
 									Theme Category
 								</label>
@@ -505,7 +569,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									id="themeCategory"
 									name="themeCategoryId"
 									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 								>
 									<option value="">Select a category</option>
 									{themeCategories.map((category) => (
@@ -515,10 +579,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									))}
 								</select>
 							</div>
-							<div className="flex-1">
+							<div>
 								<label
 									htmlFor="themeName"
-									className="block text-sm font-medium text-zinc-400 mb-2"
+									className="block text-sm font-medium text-zinc-400 mb-1"
 								>
 									Theme Name
 								</label>
@@ -527,121 +591,53 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									id="themeName"
 									name="themeName"
 									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 									placeholder="Enter theme name"
 								/>
 							</div>
-						</div>
-						<div>
-							<label
-								htmlFor="themeDescription"
-								className="block text-sm font-medium text-zinc-400 mb-2"
-							>
-								Theme Description
-							</label>
-							<textarea
-								id="themeDescription"
-								name="themeDescription"
-								rows={3}
-								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-								placeholder="Enter theme description (optional)"
-							/>
+							<div className="md:col-span-2">
+								<label
+									htmlFor="themeDescription"
+									className="block text-sm font-medium text-zinc-400 mb-1"
+								>
+									Theme Description
+								</label>
+								<textarea
+									id="themeDescription"
+									name="themeDescription"
+									rows={2}
+									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+									placeholder="Enter theme description (optional)"
+								/>
+							</div>
 						</div>
 						<div className="flex justify-end">
 							<button
 								type="submit"
 								disabled={createMonthFetcher.state !== "idle"}
-								className={`self-end inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+								className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
 									createMonthFetcher.state !== "idle"
 										? "opacity-50 cursor-not-allowed"
-										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+										: "text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
 								}`}
 							>
-								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-									{createMonthFetcher.state !== "idle"
-										? "Creating..."
-										: "Create Month"}
-								</span>
+								{createMonthFetcher.state !== "idle"
+									? "Creating..."
+									: "Create Month"}
 							</button>
 						</div>
-					</div>
-					{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-				</createMonthFetcher.Form>
-			</section>
-
-			{/* Month Status Section */}
-			<section className="mb-12">
-				<h2 className="text-2xl font-semibold mb-4 text-zinc-200">
-					Month Status
-				</h2>
-				{selectedMonth && (
-					<>
-						<statusUpdateFetcher.Form
-							method="POST"
-							className="flex items-end gap-4"
-						>
-							<input type="hidden" name="monthId" value={selectedMonth.id} />
-							<input type="hidden" name="intent" value="updateStatus" />
-							<div className="flex-1">
-								<label
-									htmlFor="status"
-									className="block text-sm font-medium text-zinc-400 mb-2"
-								>
-									Status for{" "}
-									{new Date(
-										selectedMonth.year,
-										selectedMonth.month - 1,
-									).toLocaleString("default", {
-										month: "long",
-										year: "numeric",
-									})}
-								</label>
-								<select
-									id="status"
-									name="status"
-									value={selectedMonth.status}
-									onChange={(e) => {
-										const form = e.target.form;
-										if (form) {
-											form.requestSubmit();
-										}
-									}}
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-								>
-									{monthStatuses.map((status) => (
-										<option key={status} value={status} className="py-1">
-											{status.charAt(0).toUpperCase() + status.slice(1)}
-										</option>
-									))}
-								</select>
-							</div>
-						</statusUpdateFetcher.Form>
-						{statusUpdateFetcher.data?.error && (
-							<p className="mt-2 text-sm text-red-400">
-								{statusUpdateFetcher.data.error}
-							</p>
-						)}
-					</>
-				)}
-			</section>
+						{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+					</createMonthFetcher.Form>
+				</section>
+			)}
 
 			{/* Jury Selection Section */}
 			{selectedMonth && nominations.length > 0 && (
 				<section>
-					<div className="mb-4 flex items-center justify-between">
-						<h2 className="text-2xl font-semibold text-zinc-200">
-							Jury Selection
-						</h2>
-						<button
-							type="button"
-							onClick={handleCopyAsCSV}
-							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-zinc-200 shadow-sm shadow-zinc-500/20 border border-zinc-400/20 hover:bg-zinc-500/10 hover:border-zinc-400/30 hover:shadow-zinc-500/40 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-400/5 after:transition-colors"
-						>
-							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								{csvCopied ? "Copied!" : "Copy as CSV"}
-							</span>
-						</button>
-					</div>
+					<h2 className="text-xl font-semibold mb-4 text-zinc-200">
+						{nominations.length} Game{nominations.length !== 1 ? "s" : ""}{" "}
+						Nominated
+					</h2>
 
 					<div className="bg-black/10 backdrop-blur-sm rounded-lg shadow overflow-hidden border border-white/10">
 						<div className="overflow-x-auto">
@@ -650,33 +646,33 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									<tr>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
+											className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Game
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
+											className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Year
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
+											className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Type
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
+											className="px-4 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
 											Pitches
 										</th>
 										<th
 											scope="col"
-											className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
+											className="px-4 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider"
 										>
-											Selected
+											Select
 										</th>
 									</tr>
 								</thead>
@@ -686,7 +682,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 											key={nomination.id}
 											className="hover:bg-white/5 transition-colors"
 										>
-											<td className="px-6 py-4 whitespace-nowrap">
+											<td className="px-4 py-3 whitespace-nowrap">
 												<div className="flex items-center">
 													{nomination.gameCover && (
 														<img
@@ -695,17 +691,17 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 															className="h-10 w-10 object-cover rounded-sm mr-3 border border-white/10"
 														/>
 													)}
-													<div className="text-sm font-medium text-zinc-200">
+													<div className="text-sm font-medium text-zinc-200 truncate max-w-[200px]">
 														{nomination.gameName}
 													</div>
 												</div>
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
+											<td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400">
 												{nomination.gameYear}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap">
+											<td className="px-4 py-3 whitespace-nowrap">
 												<span
-													className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+													className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
 														nomination.short
 															? "bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
 															: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
@@ -714,42 +710,44 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 													{nomination.short ? "Short" : "Long"}
 												</span>
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm">
+											<td className="px-4 py-3 whitespace-nowrap text-sm text-center">
 												<button
 													type="button"
 													onClick={() => {
 														setSelectedNomination(nomination);
 														setIsPitchesModalOpen(true);
 													}}
-													className="text-zinc-400 hover:text-zinc-200 transition-colors"
+													className="inline-flex items-center justify-center px-2 py-1 text-xs rounded bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700/60 transition-colors"
 												>
-													View Pitches (
-													{
-														(
-															nominations.find((n) => n.id === nomination.id)
-																?.pitches || []
-														).length
-													}
-													)
+													{(
+														nominations.find((n) => n.id === nomination.id)
+															?.pitches || []
+													).length || 0}
 												</button>
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap">
+											<td className="px-4 py-3 whitespace-nowrap text-center">
 												<button
 													type="button"
 													onClick={() => handleToggleJurySelected(nomination)}
 													disabled={isProcessingNomination(nomination.id)}
-													className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+													className={`relative inline-flex h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
 														isProcessingNomination(nomination.id)
-															? "opacity-70 border-yellow-400/30"
+															? "opacity-70"
 															: ""
 													} ${
 														getNominationSelectedState(nomination)
 															? "bg-blue-500"
 															: "bg-zinc-700"
 													}`}
+													aria-pressed={getNominationSelectedState(nomination)}
 												>
+													<span className="sr-only">
+														{getNominationSelectedState(nomination)
+															? "Selected"
+															: "Not selected"}
+													</span>
 													<span
-														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ${
 															getNominationSelectedState(nomination)
 																? "translate-x-5"
 																: "translate-x-0"
