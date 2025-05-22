@@ -118,7 +118,15 @@ export async function getWinner(
 		});
 
 		if (!winners.rows.length) {
-			return calculateAndStoreWinner(monthId, short);
+			try {
+				return await calculateAndStoreWinner(monthId, short);
+			} catch (calcError) {
+				console.error(
+					`[Winner] Error calculating winner for month ${monthId} (short: ${short}):`,
+					calcError,
+				);
+				return null;
+			}
 		}
 
 		const winner = winners.rows[0];

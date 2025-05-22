@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { db } from "~/server/database.server";
-import type { Month } from "~/types";
+import type { Month, Theme } from "~/types";
 import { getMonth } from "~/server/month.server";
 import { getWinner } from "~/server/winner.server";
 import type { Route } from "./+types/history";
@@ -15,24 +15,47 @@ export async function loader() {
 
 	const months: Month[] = await Promise.all(
 		result.rows.map(async (row) => {
-			const month = await getMonth(row.id as number);
+			try {
+				const month = await getMonth(row.id as number);
 
-			// Only fetch winners for months that have completed voting
-			if (month.status === "voting") {
-				return month;
+				// Only fetch winners for months that have completed voting
+				if (month.status === "voting") {
+					return month;
+				}
+
+				try {
+					const longWinner = await getWinner(month.id, false);
+					const shortWinner = await getWinner(month.id, true);
+
+					if (!longWinner && !shortWinner) {
+						return month;
+					}
+
+					return {
+						...month,
+						winners: [
+							...(longWinner ? [longWinner] : []),
+							...(shortWinner ? [shortWinner] : []),
+						],
+					};
+				} catch (winnerError) {
+					console.error(
+						`Error fetching winners for month ${month.id}:`,
+						winnerError,
+					);
+					return month;
+				}
+			} catch (monthError) {
+				console.error(`Error fetching month ${row.id}:`, monthError);
+				return {
+					id: row.id as number,
+					month: 0,
+					year: 0,
+					status: "complete" as const,
+					winners: [],
+					theme: null as unknown as Theme,
+				} as Month;
 			}
-
-			const longWinner = await getWinner(month.id, false);
-			const shortWinner = await getWinner(month.id, true);
-
-			if (!longWinner || !shortWinner) {
-				return month;
-			}
-
-			return {
-				...month,
-				winners: [longWinner, shortWinner],
-			};
 		}),
 	);
 

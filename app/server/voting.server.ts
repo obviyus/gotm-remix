@@ -323,9 +323,23 @@ export const runRounds = async (
 			const [targetName, targetRound] = target.split("_");
 			const t = graph.get(target);
 
+			// Parse rounds safely and ensure they're valid finite numbers
+			const sourceRoundNum = Number.parseInt(sourceRound, 10);
+			const targetRoundNum = Number.parseInt(targetRound, 10);
+
+			// Only use repeat if the numbers are valid and finite
+			const sourceSpaces =
+				Number.isFinite(sourceRoundNum) && sourceRoundNum > 0
+					? " ".repeat(sourceRoundNum)
+					: "";
+			const targetSpaces =
+				Number.isFinite(targetRoundNum) && targetRoundNum > 0
+					? " ".repeat(targetRoundNum)
+					: "";
+
 			results.push({
-				source: `${sourceName} (${sourceData.votes})${" ".repeat(Number.parseInt(sourceRound, 10))}`,
-				target: `${targetName} (${t?.votes})${" ".repeat(Number.parseInt(targetRound, 10))}`,
+				source: `${sourceName} (${sourceData.votes})${sourceSpaces}`,
+				target: `${targetName} (${t?.votes})${targetSpaces}`,
 				weight: String(weight),
 			});
 		}
