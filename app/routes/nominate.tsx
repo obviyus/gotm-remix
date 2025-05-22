@@ -254,6 +254,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							</p>
 							<Link
 								to="/history"
+								prefetch="viewport"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
 							>
 								Browse Past Months →
@@ -268,6 +269,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							</p>
 							<Link
 								to="/voting"
+								prefetch="viewport"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
 							>
 								Go Vote Now →
@@ -283,6 +285,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							</p>
 							<Link
 								to="/"
+								prefetch="viewport"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
 							>
 								See This Month&#39;s Games →
@@ -311,6 +314,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							</p>
 							<Link
 								to="/history"
+								prefetch="viewport"
 								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
 							>
 								Browse Past Months →

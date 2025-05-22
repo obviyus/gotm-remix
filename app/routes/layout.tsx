@@ -124,6 +124,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 									<div className="flex items-center border-x border-zinc-800 px-2 sm:px-3 md:px-4">
 										<Link
 											to={centerItem.path}
+											prefetch="viewport"
 											className={getLinkClassName(centerItem.path)}
 										>
 											<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-[0.8rem] md:text-sm">
@@ -145,6 +146,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 											<Link
 												key={link.path}
 												to={link.path}
+												prefetch="viewport"
 												className={getLinkClassName(link.path)}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
@@ -177,6 +179,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 							<Link
 								key={link.path}
 								to={link.path}
+								prefetch="viewport"
 								className={getLinkClassName(link.path, true)}
 								onClick={() => setIsMobileMenuOpen(false)}
 							>
