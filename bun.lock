@@ -10,6 +10,7 @@
         "@libsql/client": "^0.15.7",
         "@react-router/node": "^7.6.0",
         "@react-router/serve": "^7.6.0",
+        "croner": "^9.0.0",
         "dotenv": "^16.5.0",
         "echarts": "^5.6.0",
         "echarts-for-react": "^3.0.2",
@@ -25,8 +26,8 @@
         "@react-router/dev": "^7.6.0",
         "@tailwindcss/postcss": "^4.1.7",
         "@tailwindcss/typography": "^0.5.16",
-        "@types/bun": "^1.2.13",
-        "@types/react": "^18.3.21",
+        "@types/bun": "^1.2.14",
+        "@types/react": "^18.3.22",
         "@types/react-dom": "^18.3.7",
         "@types/string-similarity": "^4.0.2",
         "@typescript-eslint/eslint-plugin": "^6.21.0",
@@ -561,6 +562,8 @@
     "cookie-signature": ["cookie-signature@1.0.6", "", {}, "sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ=="],
 
     "cosmiconfig": ["cosmiconfig@7.1.0", "", { "dependencies": { "@types/parse-json": "^4.0.0", "import-fresh": "^3.2.1", "parse-json": "^5.0.0", "path-type": "^4.0.0", "yaml": "^1.10.0" } }, "sha512-AdmX6xUzdNASswsFtmwSt7Vj8po9IuqXm0UXz7QKPuEUmPB4XyjGfaAr2PSuELMwkRMVH1EpIkX5bTZGRB3eCA=="],
+
+    "croner": ["croner@9.0.0", "", {}, "sha512-onMB0OkDjkXunhdW9htFjEhqrD54+M94i6ackoUkjHKbRnXdyEyKRelp4nJ1kAz32+s27jP1FsebpJCVl0BsvA=="],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 

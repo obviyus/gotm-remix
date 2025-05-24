@@ -17,6 +17,7 @@
 		"@libsql/client": "^0.15.7",
 		"@react-router/node": "^7.6.0",
 		"@react-router/serve": "^7.6.0",
+		"croner": "^9.0.0",
 		"dotenv": "^16.5.0",
 		"echarts": "^5.6.0",
 		"echarts-for-react": "^3.0.2",
