@@ -31,11 +31,11 @@ function getMonthDates(month: number, year: number) {
 	// 1st: Voting ends, new month begins
 	// 2 days before voting ends: Voting starts (2-day voting period)
 	// 3 days before voting: Jury starts
-	// 2 days before jury: Nominations start
+	// 3 days before jury: Nominations start
 
 	const votingStarts = daysInMonth - 1; // 2 days before month end (includes last day)
 	const juryStarts = votingStarts - 3;
-	const nominationsStart = juryStarts - 2;
+	const nominationsStart = juryStarts - 3;
 
 	return {
 		nominationsStart,
