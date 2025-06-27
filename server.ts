@@ -44,46 +44,32 @@ function getMonthDates(month: number, year: number) {
 	};
 }
 
-for (let month = 1; month <= 12; month++) {
-	const currentYear = new Date().getFullYear();
-	const dates = getMonthDates(month, currentYear);
+// Check daily at midnight for phase transitions
+new Cron("0 0 0 * * *", { timezone: "America/New_York" }, async () => {
+	const now = new Date();
+	const currentMonth = now.getMonth() + 1;
+	const currentYear = now.getFullYear();
+	const currentDay = now.getDate();
+	const dates = getMonthDates(currentMonth, currentYear);
 
-	// Nominations start
-	new Cron(
-		`0 0 0 ${dates.nominationsStart} ${month} *`,
-		{ timezone: "America/New_York" },
-		async () => {
-			console.log(`Nominations starting for month ${month}...`);
-			await sendDiscordWebhook("Nominations phase starting soon!", {
-				title: "🚨 Nomination Phase Alert",
-			});
-		},
-	);
-
-	// Jury phase (nominations close)
-	new Cron(
-		`0 0 0 ${dates.juryStarts} ${month} *`,
-		{ timezone: "America/New_York" },
-		async () => {
-			console.log(`Jury phase starting for month ${month}...`);
-			await sendDiscordWebhook("Nominations closing soon!", {
-				title: "📋 Nominations Deadline",
-			});
-		},
-	);
-
-	// Voting starts
-	new Cron(
-		`0 0 0 ${dates.votingStarts} ${month} *`,
-		{ timezone: "America/New_York" },
-		async () => {
-			console.log(`Voting starting for month ${month}...`);
-			await sendDiscordWebhook("Voting phase starting soon!", {
-				title: "🗳️ Voting Opens",
-			});
-		},
-	);
-}
+	// Check if today is a phase transition day
+	if (currentDay === dates.nominationsStart) {
+		console.log(`Nominations starting for month ${currentMonth}...`);
+		await sendDiscordWebhook("Nominations phase starting soon!", {
+			title: "🚨 Nomination Phase Alert",
+		});
+	} else if (currentDay === dates.juryStarts) {
+		console.log(`Jury phase starting for month ${currentMonth}...`);
+		await sendDiscordWebhook("Nominations closing soon!", {
+			title: "📋 Nominations Deadline",
+		});
+	} else if (currentDay === dates.votingStarts) {
+		console.log(`Voting starting for month ${currentMonth}...`);
+		await sendDiscordWebhook("Voting phase starting soon!", {
+			title: "🗳️ Voting Opens",
+		});
+	}
+});
 
 // 1st: Voting Ends, new GotM begins (same for all months)
 new Cron("0 0 0 1 * *", { timezone: "America/New_York" }, async () => {
