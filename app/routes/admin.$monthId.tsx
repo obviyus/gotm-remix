@@ -340,7 +340,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 					const combinedPitches = nomination.pitches
 						.map((pitch) => escapeCSV(pitch.pitch))
 						.join("\n");
-					csvString += `\t${escapeCSV(nomination.gameName)}\t${combinedPitches}\n`;
+					csvString += `\t${escapeCSV(nomination.gameName)}\t"${combinedPitches}"\n`;
 				} else {
 					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
 				}
@@ -355,7 +355,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 					const combinedPitches = nomination.pitches
 						.map((pitch) => escapeCSV(pitch.pitch))
 						.join("\n");
-					csvString += `\t${escapeCSV(nomination.gameName)}\t${combinedPitches}\n`;
+					csvString += `\t${escapeCSV(nomination.gameName)}\t"${combinedPitches}"\n`;
 				} else {
 					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
 				}
