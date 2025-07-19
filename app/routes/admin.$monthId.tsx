@@ -320,14 +320,12 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		const escapeCSV = (text: string | null | undefined) => {
 			if (text === null || text === undefined) return "";
 
-			// Ensure text is a string and clean it - replace tabs and newlines
+			// Ensure text is a string and clean it - replace tabs only
 			const strText = String(text)
-				.replace(/\t/g, " ") // Replace tabs with spaces
-				.replace(/\n/g, " ") // Replace newlines with spaces
-				.replace(/\r/g, " ") // Replace carriage returns with spaces
-				.trim(); // Trim any leading/trailing whitespace
+				.replace(/\t/g, " ")
+				.replace(/\r/g, " ")
+				.trim();
 
-			// No need to escape quotes with tab-delimited format
 			return strText;
 		};
 
@@ -338,13 +336,11 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			csvString += "Long Games\t\t\n";
 			for (const nomination of longGames) {
 				if (nomination.pitches && nomination.pitches.length > 0) {
-					for (const [index, pitch] of nomination.pitches.entries()) {
-						if (index === 0) {
-							csvString += `\t${escapeCSV(nomination.gameName)}\t${escapeCSV(pitch.pitch)}\n`;
-						} else {
-							csvString += `\t\t${escapeCSV(pitch.pitch)}\n`;
-						}
-					}
+					// Combine all pitches into a single cell with line breaks
+					const combinedPitches = nomination.pitches
+						.map((pitch) => escapeCSV(pitch.pitch))
+						.join("\n");
+					csvString += `\t${escapeCSV(nomination.gameName)}\t${combinedPitches}\n`;
 				} else {
 					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
 				}
@@ -355,13 +351,11 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			csvString += "Short Games\t\t\n";
 			for (const nomination of shortGames) {
 				if (nomination.pitches && nomination.pitches.length > 0) {
-					for (const [index, pitch] of nomination.pitches.entries()) {
-						if (index === 0) {
-							csvString += `\t${escapeCSV(nomination.gameName)}\t${escapeCSV(pitch.pitch)}\n`;
-						} else {
-							csvString += `\t\t${escapeCSV(pitch.pitch)}\n`;
-						}
-					}
+					// Combine all pitches into a single cell with line breaks
+					const combinedPitches = nomination.pitches
+						.map((pitch) => escapeCSV(pitch.pitch))
+						.join("\n");
+					csvString += `\t${escapeCSV(nomination.gameName)}\t${combinedPitches}\n`;
 				} else {
 					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
 				}
