@@ -1,5 +1,5 @@
-import type { Month, ThemeCategory } from "~/types";
 import { db } from "~/server/database.server";
+import type { Month, ThemeCategory } from "~/types";
 
 interface MonthRow {
 	month_id: number;

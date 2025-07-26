@@ -1,6 +1,6 @@
-import type { Nomination } from "~/types";
 import { db } from "~/server/database.server";
 import { getPitchesForNominations } from "~/server/pitches.server";
+import type { Nomination } from "~/types";
 
 export async function getNominationsForMonth(
 	monthId: number,

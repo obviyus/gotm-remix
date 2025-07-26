@@ -1,10 +1,10 @@
+import { CalendarDaysIcon, TrophyIcon } from "@heroicons/react/24/outline";
 import { Link } from "react-router";
 import { db } from "~/server/database.server";
-import type { Month, Theme } from "~/types";
 import { getMonth } from "~/server/month.server";
 import { getWinner } from "~/server/winner.server";
+import type { Month, Theme } from "~/types";
 import type { Route } from "./+types/history";
-import { CalendarDaysIcon, TrophyIcon } from "@heroicons/react/24/outline";
 
 export async function loader() {
 	const result = await db.execute(

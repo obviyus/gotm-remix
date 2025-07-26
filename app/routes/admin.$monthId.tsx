@@ -1,12 +1,12 @@
-import { Link, useFetcher, useNavigate, redirect } from "react-router";
-import { useEffect, useState } from "react";
-import { db } from "~/server/database.server";
-import { getSession } from "~/sessions";
-import PitchesModal from "~/components/PitchesModal";
-import type { Nomination } from "~/types";
-import { getNominationsForMonth } from "~/server/nomination.server";
-import { getMonth, getThemeCategories } from "~/server/month.server";
 import type { Row, Value } from "@libsql/client";
+import { useEffect, useState } from "react";
+import { Link, redirect, useFetcher, useNavigate } from "react-router";
+import PitchesModal from "~/components/PitchesModal";
+import { db } from "~/server/database.server";
+import { getMonth, getThemeCategories } from "~/server/month.server";
+import { getNominationsForMonth } from "~/server/nomination.server";
+import { getSession } from "~/sessions";
+import type { Nomination } from "~/types";
 import type { Route } from "./+types/admin.$monthId";
 
 interface ActionResponse {

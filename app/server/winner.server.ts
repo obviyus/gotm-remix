@@ -1,4 +1,4 @@
-import { db } from "./database.server";
+import { db } from "~/server/database.server";
 import { calculateVotingResults } from "~/server/voting.server";
 import type { Nomination } from "~/types";
 

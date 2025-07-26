@@ -1,6 +1,6 @@
-import type { Pitch } from "~/types";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
+import type { Pitch } from "~/types";
 
 export async function getPitchesForNomination(
 	nominationId: number,

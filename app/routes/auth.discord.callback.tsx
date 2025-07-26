@@ -1,6 +1,6 @@
 import { redirect } from "react-router";
-import { commitSession, getSession } from "~/sessions";
 import { getCurrentMonth } from "~/server/month.server";
+import { commitSession, getSession } from "~/sessions";
 import type { Route } from "./+types/auth.discord.callback";
 
 type MonthStatus =

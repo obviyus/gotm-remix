@@ -1,16 +1,16 @@
-import { useRef, useEffect } from "react";
-import { db } from "~/server/database.server";
-import * as echarts from "echarts/core";
-import { BarChart, PieChart, LineChart } from "echarts/charts";
+import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
+	DatasetComponent,
+	GridComponent,
+	LegendComponent,
 	TitleComponent,
 	TooltipComponent,
-	GridComponent,
-	DatasetComponent,
 	TransformComponent,
-	LegendComponent,
 } from "echarts/components";
+import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
+import { useEffect, useRef } from "react";
+import { db } from "~/server/database.server";
 import cache from "~/utils/cache.server";
 import type { Route } from "./+types/stats";
 
@@ -682,7 +682,9 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 
 function JurySelectionPercentageChart({
 	data,
-}: { data: JurySelectionStatsType[] }) {
+}: {
+	data: JurySelectionStatsType[];
+}) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -881,7 +883,9 @@ function WinnersByYearChart({ data }: { data: WinnerByYearStats[] }) {
 
 function TopScoringNominationsChart({
 	data,
-}: { data: TopScoringNominationStats[] }) {
+}: {
+	data: TopScoringNominationStats[];
+}) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 

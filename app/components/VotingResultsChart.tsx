@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef } from "react";
-import * as echarts from "echarts/core";
 import { SankeyChart, type SankeySeriesOption } from "echarts/charts";
 import {
 	TooltipComponent,
 	type TooltipComponentOption,
 } from "echarts/components";
+import type { ComposeOption, ECharts } from "echarts/core";
+import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import type { ECharts, ComposeOption } from "echarts/core";
 import type { CallbackDataParams } from "echarts/types/dist/shared";
+import { useEffect, useMemo, useRef } from "react";
 
 echarts.use([SankeyChart, TooltipComponent, CanvasRenderer]);
 type ECOption = ComposeOption<SankeySeriesOption | TooltipComponentOption>;

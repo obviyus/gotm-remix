@@ -1,13 +1,13 @@
-import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { useMemo, useState } from "react";
-import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
-import type { Nomination } from "~/types";
-import SplitLayout, { Column } from "~/components/SplitLayout";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
+import SplitLayout, { Column } from "~/components/SplitLayout";
 import ThemeCard from "~/components/ThemeCard";
+import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
+import type { Nomination } from "~/types";
 import type { Route } from "./+types/home";
 
 export async function loader() {

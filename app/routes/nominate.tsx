@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { Link, useFetcher, redirect } from "react-router";
-import type { Route } from "./+types/nominate";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import { searchGames } from "~/server/igdb.server";
+import { useState } from "react";
+import { Link, redirect, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
-import { db } from "~/server/database.server";
-import { getSession } from "~/sessions";
-import type { Nomination, NominationFormData } from "~/types";
 import PitchesModal from "~/components/PitchesModal";
+import { db } from "~/server/database.server";
+import { searchGames } from "~/server/igdb.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import { getSession } from "~/sessions";
+import type { Nomination, NominationFormData } from "~/types";
+import type { Route } from "./+types/nominate";
 
 interface NominationResponse {
 	error?: string;

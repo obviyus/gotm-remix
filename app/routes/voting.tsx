@@ -1,20 +1,20 @@
-import { useFetcher, redirect } from "react-router";
 import {
 	DragDropContext,
 	Draggable,
 	Droppable,
 	type DropResult,
 } from "@hello-pangea/dnd";
-import { db } from "~/server/database.server";
-import type { Nomination } from "~/types";
-import { useState } from "react";
-import GameCard from "~/components/GameCard";
-import { getSession } from "~/sessions";
 import { TrashIcon } from "@heroicons/react/20/solid";
-import SplitLayout, { Column } from "~/components/SplitLayout";
+import { useState } from "react";
+import { redirect, useFetcher } from "react-router";
+import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
+import SplitLayout, { Column } from "~/components/SplitLayout";
+import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
+import { getSession } from "~/sessions";
+import type { Nomination } from "~/types";
 import type { Route } from "./+types/voting";
 
 export async function loader({ request }: Route.LoaderArgs) {
