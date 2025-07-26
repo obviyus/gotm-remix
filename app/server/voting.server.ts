@@ -117,12 +117,13 @@ export const getCurrentVoteCount = (
 	nominations: Nomination[],
 	voteRankingsMap: Map<number, Ranking[]>,
 ): Record<number, number> => {
-	const voteCount: Record<number, number> = {};
-	for (const nom of nominations) {
-		voteCount[nom.id] = 0;
-	}
+	// Pre-allocate with zeros for all nominations
+	const voteCount: Record<number, number> = Object.fromEntries(
+		nominations.map((n) => [n.id, 0]),
+	);
 
-	for (const [, rankings] of voteRankingsMap) {
+	// Single pass through rankings
+	for (const rankings of voteRankingsMap.values()) {
 		if (rankings.length > 0) {
 			const topNomId = rankings[0].nominationId;
 			if (topNomId in voteCount) {
@@ -138,10 +139,24 @@ export const eliminateNominationFromRankings = (
 	loserId: number,
 	voteRankingsMap: Map<number, Ranking[]>,
 ) => {
-	for (const [voteId, rankings] of voteRankingsMap.entries()) {
-		let filtered = rankings.filter((r) => r.nominationId !== loserId);
-		filtered = filtered.map((r, idx) => ({ ...r, rank: idx + 1 }));
-		voteRankingsMap.set(voteId, filtered);
+	for (const rankings of voteRankingsMap.values()) {
+		// Find index of loser
+		let loserIndex = -1;
+		for (let i = 0; i < rankings.length; i++) {
+			if (rankings[i].nominationId === loserId) {
+				loserIndex = i;
+				break;
+			}
+		}
+
+		// If found, remove and update ranks in one pass
+		if (loserIndex !== -1) {
+			rankings.splice(loserIndex, 1);
+			// Update ranks for remaining items after the removed one
+			for (let i = loserIndex; i < rankings.length; i++) {
+				rankings[i].rank = i + 1;
+			}
+		}
 	}
 };
 
@@ -154,15 +169,18 @@ export const transferVotes = (
 	const transferred = new Map<number, number>();
 	const remainingIds = new Set(remainingNoms.map((n) => n.id));
 
+	// Single pass through votes
 	for (const vote of votes) {
-		const rankings = voteRankingsMap.get(vote.id) ?? [];
-		if (rankings.length === 0) continue;
+		const rankings = voteRankingsMap.get(vote.id);
+		if (!rankings || rankings.length < 2) continue;
 
-		if (rankings[0].nominationId === loserId) {
-			if (rankings.length > 1 && remainingIds.has(rankings[1].nominationId)) {
-				const nextTopId = rankings[1].nominationId;
-				transferred.set(nextTopId, (transferred.get(nextTopId) || 0) + 1);
-			}
+		// Check if first choice was the loser
+		if (
+			rankings[0].nominationId === loserId &&
+			remainingIds.has(rankings[1].nominationId)
+		) {
+			const nextTopId = rankings[1].nominationId;
+			transferred.set(nextTopId, (transferred.get(nextTopId) || 0) + 1);
 		}
 	}
 
@@ -175,20 +193,51 @@ export const calculateWeightedScores = async (
 	voteRankingsMap: Map<number, Ranking[]>,
 ): Promise<Map<number, number>> => {
 	const maxRank = nominations.length;
-	const rankWeights = Array.from({ length: maxRank }, (_, i) => maxRank - i);
+	const rankWeights = new Float32Array(maxRank);
 
-	const weighted = new Map<number, number>();
+	// Pre-compute weights
+	for (let i = 0; i < maxRank; i++) {
+		rankWeights[i] = maxRank - i;
+	}
+
+	// Pre-allocate map with all nominations
+	const weighted = new Map<number, number>(nominations.map((n) => [n.id, 0]));
+
+	// Build inverse index: nominationId -> [{voteId, rank}]
+	const nominationToVotes = new Map<
+		number,
+		Array<{ voteId: number; rank: number }>
+	>();
+
+	for (const vote of votes) {
+		const rankings = voteRankingsMap.get(vote.id);
+		if (!rankings) continue;
+
+		for (const ranking of rankings) {
+			if (!nominationToVotes.has(ranking.nominationId)) {
+				nominationToVotes.set(ranking.nominationId, []);
+			}
+			nominationToVotes.get(ranking.nominationId)?.push({
+				voteId: vote.id,
+				rank: ranking.rank,
+			});
+		}
+	}
+
+	// Calculate weighted scores using the inverse index
 	for (const nom of nominations) {
+		const votes = nominationToVotes.get(nom.id);
+		if (!votes) continue;
+
 		let sum = 0;
 		for (const vote of votes) {
-			const ranks = voteRankingsMap.get(vote.id) ?? [];
-			const found = ranks.find((r) => r.nominationId === nom.id);
-			if (found) {
-				sum += rankWeights[found.rank - 1] || 0;
+			if (vote.rank <= maxRank) {
+				sum += rankWeights[vote.rank - 1];
 			}
 		}
 		weighted.set(nom.id, sum);
 	}
+
 	return weighted;
 };
 
@@ -204,7 +253,7 @@ export const runRounds = async (
 
 	const voteRankingsMap = await buildInMemoryRankings(votes);
 
-	let nominations = [...initialNominations];
+	const nominations = [...initialNominations];
 	let round = 1;
 
 	let currentVoteCount = getCurrentVoteCount(nominations, voteRankingsMap);
@@ -222,23 +271,37 @@ export const runRounds = async (
 		});
 	}
 
+	// Pre-allocate arrays for sorting
+	const sortBuffer = new Array(nominations.length);
+
 	while (nominations.length > 1) {
-		nominations.sort((a, b) => {
-			const aScore = currentVoteCount[a.id];
-			const bScore = currentVoteCount[b.id];
-			if (aScore !== bScore) {
-				return aScore - bScore;
+		// Custom sorting with pre-allocated buffer
+		for (let i = 0; i < nominations.length; i++) {
+			sortBuffer[i] = {
+				nom: nominations[i],
+				primary: currentVoteCount[nominations[i].id],
+				secondary: nominationWeightedScores.get(nominations[i].id) ?? 0,
+			};
+		}
+
+		// In-place sort
+		sortBuffer.length = nominations.length;
+		sortBuffer.sort((a, b) => {
+			if (a.primary !== b.primary) {
+				return a.primary - b.primary;
 			}
-			return (
-				(nominationWeightedScores.get(a.id) ?? 0) -
-				(nominationWeightedScores.get(b.id) ?? 0)
-			);
+			return a.secondary - b.secondary;
 		});
+
+		// Extract sorted nominations
+		for (let i = 0; i < sortBuffer.length; i++) {
+			nominations[i] = sortBuffer[i].nom;
+		}
 
 		const loser = nominations.shift();
 		if (!loser) break;
 
-		const remaining = [...nominations];
+		const remaining = nominations; // No need to copy
 
 		const transferred = transferVotes(
 			loser.id,
@@ -249,39 +312,41 @@ export const runRounds = async (
 
 		eliminateNominationFromRankings(loser.id, voteRankingsMap);
 
+		// Update graph edges
+		const loserVertexId = `${loser.gameName}_${round}`;
+		const loserVertex = graph.get(loserVertexId);
+		if (!loserVertex) continue;
+
 		for (const nomination of remaining) {
 			const winnerId = nomination.id;
 			const winnerName = nomination.gameName;
 			const votesTransferred = transferred.get(winnerId) || 0;
 
 			const nextRoundVertexId = `${winnerName}_${round + 1}`;
-			const nextRoundVertex = graph.get(nextRoundVertexId) || {
-				votes: 0,
-				edges: new Map(),
-			};
+
+			// Get or create next round vertex
+			let nextRoundVertex = graph.get(nextRoundVertexId);
+			if (!nextRoundVertex) {
+				nextRoundVertex = { votes: 0, edges: new Map() };
+				graph.set(nextRoundVertexId, nextRoundVertex);
+			}
+
 			nextRoundVertex.votes =
 				(currentVoteCount[winnerId] || 0) + votesTransferred;
 
-			const loserVertexId = `${loser.gameName}_${round}`;
-			const loserVertex = graph.get(loserVertexId) || {
-				votes: 0,
-				edges: new Map(),
-			};
-			loserVertex.edges.set(nextRoundVertexId, votesTransferred);
+			// Add edge from loser to next round
+			if (votesTransferred > 0) {
+				loserVertex.edges.set(nextRoundVertexId, votesTransferred);
+			}
 
+			// Add edge from current round winner to next round
 			const currentRoundWinnerId = `${winnerName}_${round}`;
-			const currentRoundWinnerVertex = graph.get(currentRoundWinnerId) || {
-				votes: 0,
-				edges: new Map(),
-			};
+			const currentRoundWinnerVertex = graph.get(currentRoundWinnerId);
+			if (!currentRoundWinnerVertex) continue;
 			currentRoundWinnerVertex.edges.set(
 				nextRoundVertexId,
 				currentVoteCount[winnerId],
 			);
-
-			graph.set(nextRoundVertexId, nextRoundVertex);
-			graph.set(loserVertexId, loserVertex);
-			graph.set(currentRoundWinnerId, currentRoundWinnerVertex);
 		}
 
 		currentVoteCount = getCurrentVoteCount(remaining, voteRankingsMap);
@@ -291,43 +356,40 @@ export const runRounds = async (
 			voteRankingsMap,
 		);
 		round++;
-		nominations = remaining;
+		// nominations already points to remaining after shift
 	}
 
+	// Handle final winner
 	if (nominations.length === 1) {
 		const finalNom = nominations[0];
 		const finalCount =
 			getCurrentVoteCount([finalNom], voteRankingsMap)[finalNom.id] || 0;
 
 		const finalVertexId = `${finalNom.gameName}_${round + 1}`;
-		const finalVertex = graph.get(finalVertexId) || {
-			votes: 0,
-			edges: new Map(),
-		};
-		finalVertex.votes = finalCount;
+		const finalVertex = { votes: finalCount, edges: new Map() };
+		graph.set(finalVertexId, finalVertex);
 
 		const prevVertexId = `${finalNom.gameName}_${round}`;
-		const prevVertex = graph.get(prevVertexId) || {
-			votes: 0,
-			edges: new Map(),
-		};
-		prevVertex.edges.set(finalVertexId, finalCount);
-
-		graph.set(finalVertexId, finalVertex);
-		graph.set(prevVertexId, prevVertex);
+		const prevVertex = graph.get(prevVertexId);
+		if (prevVertex) {
+			prevVertex.edges.set(finalVertexId, finalCount);
+		}
 	}
 
+	// Build results array
 	for (const [source, sourceData] of graph) {
 		const [sourceName, sourceRound] = source.split("_");
+
 		for (const [target, weight] of sourceData.edges) {
 			const [targetName, targetRound] = target.split("_");
 			const t = graph.get(target);
+			if (!t) continue;
 
-			// Parse rounds safely and ensure they're valid finite numbers
+			// Parse rounds safely
 			const sourceRoundNum = Number.parseInt(sourceRound, 10);
 			const targetRoundNum = Number.parseInt(targetRound, 10);
 
-			// Only use repeat if the numbers are valid and finite
+			// Only use repeat if valid
 			const sourceSpaces =
 				Number.isFinite(sourceRoundNum) && sourceRoundNum > 0
 					? " ".repeat(sourceRoundNum)
@@ -339,7 +401,7 @@ export const runRounds = async (
 
 			results.push({
 				source: `${sourceName} (${sourceData.votes})${sourceSpaces}`,
-				target: `${targetName} (${t?.votes})${targetSpaces}`,
+				target: `${targetName} (${t.votes})${targetSpaces}`,
 				weight: String(weight),
 			});
 		}
