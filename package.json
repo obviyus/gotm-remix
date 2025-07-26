@@ -6,12 +6,11 @@
 	"scripts": {
 		"build": "react-router build",
 		"dev": "react-router dev",
-		"lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
-		"start": "bun run server.ts",
-		"typecheck": "react-router typegen && tsc"
+		"lint": "biome check ./app/ --fix --unsafe",
+		"start": "bun run server.ts"
 	},
 	"dependencies": {
-		"@headlessui/react": "^2.2.4",
+		"@headlessui/react": "^2.2.5",
 		"@hello-pangea/dnd": "^18.0.1",
 		"@heroicons/react": "^2.2.0",
 		"@libsql/client": "^0.15.10",
@@ -33,7 +32,7 @@
 		"@react-router/dev": "^7.7.0",
 		"@tailwindcss/postcss": "^4.1.11",
 		"@tailwindcss/typography": "^0.5.16",
-		"@types/bun": "^1.2.18",
+		"@types/bun": "^1.2.19",
 		"@types/react": "^18.3.23",
 		"@types/react-dom": "^18.3.7",
 		"@types/string-similarity": "^4.0.2",
