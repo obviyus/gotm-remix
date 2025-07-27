@@ -11,6 +11,7 @@ import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { useEffect, useRef } from "react";
 import { db } from "~/server/database.server";
+import { uniqueNameGenerator } from "~/server/nameGenerator";
 import cache from "~/utils/cache.server";
 import type { Route } from "./+types/stats";
 
@@ -70,6 +71,40 @@ interface TopScoringNominationStats {
 	count: number;
 }
 
+interface PowerNominatorStats {
+	discord_id: string;
+	winner_count: number;
+}
+
+interface PitchSuccessRateStats {
+	category: string;
+	win_rate: number;
+	total_games: number;
+}
+
+interface VotingMarginStats {
+	margin_category: string;
+	count: number;
+}
+
+interface SpeedRunStats {
+	game_name: string;
+	game_year: string;
+	win_date: string;
+	days_to_win: number;
+}
+
+interface DiscordDynastyStats {
+	discord_id: string;
+	consecutive_months: number;
+	streak_type: string;
+}
+
+interface MonthlyNominationCountStats {
+	monthYear: string;
+	count: number;
+}
+
 // Type for stats loader data
 type StatsLoaderData = {
 	totalStats: {
@@ -89,6 +124,12 @@ type StatsLoaderData = {
 	shortVsLong: ShortVsLongStatsType[];
 	winnersByYear: WinnerByYearStats[];
 	topScoringNominations: TopScoringNominationStats[];
+	powerNominators: PowerNominatorStats[];
+	pitchSuccessRate: PitchSuccessRateStats[];
+	votingMargins: VotingMarginStats[];
+	speedRuns: SpeedRunStats[];
+	discordDynasties: DiscordDynastyStats[];
+	monthlyNominationCounts: MonthlyNominationCountStats[];
 };
 
 export async function loader(): Promise<StatsLoaderData> {
@@ -111,6 +152,12 @@ export async function loader(): Promise<StatsLoaderData> {
 		winnersByYearResult,
 		topScoringNominationsResult,
 		topGamesFinalistResult,
+		powerNominatorsResult,
+		pitchSuccessRateResult,
+		votingMarginsResult,
+		speedRunsResult,
+		discordDynastiesResult,
+		monthlyNominationCountsResult,
 	] = await Promise.all([
 		// Get total stats
 		db.execute({
@@ -214,6 +261,178 @@ export async function loader(): Promise<StatsLoaderData> {
 			ORDER BY total_nominations DESC
 			LIMIT 10;`,
 		}),
+
+		// Power Nominators - Users who nominated the most winners
+		db.execute({
+			sql: `SELECT 
+				n.discord_id,
+				COUNT(DISTINCT w.game_id) as winner_count
+			FROM nominations n
+			JOIN winners w ON n.game_id = w.game_id
+			GROUP BY n.discord_id
+			ORDER BY winner_count DESC
+			LIMIT 10`,
+		}),
+
+		// Pitch Success Rate
+		db.execute({
+			sql: `WITH GamePitchStatus AS (
+				SELECT 
+					n.game_id,
+					n.game_name,
+					CASE WHEN COUNT(p.id) > 0 THEN 1 ELSE 0 END as has_pitch,
+					MAX(CASE WHEN w.game_id IS NOT NULL THEN 1 ELSE 0 END) as is_winner
+				FROM nominations n
+				LEFT JOIN pitches p ON n.id = p.nomination_id
+				LEFT JOIN winners w ON n.game_id = w.game_id
+				WHERE n.jury_selected = 1
+				GROUP BY n.game_id, n.game_name
+			)
+			SELECT 
+				CASE WHEN has_pitch = 1 THEN 'With Pitches' ELSE 'Without Pitches' END as category,
+				ROUND(AVG(is_winner) * 100, 1) as win_rate,
+				COUNT(*) as total_games
+			FROM GamePitchStatus
+			GROUP BY has_pitch`,
+		}),
+
+		// Voting Margins - Distribution of landslide vs close victories
+		db.execute({
+			sql: `WITH VoteScores AS (
+				SELECT 
+					n.month_id,
+					n.game_id,
+					n.game_name,
+					n.short,
+					COUNT(CASE WHEN r.rank = 1 THEN 1 END) * 3 +
+					COUNT(CASE WHEN r.rank = 2 THEN 1 END) * 2 +
+					COUNT(CASE WHEN r.rank = 3 THEN 1 END) * 1 as score
+				FROM nominations n
+				JOIN rankings r ON n.id = r.nomination_id
+				WHERE n.jury_selected = 1
+				GROUP BY n.month_id, n.game_id, n.game_name, n.short
+			),
+			MonthlyWinners AS (
+				SELECT 
+					month_id,
+					short,
+					game_id,
+					game_name,
+					score,
+					ROW_NUMBER() OVER (PARTITION BY month_id, short ORDER BY score DESC) as position
+				FROM VoteScores
+			),
+			Margins AS (
+				SELECT 
+					w1.month_id,
+					w1.short,
+					w1.score - COALESCE(w2.score, 0) as margin,
+					(w1.score - COALESCE(w2.score, 0)) * 100.0 / w1.score as margin_percentage
+				FROM MonthlyWinners w1
+				LEFT JOIN MonthlyWinners w2 ON w1.month_id = w2.month_id 
+					AND w1.short = w2.short 
+					AND w2.position = 2
+				WHERE w1.position = 1 AND w1.score > 0
+			)
+			SELECT 
+				CASE 
+					WHEN margin_percentage >= 50 THEN 'Landslide (50%+)'
+					WHEN margin_percentage >= 30 THEN 'Clear Victory (30-50%)'
+					WHEN margin_percentage >= 15 THEN 'Competitive (15-30%)'
+					ELSE 'Nail-biter (<15%)'
+				END as margin_category,
+				COUNT(*) as count
+			FROM Margins
+			GROUP BY margin_category
+			ORDER BY 
+				CASE margin_category
+					WHEN 'Landslide (50%+)' THEN 1
+					WHEN 'Clear Victory (30-50%)' THEN 2
+					WHEN 'Competitive (15-30%)' THEN 3
+					WHEN 'Nail-biter (<15%)' THEN 4
+				END`,
+		}),
+
+		// Speed Run - Fastest from release to win
+		db.execute({
+			sql: `SELECT 
+				w.game_name,
+				w.game_year,
+				m.year || '-' || PRINTF('%02d', m.month) as win_date,
+				CAST(julianday(m.year || '-' || PRINTF('%02d', m.month) || '-01') - 
+					 julianday(w.game_year || '-01-01') AS INTEGER) as days_to_win
+			FROM winners w
+			JOIN months m ON w.month_id = m.id
+			WHERE w.game_year IS NOT NULL 
+				AND w.game_year != ''
+				AND CAST(w.game_year AS INTEGER) < m.year
+			ORDER BY days_to_win ASC
+			LIMIT 10`,
+		}),
+
+		// Discord Dynasties - Longest consecutive participation streaks
+		db.execute({
+			sql: `WITH MonthlyParticipation AS (
+				SELECT DISTINCT
+					discord_id,
+					month_id,
+					'voter' as activity_type
+				FROM votes
+				UNION
+				SELECT DISTINCT
+					discord_id,
+					month_id,
+					'nominator' as activity_type
+				FROM nominations
+			),
+			UserMonths AS (
+				SELECT 
+					mp.discord_id,
+					mp.month_id,
+					m.year,
+					m.month,
+					ROW_NUMBER() OVER (PARTITION BY mp.discord_id ORDER BY m.year, m.month) as rn
+				FROM MonthlyParticipation mp
+				JOIN months m ON mp.month_id = m.id
+			),
+			Streaks AS (
+				SELECT 
+					discord_id,
+					year,
+					month,
+					rn,
+					year * 12 + month - rn as streak_group
+				FROM UserMonths
+			),
+			ConsecutiveStreaks AS (
+				SELECT 
+					discord_id,
+					streak_group,
+					COUNT(*) as consecutive_months,
+					MIN(year || '-' || PRINTF('%02d', month)) as start_month,
+					MAX(year || '-' || PRINTF('%02d', month)) as end_month
+				FROM Streaks
+				GROUP BY discord_id, streak_group
+			)
+			SELECT 
+				discord_id,
+				consecutive_months,
+				'Participation' as streak_type
+			FROM ConsecutiveStreaks
+			ORDER BY consecutive_months DESC
+			LIMIT 10`,
+		}),
+
+		// Monthly Nomination Counts
+		db.execute({
+			sql: `SELECT 
+				m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
+				COUNT(n.id) AS count
+			FROM months m
+			LEFT JOIN nominations n ON m.id = n.month_id
+			GROUP BY m.id, m.year, m.month
+			ORDER BY m.year, m.month`,
+		}),
 	]);
 
 	// Format results as needed for frontend charts
@@ -272,15 +491,57 @@ export async function loader(): Promise<StatsLoaderData> {
 		count: Number(row.count),
 	}));
 
+	const powerNominators = powerNominatorsResult.rows.map((row) => ({
+		discord_id: String(row.discord_id),
+		winner_count: Number(row.winner_count),
+	}));
+
+	const pitchSuccessRate = pitchSuccessRateResult.rows.map((row) => ({
+		category: String(row.category),
+		win_rate: Number(row.win_rate),
+		total_games: Number(row.total_games),
+	}));
+
+	const votingMargins = votingMarginsResult.rows.map((row) => ({
+		margin_category: String(row.margin_category),
+		count: Number(row.count),
+	}));
+
+	const speedRuns = speedRunsResult.rows.map((row) => ({
+		game_name: String(row.game_name),
+		game_year: String(row.game_year),
+		win_date: String(row.win_date),
+		days_to_win: Number(row.days_to_win),
+	}));
+
+	const discordDynasties = discordDynastiesResult.rows.map((row) => ({
+		discord_id: String(row.discord_id),
+		consecutive_months: Number(row.consecutive_months),
+		streak_type: String(row.streak_type),
+	}));
+
+	const monthlyNominationCounts = monthlyNominationCountsResult.rows.map(
+		(row) => ({
+			monthYear: String(row.monthYear),
+			count: Number(row.count),
+		}),
+	);
+
 	const result: StatsLoaderData = {
 		totalStats,
-		topGamesFinalist, // Added to result
+		topGamesFinalist,
 		yearStats,
 		monthlyStats,
 		jurySelectionStats,
 		shortVsLong,
 		winnersByYear,
 		topScoringNominations,
+		powerNominators,
+		pitchSuccessRate,
+		votingMargins,
+		speedRuns,
+		discordDynasties,
+		monthlyNominationCounts,
 	};
 
 	// Store results in cache with 1 day TTL
@@ -299,6 +560,12 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 		shortVsLong,
 		winnersByYear,
 		topScoringNominations,
+		powerNominators,
+		pitchSuccessRate,
+		votingMargins,
+		speedRuns,
+		discordDynasties,
+		monthlyNominationCounts,
 	} = loaderData;
 
 	return (
@@ -412,9 +679,95 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 						<TopScoringNominationsChart data={topScoringNominations} />
 					</ChartCard>
 				</div>
-				<div className="grid grid-cols-1 gap-8">
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 					<ChartCard title="Winners by Release Year" className="h-96">
 						<WinnersByYearChart data={winnersByYear} />
+					</ChartCard>
+					<ChartCard title="Victory Margins" className="h-96">
+						<VotingMarginsChart data={votingMargins} />
+					</ChartCard>
+				</div>
+			</section>
+
+			{/* Fun Stats Section */}
+			<section aria-labelledby="fun-stats-title">
+				<h2
+					id="fun-stats-title"
+					className="text-2xl font-semibold text-white mb-6"
+				>
+					Fun Stats
+				</h2>
+
+				{/* Speed Runs */}
+				{speedRuns.length > 0 && (
+					<div className="mb-8">
+						<ChartCard title="Fastest time from Release to Win" className="p-6">
+							<div className="space-y-3">
+								<p className="text-zinc-400 text-sm mb-4">
+									Games that won GOTM shortly after release
+								</p>
+								{speedRuns.slice(0, 5).map((game) => (
+									<div
+										key={game.game_name}
+										className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg"
+									>
+										<div className="flex-1">
+											<p className="text-white font-medium">{game.game_name}</p>
+											<p className="text-zinc-400 text-sm">
+												Released: {game.game_year}
+											</p>
+										</div>
+										<div className="text-right">
+											<p className="text-sky-400 font-medium">
+												{Math.round(game.days_to_win / 365)} years
+											</p>
+											<p className="text-zinc-400 text-sm">
+												({game.days_to_win} days)
+											</p>
+										</div>
+									</div>
+								))}
+							</div>
+						</ChartCard>
+					</div>
+				)}
+
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+					<ChartCard title="Nominators with Most Wins" className="h-96">
+						<PowerNominatorsChart data={powerNominators} />
+					</ChartCard>
+					<ChartCard title="Pitch Success Rate" className="h-96">
+						<PitchSuccessRateChart data={pitchSuccessRate} />
+					</ChartCard>
+				</div>
+
+				{/* Discord Dynasties */}
+				<div className="mb-8">
+					<ChartCard title="Longest Participation Streaks" className="p-6">
+						<div className="space-y-3">
+							<p className="text-zinc-400 text-sm mb-4">
+								Users with the longest consecutive months of participation
+							</p>
+							{discordDynasties.slice(0, 5).map((user) => (
+								<div
+									key={user.discord_id}
+									className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg"
+								>
+									<p className="text-white font-medium">
+										{uniqueNameGenerator(user.discord_id)}
+									</p>
+									<p className="text-sky-400 font-medium">
+										{user.consecutive_months} months
+									</p>
+								</div>
+							))}
+						</div>
+					</ChartCard>
+				</div>
+
+				<div className="w-full">
+					<ChartCard title="Monthly Nominations Trend" className="h-96">
+						<MonthlyNominationCountsChart data={monthlyNominationCounts} />
 					</ChartCard>
 				</div>
 			</section>
@@ -1080,4 +1433,302 @@ function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
 	}
 
 	return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
+}
+
+// Power Nominators Chart
+function PowerNominatorsChart({ data }: { data: PowerNominatorStats[] }) {
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		chartInstanceRef.current.setOption({
+			tooltip: {
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
+			},
+			grid: {
+				left: "3%",
+				right: "6%",
+				bottom: "15%",
+				top: "3%",
+				containLabel: true,
+			},
+			xAxis: {
+				type: "value",
+				axisLabel: { color: "#94a3b8" },
+				name: "Winners Nominated",
+				nameLocation: "middle",
+				nameGap: 30,
+				nameTextStyle: { color: "#94a3b8" },
+			},
+			yAxis: {
+				type: "category",
+				data: data.map((item) => uniqueNameGenerator(item.discord_id)),
+				axisLabel: { color: "#94a3b8" },
+			},
+			series: [
+				{
+					name: "Winners",
+					type: "bar",
+					barWidth: "60%",
+					data: data.map((item) => item.winner_count),
+					itemStyle: {
+						color: "#34d399",
+					},
+				},
+			],
+		});
+
+		return () => {
+			if (chartInstanceRef.current) {
+				chartInstanceRef.current.dispose();
+				chartInstanceRef.current = null;
+			}
+		};
+	}, [data]);
+
+	return <div ref={chartRef} className="w-full h-full" />;
+}
+
+// Pitch Success Rate Chart
+function PitchSuccessRateChart({ data }: { data: PitchSuccessRateStats[] }) {
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		chartInstanceRef.current.setOption({
+			tooltip: {
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
+				formatter: (params: unknown[]) => {
+					const item = params[0] as {
+						name: string;
+						value: number;
+						data: { totalGames: number };
+					};
+					return `${item.name}<br/>Win Rate: ${item.value}%<br/>Total Games: ${item.data.totalGames}`;
+				},
+			},
+			grid: {
+				left: "6%",
+				right: "6%",
+				bottom: "3%",
+				top: "3%",
+				containLabel: true,
+			},
+			xAxis: {
+				type: "category",
+				data: data.map((item) => item.category),
+				axisLabel: { color: "#94a3b8" },
+			},
+			yAxis: {
+				type: "value",
+				axisLabel: {
+					color: "#94a3b8",
+					formatter: "{value}%",
+				},
+				name: "Win Rate",
+				nameTextStyle: { color: "#94a3b8" },
+			},
+			series: [
+				{
+					name: "Win Rate",
+					type: "bar",
+					barWidth: "50%",
+					data: data.map((item) => ({
+						value: item.win_rate,
+						totalGames: item.total_games,
+						itemStyle: {
+							color: item.category === "With Pitches" ? "#34d399" : "#fbbf24",
+						},
+					})),
+				},
+			],
+		});
+
+		return () => {
+			if (chartInstanceRef.current) {
+				chartInstanceRef.current.dispose();
+				chartInstanceRef.current = null;
+			}
+		};
+	}, [data]);
+
+	return <div ref={chartRef} className="w-full h-full" />;
+}
+
+// Voting Margins Chart
+function VotingMarginsChart({ data }: { data: VotingMarginStats[] }) {
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		// Sort data for better visualization
+		const sortedData = [...data].sort((a, b) => {
+			const order = [
+				"Landslide (50%+)",
+				"Clear Victory (30-50%)",
+				"Competitive (15-30%)",
+				"Nail-biter (<15%)",
+			];
+			return (
+				order.indexOf(a.margin_category) - order.indexOf(b.margin_category)
+			);
+		});
+
+		chartInstanceRef.current.setOption({
+			tooltip: {
+				trigger: "item",
+				formatter: "{a} <br/>{b}: {c} ({d}%)",
+			},
+			legend: {
+				orient: "horizontal",
+				bottom: "10%",
+				left: "center",
+				data: sortedData.map((item) => item.margin_category),
+				textStyle: { color: "#fff", fontSize: 12 },
+			},
+			series: [
+				{
+					name: "Victory Types",
+					type: "pie",
+					radius: ["40%", "70%"],
+					center: ["50%", "40%"],
+					avoidLabelOverlap: false,
+					label: {
+						show: true,
+						position: "center",
+						formatter: () => "Victory\nMargins",
+						fontSize: 16,
+						color: "#94a3b8",
+					},
+					labelLine: {
+						show: false,
+					},
+					data: sortedData.map((item, index) => ({
+						value: item.count,
+						name: item.margin_category,
+						itemStyle: {
+							color: ["#ef4444", "#f59e0b", "#3b82f6", "#10b981"][index],
+						},
+					})),
+				},
+			],
+		});
+
+		return () => {
+			if (chartInstanceRef.current) {
+				chartInstanceRef.current.dispose();
+				chartInstanceRef.current = null;
+			}
+		};
+	}, [data]);
+
+	return <div ref={chartRef} className="w-full h-full" />;
+}
+
+// Monthly Nomination Counts Chart
+function MonthlyNominationCountsChart({
+	data,
+}: {
+	data: MonthlyNominationCountStats[];
+}) {
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		// Filter out leading months with zero nominations
+		const filteredData = data.filter((item, index) => {
+			if (index === 0) return item.count > 0;
+			const anyPreviousNominations = data
+				.slice(0, index)
+				.some((prev) => prev.count > 0);
+			return anyPreviousNominations || item.count > 0;
+		});
+
+		chartInstanceRef.current.setOption({
+			tooltip: {
+				trigger: "axis",
+				axisPointer: { type: "line" },
+			},
+			grid: {
+				left: "6%",
+				right: "6%",
+				bottom: "16%",
+				top: "3%",
+				containLabel: true,
+			},
+			xAxis: {
+				type: "category",
+				data: filteredData.map((item) => formatMonthYear(item.monthYear)),
+				axisLabel: {
+					color: "#94a3b8",
+					rotate: 45,
+				},
+			},
+			yAxis: {
+				type: "value",
+				axisLabel: { color: "#94a3b8" },
+				name: "Nominations",
+				nameTextStyle: { color: "#94a3b8" },
+			},
+			series: [
+				{
+					name: "Nominations",
+					type: "line",
+					data: filteredData.map((item) => item.count),
+					smooth: true,
+					lineStyle: { width: 3 },
+					itemStyle: { color: "#fbbf24" },
+					areaStyle: {
+						color: {
+							type: "linear",
+							x: 0,
+							y: 0,
+							x2: 0,
+							y2: 1,
+							colorStops: [
+								{ offset: 0, color: "rgba(251, 191, 36, 0.5)" },
+								{ offset: 1, color: "rgba(251, 191, 36, 0.1)" },
+							],
+						},
+					},
+					symbolSize: 8,
+				},
+			],
+		});
+
+		return () => {
+			if (chartInstanceRef.current) {
+				chartInstanceRef.current.dispose();
+				chartInstanceRef.current = null;
+			}
+		};
+	}, [data]);
+
+	return <div ref={chartRef} className="w-full h-full" />;
 }
