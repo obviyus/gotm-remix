@@ -1,3 +1,4 @@
+import type { Row } from "@libsql/client";
 import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
 	DatasetComponent,
@@ -436,7 +437,7 @@ export async function loader(): Promise<StatsLoaderData> {
 
 	// AIDEV-NOTE: Optimized data transformation with pre-allocated structures and minimized iterations
 	// Process core stats mega-query result
-	const coreData = new Map<string, any>();
+	const coreData = new Map<string, Row>();
 	for (const row of coreStatsResult.rows) {
 		coreData.set(row.query_type as string, row);
 	}
@@ -444,6 +445,10 @@ export async function loader(): Promise<StatsLoaderData> {
 	const totalsRow = coreData.get("totals");
 	const votesRow = coreData.get("votes");
 	const otherRow = coreData.get("other");
+
+	if (!totalsRow || !votesRow || !otherRow) {
+		throw new Error("Missing core data");
+	}
 
 	const totalStats = {
 		total_nominations: Number(totalsRow.total_nominations),
@@ -492,7 +497,7 @@ export async function loader(): Promise<StatsLoaderData> {
 				selected: Number(row.short_count),
 				total: Number(row.long_count),
 				selectPercentage:
-					row.long_count > 0
+					Number(row.long_count) > 0
 						? Math.round(
 								(Number(row.short_count) / Number(row.long_count)) * 100,
 							)
@@ -506,13 +511,16 @@ export async function loader(): Promise<StatsLoaderData> {
 	}
 
 	// Process game stats mega-query result
-	const gameData = new Map<string, any[]>();
+	const gameData = new Map<string, Row[]>();
 	for (const row of gameStatsResult.rows) {
 		const type = row.query_type as string;
 		if (!gameData.has(type)) {
 			gameData.set(type, []);
 		}
-		gameData.get(type)!.push(row);
+		const typeArray = gameData.get(type);
+		if (typeArray) {
+			typeArray.push(row);
+		}
 	}
 
 	const topScoringNominations: TopScoringNominationStats[] = [];
@@ -583,13 +591,17 @@ export async function loader(): Promise<StatsLoaderData> {
 	}
 
 	// Process user stats mega-query result
-	const userData = new Map<string, any[]>();
+	const userData = new Map<string, Row[]>();
 	for (const row of userStatsResult.rows) {
 		const type = row.query_type as string;
 		if (!userData.has(type)) {
 			userData.set(type, []);
 		}
-		userData.get(type)!.push(row);
+
+		const typeArray = userData.get(type);
+		if (typeArray) {
+			typeArray.push(row);
+		}
 	}
 
 	const powerNominators: PowerNominatorStats[] = [];
@@ -867,8 +879,9 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 // AIDEV-NOTE: Memoized month-year formatter to avoid repeated Date object creation
 const formatMonthYearCache = new Map<string, string>();
 function formatMonthYear(monthYear: string): string {
-	if (formatMonthYearCache.has(monthYear)) {
-		return formatMonthYearCache.get(monthYear)!;
+	const cached = formatMonthYearCache.get(monthYear);
+	if (cached) {
+		return cached;
 	}
 
 	const [year, month] = monthYear.split("-");
