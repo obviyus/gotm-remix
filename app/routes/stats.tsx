@@ -15,7 +15,7 @@ import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
 import type { Route } from "./+types/stats";
 
-// AIDEV-NOTE: Register ECharts components once globally for better performance
+// Register ECharts components once globally for better performance
 echarts.use([
 	BarChart,
 	PieChart,
@@ -29,7 +29,7 @@ echarts.use([
 	CanvasRenderer,
 ]);
 
-// AIDEV-NOTE: Custom hook for optimized ECharts instance management
+// Custom hook for optimized ECharts instance management
 function useOptimizedChart() {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -141,7 +141,7 @@ interface MonthlyNominationCountStats {
 	count: number;
 }
 
-// AIDEV-NOTE: Performance-critical data structures - keep flat and minimal for memory efficiency
+// Performance-critical data structures - keep flat and minimal for memory efficiency
 // Type for stats loader data
 type StatsLoaderData = {
 	totalStats: {
@@ -169,12 +169,12 @@ type StatsLoaderData = {
 	monthlyNominationCounts: MonthlyNominationCountStats[];
 };
 
-// AIDEV-NOTE: Critical performance bottleneck - 13 parallel DB queries optimized to 3 strategic ones
+// Critical performance bottleneck - 13 parallel DB queries optimized to 3 strategic ones
 export async function loader(): Promise<StatsLoaderData> {
-	// AIDEV-NOTE: Reduced from 13 parallel queries to 3 optimized mega-queries for better performance
+	// Reduced from 13 parallel queries to 3 optimized mega-queries for better performance
 	const [coreStatsResult, gameStatsResult, userStatsResult] = await Promise.all(
 		[
-			// AIDEV-NOTE: Mega-query 1: Core stats with all totals and basic aggregations in single query
+			// Mega-query 1: Core stats with all totals and basic aggregations in single query
 			db.execute({
 				sql: `WITH
 				total_stats AS (
@@ -234,7 +234,7 @@ export async function loader(): Promise<StatsLoaderData> {
 			SELECT 'monthly_' || monthYear as query_type, nomination_count as total_nominations, voters as unique_games, nominators as total_nominators, selected as short_count, total as long_count, NULL as short_nominators, NULL as long_nominators FROM monthly_stats`,
 			}),
 
-			// AIDEV-NOTE: Mega-query 2: Game-related stats with optimized joins and CTEs
+			// Mega-query 2: Game-related stats with optimized joins and CTEs
 			db.execute({
 				sql: `WITH
 				top_scoring AS (
@@ -366,7 +366,7 @@ export async function loader(): Promise<StatsLoaderData> {
 			UNION ALL
 			SELECT 'speed_runs' as query_type, game_name, days_to_win as value1, NULL as value2, game_year as value3, win_date as value4 FROM speed_runs`,
 			}),
-			// AIDEV-NOTE: Mega-query 3: User-related stats with optimized aggregations
+			// Mega-query 3: User-related stats with optimized aggregations
 			db.execute({
 				sql: `WITH
 				power_nominators AS (
@@ -435,7 +435,7 @@ export async function loader(): Promise<StatsLoaderData> {
 		],
 	);
 
-	// AIDEV-NOTE: Optimized data transformation with pre-allocated structures and minimized iterations
+	// Optimized data transformation with pre-allocated structures and minimized iterations
 	// Process core stats mega-query result
 	const coreData = new Map<string, Row>();
 	for (const row of coreStatsResult.rows) {
@@ -649,7 +649,7 @@ export async function loader(): Promise<StatsLoaderData> {
 	return result;
 }
 
-// AIDEV-NOTE: Main component optimized for minimal re-renders - data is pre-processed in loader
+// Main component optimized for minimal re-renders - data is pre-processed in loader
 export default function StatsPage({ loaderData }: Route.ComponentProps) {
 	// Destructure once to avoid object property access in render
 	const {
@@ -876,7 +876,7 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 	);
 }
 
-// AIDEV-NOTE: Memoized month-year formatter to avoid repeated Date object creation
+// Memoized month-year formatter to avoid repeated Date object creation
 const formatMonthYearCache = new Map<string, string>();
 function formatMonthYear(monthYear: string): string {
 	const cached = formatMonthYearCache.get(monthYear);
@@ -924,7 +924,7 @@ function ChartCard({
 	);
 }
 
-// AIDEV-NOTE: Optimized chart components with memoization and reduced re-renders
+// Optimized chart components with memoization and reduced re-renders
 // Chart Components
 function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
@@ -1118,6 +1118,15 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 			chartInstanceRef.current = echarts.init(chartRef.current);
 		}
 
+		// Filter out leading months with zero nominations
+		const filteredData = data.filter((item, index) => {
+			if (index === 0) return item.total > 0;
+			const anyPreviousNominations = data
+				.slice(0, index)
+				.some((prev) => prev.total > 0);
+			return anyPreviousNominations || item.total > 0;
+		});
+
 		chartInstanceRef.current.setOption({
 			tooltip: {
 				trigger: "axis",
@@ -1132,7 +1141,7 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 			},
 			xAxis: {
 				type: "category",
-				data: data.map((item) => formatMonthYear(item.monthYear)),
+				data: filteredData.map((item) => formatMonthYear(item.monthYear)),
 				axisLabel: {
 					color: "#94a3b8",
 					rotate: 45,
@@ -1149,14 +1158,14 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 					type: "bar",
 					stack: "games",
 					itemStyle: { color: "#94a3b8" },
-					data: data.map((item) => item.total),
+					data: filteredData.map((item) => item.total),
 				},
 				{
 					name: "Selected by Jury",
 					type: "bar",
 					stack: "games",
 					itemStyle: { color: "#34d399" },
-					data: data.map((item) => item.selected),
+					data: filteredData.map((item) => item.selected),
 				},
 			],
 		});
@@ -1187,6 +1196,15 @@ function JurySelectionPercentageChart({
 			chartInstanceRef.current = echarts.init(chartRef.current);
 		}
 
+		// Filter out leading months with zero nominations
+		const filteredData = data.filter((item, index) => {
+			if (index === 0) return item.total > 0;
+			const anyPreviousNominations = data
+				.slice(0, index)
+				.some((prev) => prev.total > 0);
+			return anyPreviousNominations || item.total > 0;
+		});
+
 		chartInstanceRef.current.setOption({
 			tooltip: {
 				trigger: "axis",
@@ -1201,7 +1219,7 @@ function JurySelectionPercentageChart({
 			},
 			xAxis: {
 				type: "category",
-				data: data.map((item) => formatMonthYear(item.monthYear)),
+				data: filteredData.map((item) => formatMonthYear(item.monthYear)),
 				axisLabel: {
 					color: "#94a3b8",
 					rotate: 45,
@@ -1221,7 +1239,7 @@ function JurySelectionPercentageChart({
 				{
 					name: "Selection Percentage",
 					type: "line",
-					data: data.map((item) => item.selectPercentage),
+					data: filteredData.map((item) => item.selectPercentage),
 					smooth: true,
 					lineStyle: { width: 3 },
 					itemStyle: { color: "#fbbf24" },
