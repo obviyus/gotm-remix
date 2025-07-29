@@ -12,7 +12,6 @@ import { CanvasRenderer } from "echarts/renderers";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
-import cache from "~/utils/cache.server";
 import type { Route } from "./+types/stats";
 
 // AIDEV-NOTE: Register ECharts components once globally for better performance
@@ -171,16 +170,6 @@ type StatsLoaderData = {
 
 // AIDEV-NOTE: Critical performance bottleneck - 13 parallel DB queries optimized to 3 strategic ones
 export async function loader(): Promise<StatsLoaderData> {
-	const CACHE_KEY = "stats_page_data";
-	// TTL set to 1 day (24 hours in milliseconds)
-	const TTL = 24 * 60 * 60 * 1000;
-
-	// Try to get data from cache
-	const cachedData = cache.get<StatsLoaderData>(CACHE_KEY);
-	if (cachedData) {
-		return cachedData;
-	}
-
 	// AIDEV-NOTE: Reduced from 13 parallel queries to 3 optimized mega-queries for better performance
 	const [coreStatsResult, gameStatsResult, userStatsResult] = await Promise.all(
 		[
@@ -222,8 +211,8 @@ export async function loader(): Promise<StatsLoaderData> {
 				monthly_stats AS (
 					SELECT 
 						m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
-						COUNT(DISTINCT n.discord_id) AS nominators,
-						COUNT(DISTINCT v.discord_id) AS voters,
+						COUNT(DISTINCT CASE WHEN n.discord_id IS NOT NULL THEN n.discord_id END) AS nominators,
+						COUNT(DISTINCT CASE WHEN v.discord_id IS NOT NULL THEN v.discord_id END) AS voters,
 						COUNT(n.id) AS nomination_count,
 						COUNT(CASE WHEN n.jury_selected = 1 THEN 1 END) AS selected,
 						COUNT(n.id) AS total
@@ -233,15 +222,15 @@ export async function loader(): Promise<StatsLoaderData> {
 					GROUP BY m.id, m.year, m.month
 					ORDER BY m.year, m.month
 				)
-			SELECT 'totals' as query_type, * FROM total_stats
+			SELECT 'totals' as query_type, total_nominations, unique_games, total_nominators, short_count, long_count, short_nominators, long_nominators FROM total_stats
 			UNION ALL
-			SELECT 'votes' as query_type, total_votes as total_nominations, NULL, total_voters as total_nominators, NULL, NULL, NULL, NULL FROM vote_stats
+			SELECT 'votes' as query_type, total_votes as total_nominations, NULL as unique_games, total_voters as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators FROM vote_stats
 			UNION ALL
-			SELECT 'other' as query_type, total_jury_members as total_nominations, total_pitches as unique_games, total_winners as total_nominators, NULL, NULL, NULL, NULL FROM other_stats
+			SELECT 'other' as query_type, total_jury_members as total_nominations, total_pitches as unique_games, total_winners as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators FROM other_stats
 			UNION ALL
-			SELECT 'year_' || game_year as query_type, nomination_count as total_nominations, NULL, NULL, NULL, NULL, NULL, NULL FROM year_stats
+			SELECT 'year_' || game_year as query_type, nomination_count as total_nominations, NULL as unique_games, NULL as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators FROM year_stats
 			UNION ALL
-			SELECT 'monthly_' || monthYear as query_type, nomination_count as total_nominations, NULL, nominators as total_nominators, voters as unique_games, selected as short_count, total as long_count, NULL FROM monthly_stats`,
+			SELECT 'monthly_' || monthYear as query_type, nomination_count as total_nominations, voters as unique_games, nominators as total_nominators, selected as short_count, total as long_count, NULL as short_nominators, NULL as long_nominators FROM monthly_stats`,
 			}),
 
 			// AIDEV-NOTE: Mega-query 2: Game-related stats with optimized joins and CTEs
@@ -644,9 +633,6 @@ export async function loader(): Promise<StatsLoaderData> {
 		discordDynasties,
 		monthlyNominationCounts,
 	};
-
-	// Store results in cache with 1 day TTL
-	cache.set(CACHE_KEY, result, TTL);
 
 	return result;
 }
