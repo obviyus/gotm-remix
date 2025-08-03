@@ -16,21 +16,15 @@ Every month, the users and jury select one short (< 12 hours on HLTB) and one lo
 
 This repository uses Bun for package management and the runtime. To start the development server:
 
-1. Start MySQL via Docker:
-```sh
-$ docker-compose up -d
-```
-
-2. Seed the database:
-```sh
-$ mysql -u root -h 127.0.0.1 -P 3306 -p < db/schema.sql
-```
-
-3. Start the server:
+1. Start the server (uses local file database):
 ```sh
 $ bun run dev
 ```
 
-## Contributions
+## Production
 
-Contributions are welcome! Please follow the [Engineering Conventions](CONVENTIONS.md) when contributing.
+For production deployment, set up environment variables:
+```sh
+TURSO_DATABASE_URL=your_turso_url
+TURSO_AUTH_TOKEN=your_turso_token
+```
