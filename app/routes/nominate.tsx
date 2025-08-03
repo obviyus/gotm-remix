@@ -1,8 +1,18 @@
-import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { useState } from "react";
 import { Link, redirect, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
+import { Button } from "~/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
 import { db } from "~/server/database.server";
 import { searchGames } from "~/server/igdb.server";
 import { getCurrentMonth } from "~/server/month.server";
@@ -417,22 +427,20 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 					<search.Form method="post" onSubmit={handleSearch} className="mb-8">
 						<div className="flex gap-4">
-							<input
+							<Input
 								type="search"
 								name="query"
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								placeholder="Search for games..."
-								className="flex-1 rounded-md border-white/10 bg-black/20 text-zinc-200 placeholder-zinc-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+								className="flex-1 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500"
 							/>
 							<button
 								type="submit"
 								disabled={isSearching || !searchTerm.trim()}
-								className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
+								className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
 							>
-								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-									{isSearching ? "Searching..." : "Search"}
-								</span>
+								{isSearching ? "Searching..." : "Search"}
 							</button>
 						</div>
 					</search.Form>
@@ -518,198 +526,191 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			{/* Game Length Selection Modal */}
 			<Dialog
 				open={isOpen}
-				onClose={() => {
-					setIsOpen(false);
-					setPitch(""); // Reset pitch when closing modal
+				onOpenChange={(open) => {
+					if (!open) {
+						setIsOpen(false);
+						setPitch(""); // Reset pitch when closing modal
+					}
 				}}
-				className="relative z-50"
 			>
-				<div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-
-				{/* Full-screen container for mobile slide-up and desktop centered modal */}
-				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-zinc-900 border border-white/10 p-6 shadow-xl">
-						<DialogTitle className="text-lg font-medium leading-6 text-zinc-200 mb-4">
+				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
+					<DialogHeader>
+						<DialogTitle className="text-zinc-200">
 							Nominate {selectedGame?.gameName} ({selectedGame?.gameYear})
 						</DialogTitle>
+					</DialogHeader>
 
-						{/* Game Cover and Summary */}
-						<div className="mb-6 flex gap-4">
-							{selectedGame?.gameCover && (
-								<div className="flex-shrink-0">
-									<img
-										src={selectedGame.gameCover.replace(
-											"/t_thumb/",
-											"/t_cover_big/",
-										)}
-										alt={selectedGame.gameName}
-										className="w-32 rounded-lg shadow-lg border border-white/10"
-									/>
-								</div>
-							)}
-							{selectedGame?.summary && (
-								<div className="flex-1">
-									<p className="text-sm text-zinc-400 line-clamp-[12]">
-										{selectedGame.summary}
-									</p>
-								</div>
-							)}
-						</div>
+					{/* Game Cover and Summary */}
+					<div className="mb-6 flex gap-4">
+						{selectedGame?.gameCover && (
+							<div className="flex-shrink-0">
+								<img
+									src={selectedGame.gameCover.replace(
+										"/t_thumb/",
+										"/t_cover_big/",
+									)}
+									alt={selectedGame.gameName}
+									className="w-32 rounded-lg shadow-lg border border-white/10"
+								/>
+							</div>
+						)}
+						{selectedGame?.summary && (
+							<div className="flex-1">
+								<p className="text-sm text-zinc-400 line-clamp-[12]">
+									{selectedGame.summary}
+								</p>
+							</div>
+						)}
+					</div>
 
-						{/* Pitch Input */}
-						<div className="mb-6">
-							<label
-								htmlFor="pitch"
-								className="block text-sm font-medium text-zinc-400 mb-2"
-							>
-								Pitch (Optional)
-							</label>
-							<textarea
-								id="pitch"
-								name="pitch"
-								rows={3}
-								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 placeholder-zinc-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-								value={pitch}
-								onChange={(e) => setPitch(e.target.value)}
-							/>
-						</div>
+					{/* Pitch Input */}
+					<div className="mb-6">
+						<Label htmlFor="pitch" className="text-zinc-400">
+							Pitch (Optional)
+						</Label>
+						<Textarea
+							id="pitch"
+							name="pitch"
+							rows={3}
+							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
+							value={pitch}
+							onChange={(e) => setPitch(e.target.value)}
+						/>
+					</div>
 
-						<div className="grid grid-cols-2 gap-4">
+					<DialogFooter>
+						<div className="grid grid-cols-2 gap-4 w-full">
 							<button
 								type="button"
 								onClick={() => handleGameLength(true)}
 								disabled={Boolean(shortNomination)}
-								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
 									shortNomination
-										? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
-										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
+										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
 								}`}
 							>
-								<span className="relative z-10 flex flex-col items-center justify-center gap-1 transition-transform group-hover/btn:scale-105">
-									Short Game
-									<span className="text-xs opacity-80">(&lt; 12 hours)</span>
-									{shortNomination && (
-										<span className="text-xs">Already nominated</span>
-									)}
-								</span>
+								<span>Short Game</span>
+								<span className="text-xs opacity-80">(&lt; 12 hours)</span>
+								{shortNomination && (
+									<span className="text-xs">Already nominated</span>
+								)}
 							</button>
 							<button
 								type="button"
 								onClick={() => handleGameLength(false)}
 								disabled={Boolean(longNomination)}
-								className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
+								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
 									longNomination
-										? "opacity-50 cursor-not-allowed text-zinc-400 border border-zinc-400/20"
-										: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
+										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
 								}`}
 							>
-								<span className="relative z-10 flex flex-col items-center justify-center gap-1 transition-transform group-hover/btn:scale-105">
-									Long Game
-									<span className="text-xs opacity-80">(&gt; 12 hours)</span>
-									{longNomination && (
-										<span className="text-xs">Already nominated</span>
-									)}
-								</span>
+								<span>Long Game</span>
+								<span className="text-xs opacity-80">(&gt; 12 hours)</span>
+								{longNomination && (
+									<span className="text-xs">Already nominated</span>
+								)}
 							</button>
 						</div>
-					</DialogPanel>
-				</div>
+					</DialogFooter>
+				</DialogContent>
 			</Dialog>
 
 			{/* Edit Modal */}
 			<Dialog
 				open={isEditOpen}
-				onClose={() => {
-					setIsEditOpen(false);
-					setEditPitch("");
+				onOpenChange={(open) => {
+					if (!open) {
+						setIsEditOpen(false);
+						setEditPitch("");
+					}
 				}}
-				className="relative z-50"
 			>
-				<div
-					className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-					aria-hidden="true"
-				/>
-				<div className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-					<DialogPanel className="w-full sm:w-[32rem] rounded-t-lg sm:rounded-lg bg-zinc-900 border border-white/10 p-6 shadow-xl">
-						<DialogTitle className="text-lg font-medium leading-6 text-zinc-200 mb-4">
+				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
+					<DialogHeader>
+						<DialogTitle className="text-zinc-200">
 							{editingNomination && editingNomination.pitches.length > 0
 								? "Edit"
 								: "Add"}{" "}
 							Pitch: {editingNomination?.gameName}
 						</DialogTitle>
-						<div className="mb-6">
-							<label
-								htmlFor="editPitch"
-								className="block text-sm font-medium text-zinc-400 mb-2"
-							>
-								Pitch
-							</label>
-							<textarea
-								id="editPitch"
-								rows={3}
-								className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 placeholder-zinc-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-								value={editPitch}
-								onChange={(e) => setEditPitch(e.target.value)}
-								placeholder="Write your pitch here..."
-							/>
-						</div>
-						<div className="flex justify-end gap-3">
-							<button
-								type="button"
-								onClick={() => setIsEditOpen(false)}
-								className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 transition-colors border border-white/10"
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={handleEditSubmit}
-								className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-							>
-								{editingNomination?.pitches ? "Save Changes" : "Add Pitch"}
-							</button>
-						</div>
-					</DialogPanel>
-				</div>
+					</DialogHeader>
+
+					<div className="mb-6">
+						<Label htmlFor="editPitch" className="text-zinc-400">
+							Pitch
+						</Label>
+						<Textarea
+							id="editPitch"
+							rows={3}
+							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
+							value={editPitch}
+							onChange={(e) => setEditPitch(e.target.value)}
+							placeholder="Write your pitch here..."
+						/>
+					</div>
+
+					<DialogFooter>
+						<Button
+							type="button"
+							onClick={() => setIsEditOpen(false)}
+							variant="outline"
+							className="bg-zinc-800 border-white/10 text-zinc-200 hover:bg-zinc-700"
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={handleEditSubmit}
+							className="bg-blue-600 hover:bg-blue-700 text-white"
+						>
+							{editingNomination?.pitches ? "Save Changes" : "Add Pitch"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
 			</Dialog>
 
 			{/* Delete Confirmation Modal */}
 			<Dialog
 				open={isDeleteOpen}
-				onClose={() => setIsDeleteOpen(false)}
-				className="relative z-50"
+				onOpenChange={(open) => {
+					if (!open) {
+						setIsDeleteOpen(false);
+					}
+				}}
 			>
-				<div
-					className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-					aria-hidden="true"
-				/>
-				<div className="fixed inset-0 flex items-center justify-center p-4">
-					<DialogPanel className="w-full max-w-sm rounded-lg bg-zinc-900 border border-white/10 p-6 shadow-xl">
-						<DialogTitle className="text-lg font-medium leading-6 text-zinc-200 mb-4">
+				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
+					<DialogHeader>
+						<DialogTitle className="text-zinc-200">
 							Delete Nomination
 						</DialogTitle>
-						<p className="text-sm text-zinc-400 mb-6">
-							Are you sure you want to delete your nomination for{" "}
-							{deletingNomination?.gameName}? This action cannot be undone.
-						</p>
-						<div className="flex justify-end gap-3">
-							<button
-								type="button"
-								onClick={() => setIsDeleteOpen(false)}
-								className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 transition-colors border border-white/10"
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={handleDeleteConfirm}
-								className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-							>
-								Delete
-							</button>
-						</div>
-					</DialogPanel>
-				</div>
+					</DialogHeader>
+
+					<p className="text-sm text-zinc-400 mb-6">
+						Are you sure you want to delete your nomination for{" "}
+						{deletingNomination?.gameName}? This action cannot be undone.
+					</p>
+
+					<DialogFooter>
+						<Button
+							type="button"
+							onClick={() => setIsDeleteOpen(false)}
+							variant="outline"
+							className="bg-zinc-800 border-white/10 text-zinc-200 hover:bg-zinc-700"
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={handleDeleteConfirm}
+							variant="destructive"
+							className="bg-red-600 hover:bg-red-700 text-white"
+						>
+							Delete
+						</Button>
+					</DialogFooter>
+				</DialogContent>
 			</Dialog>
 
 			{/* Add PitchesModal */}

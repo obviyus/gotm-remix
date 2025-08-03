@@ -10,10 +10,10 @@
 		"start": "bun run server.ts"
 	},
 	"dependencies": {
-		"@headlessui/react": "^2.2.7",
 		"@hello-pangea/dnd": "^18.0.1",
 		"@libsql/client": "^0.15.10",
 		"@radix-ui/react-dialog": "^1.1.14",
+		"@radix-ui/react-label": "^2.1.7",
 		"@radix-ui/react-scroll-area": "^1.2.9",
 		"@radix-ui/react-separator": "^1.1.7",
 		"@radix-ui/react-slot": "^1.2.3",
