@@ -110,6 +110,7 @@ interface TopScoringNominationStats {
 interface PowerNominatorStats {
 	discord_id: string;
 	winner_count: number;
+	display_name: string;
 }
 
 interface PitchSuccessRateStats {
@@ -134,6 +135,7 @@ interface DiscordDynastyStats {
 	discord_id: string;
 	consecutive_months: number;
 	streak_type: string;
+	display_name: string;
 }
 
 interface MonthlyNominationCountStats {
@@ -614,6 +616,7 @@ export async function loader(): Promise<StatsLoaderData> {
 					powerNominators.push({
 						discord_id: String(row.discord_id),
 						winner_count: Number(row.value1),
+						display_name: uniqueNameGenerator(String(row.discord_id)),
 					});
 				}
 				break;
@@ -623,6 +626,7 @@ export async function loader(): Promise<StatsLoaderData> {
 						discord_id: String(row.discord_id),
 						consecutive_months: Number(row.value1),
 						streak_type: String(row.value2),
+						display_name: uniqueNameGenerator(String(row.discord_id)),
 					});
 				}
 				break;
@@ -854,9 +858,7 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 									key={user.discord_id}
 									className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg"
 								>
-									<p className="text-white font-medium">
-										{uniqueNameGenerator(user.discord_id)}
-									</p>
+									<p className="text-white font-medium">{user.display_name}</p>
 									<p className="text-sky-400 font-medium">
 										{user.consecutive_months} months
 									</p>
@@ -1639,7 +1641,7 @@ function PowerNominatorsChart({ data }: { data: PowerNominatorStats[] }) {
 			},
 			yAxis: {
 				type: "category",
-				data: data.map((item) => uniqueNameGenerator(item.discord_id)),
+				data: data.map((item) => item.display_name),
 				axisLabel: { color: "#94a3b8" },
 			},
 			series: [
