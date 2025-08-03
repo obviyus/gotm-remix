@@ -9,7 +9,7 @@ import { useState } from "react";
 import { redirect, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
-import SplitLayout, { Column } from "~/components/SplitLayout";
+import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
@@ -470,7 +470,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	};
 
 	return (
-		<SplitLayout
+		<TwoColumnLayout
 			title="Drag and Drop the games"
 			subtitle="to sort them in the priority you want them to win"
 			description="Please only vote for games you actually want to play next month :)"
@@ -535,6 +535,6 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 				}}
 				nomination={selectedNomination}
 			/>
-		</SplitLayout>
+		</TwoColumnLayout>
 	);
 }

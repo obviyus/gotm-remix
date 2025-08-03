@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
-import SplitLayout, { Column } from "~/components/SplitLayout";
 import ThemeCard from "~/components/ThemeCard";
+import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
@@ -167,7 +167,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			<div className="mt-12">
-				<SplitLayout
+				<TwoColumnLayout
 					title="All Nominations"
 					description="These games were nominated for this month's Game of the Month."
 				>
@@ -190,7 +190,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 					>
 						{renderNominationsList(nominations.short, true)}
 					</Column>
-				</SplitLayout>
+				</TwoColumnLayout>
 			</div>
 
 			<PitchesModal

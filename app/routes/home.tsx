@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
-import SplitLayout, { Column } from "~/components/SplitLayout";
 import ThemeCard from "~/components/ThemeCard";
+import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
@@ -105,7 +105,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
 			<div>
 				{month.status === "nominating" && nominations ? (
-					<SplitLayout
+					<TwoColumnLayout
 						title="Current Nominations"
 						description="These games have been nominated for this month's Game of the Month."
 					>
@@ -128,7 +128,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 						>
 							{renderNominationsList(nominations.short)}
 						</Column>
-					</SplitLayout>
+					</TwoColumnLayout>
 				) : month.status === "jury" && nominations ? (
 					<>
 						<div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-6 mb-8 text-center">
@@ -145,7 +145,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 								begin and you&apos;ll be able to rank your favorites.
 							</p>
 						</div>
-						<SplitLayout
+						<TwoColumnLayout
 							title="All Nominations"
 							description="These games have been nominated for this month's Game of the Month. The jury is currently selecting which games will advance to the voting phase."
 						>
@@ -168,7 +168,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 							>
 								{renderNominationsList(nominations.short)}
 							</Column>
-						</SplitLayout>
+						</TwoColumnLayout>
 					</>
 				) : (
 					<div className="space-y-6">
