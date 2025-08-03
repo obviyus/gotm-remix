@@ -1,4 +1,4 @@
-import { CalendarDaysIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import { CalendarDays, Trophy } from "lucide-react";
 import { Link } from "react-router";
 import { db } from "~/server/database.server";
 import { getMonth } from "~/server/month.server";
@@ -92,7 +92,7 @@ export default function History({ loaderData }: Route.ComponentProps) {
 							</div>
 							<div className="relative flex justify-center">
 								<span className="bg-zinc-900 px-2 text-xl font-semibold text-zinc-300 flex items-center gap-1.5">
-									<CalendarDaysIcon className="h-5 w-5 text-zinc-400" />
+									<CalendarDays className="h-5 w-5 text-zinc-400" />
 									{year}
 								</span>
 							</div>
@@ -144,7 +144,7 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																)}
 																<div>
 																	<div className="flex items-center text-2xs font-medium text-blue-400 mb-0.5">
-																		<TrophyIcon className="h-3.5 w-3.5 mr-1" />
+																		<Trophy className="h-3.5 w-3.5 mr-1" />
 																		Long Winner
 																	</div>
 																	<div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors duration-200">
@@ -169,7 +169,7 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																)}
 																<div>
 																	<div className="flex items-center text-2xs font-medium text-emerald-400 mb-0.5">
-																		<TrophyIcon className="h-3.5 w-3.5 mr-1" />
+																		<Trophy className="h-3.5 w-3.5 mr-1" />
 																		Short Winner
 																	</div>
 																	<div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors duration-200">

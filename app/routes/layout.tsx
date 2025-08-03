@@ -1,4 +1,4 @@
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { db } from "~/server/database.server";
@@ -88,9 +88,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 							>
 								<span className="sr-only">Open main menu</span>
 								{!isMobileMenuOpen ? (
-									<Bars3Icon className="h-6 w-6" aria-hidden="true" />
+									<Menu className="h-6 w-6" aria-hidden="true" />
 								) : (
-									<XMarkIcon className="h-6 w-6" aria-hidden="true" />
+									<X className="h-6 w-6" aria-hidden="true" />
 								)}
 							</button>
 							<span className="text-lg font-bold text-zinc-100">

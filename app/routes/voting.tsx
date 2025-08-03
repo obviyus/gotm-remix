@@ -4,7 +4,7 @@ import {
 	Droppable,
 	type DropResult,
 } from "@hello-pangea/dnd";
-import { TrashIcon } from "@heroicons/react/20/solid";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { redirect, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
@@ -489,7 +489,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 							onClick={() => deleteVote(false)}
 						>
 							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+								<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 								Clear Vote
 							</span>
 						</button>
@@ -515,7 +515,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 							onClick={() => deleteVote(true)}
 						>
 							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+								<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 								Clear Vote
 							</span>
 						</button>

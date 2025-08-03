@@ -3,13 +3,13 @@ import type {
 	DraggableProvidedDragHandleProps,
 } from "@hello-pangea/dnd";
 import {
-	ArrowDownIcon,
-	ArrowUpIcon,
-	ChatBubbleBottomCenterTextIcon,
-	LinkIcon,
-	PencilSquareIcon,
-	TrashIcon,
-} from "@heroicons/react/20/solid";
+	ArrowDown,
+	ArrowUp,
+	Edit,
+	ExternalLink,
+	MessageCircle,
+	Trash2,
+} from "lucide-react";
 import type { Nomination } from "~/types";
 
 interface GameCardProps {
@@ -174,12 +174,12 @@ export default function GameCard({
 								<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
 									{isRanked ? (
 										<>
-											<ArrowDownIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+											<ArrowDown className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 											Remove from Ranking
 										</>
 									) : (
 										<>
-											<ArrowUpIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+											<ArrowUp className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 											Add to Ranking
 										</>
 									)}
@@ -192,7 +192,7 @@ export default function GameCard({
 									onClick={onViewPitches}
 									className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-zinc-200 bg-zinc-500/10 hover:bg-zinc-500/20 transition-all duration-300 backdrop-blur-sm border border-zinc-500/20 hover:border-zinc-500/30"
 								>
-									<ChatBubbleBottomCenterTextIcon className="w-4 h-4" />
+									<MessageCircle className="w-4 h-4" />
 									{pitchCount > 0 ? (
 										<>
 											View {pitchCount} {pitchCount === 1 ? "Pitch" : "Pitches"}
@@ -211,7 +211,7 @@ export default function GameCard({
 							onClick={onViewPitches}
 							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-zinc-200 bg-zinc-500/10 hover:bg-zinc-500/20 transition-all duration-300 backdrop-blur-sm border border-zinc-500/20 hover:border-zinc-500/30"
 						>
-							<ChatBubbleBottomCenterTextIcon className="w-4 h-4" />
+							<MessageCircle className="w-4 h-4" />
 							{pitchCount > 0 ? (
 								<>
 									View {pitchCount} {pitchCount === 1 ? "Pitch" : "Pitches"}
@@ -265,7 +265,7 @@ export default function GameCard({
 									title="View on IGDB"
 								>
 									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-										<LinkIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+										<ExternalLink className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 										{variant === "nomination" ? "View on IGDB" : "IGDB"}
 									</span>
 								</a>
@@ -282,7 +282,7 @@ export default function GameCard({
 											}
 										>
 											<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-												<PencilSquareIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+												<Edit className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 												{game.pitches.length > 0 ? "Edit pitch" : "Add pitch"}
 											</span>
 										</button>
@@ -295,7 +295,7 @@ export default function GameCard({
 											title="Delete nomination"
 										>
 											<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-												<TrashIcon className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+												<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
 												Delete
 											</span>
 										</button>
