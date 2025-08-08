@@ -47,6 +47,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	});
 
 	const selectedMonthId = Number(params.monthId);
+	if (!Number.isFinite(selectedMonthId)) {
+		throw new Response("Invalid month ID", { status: 400 });
+	}
 	const selectedMonth = await getMonth(selectedMonthId);
 
 	if (!selectedMonth) {
@@ -435,18 +438,25 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 
 					{/* Month Navigation */}
 					<div className="flex items-center justify-between mt-4">
-						<Link
-							to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) + 1]?.id}`}
-							prefetch="viewport"
-							className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg ${
-								months.findIndex((m) => m.id === selectedMonth.id) ===
-								months.length - 1
-									? "pointer-events-none opacity-50"
-									: "text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10"
-							}`}
-						>
-							← Previous Month
-						</Link>
+						{(() => {
+							const currentIndex = months.findIndex(
+								(m) => m.id === selectedMonth.id,
+							);
+							const prev = months[currentIndex + 1];
+							return prev ? (
+								<Link
+									to={`/admin/${prev.id}`}
+									prefetch="viewport"
+									className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10`}
+								>
+									← Previous Month
+								</Link>
+							) : (
+								<span className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg pointer-events-none opacity-50">
+									← Previous Month
+								</span>
+							);
+						})()}
 
 						<div className="flex gap-2">
 							<button
@@ -468,17 +478,25 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							)}
 						</div>
 
-						<Link
-							to={`/admin/${months[months.findIndex((m) => m.id === selectedMonth.id) - 1]?.id}`}
-							prefetch="viewport"
-							className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg ${
-								months.findIndex((m) => m.id === selectedMonth.id) === 0
-									? "pointer-events-none opacity-50"
-									: "text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10"
-							}`}
-						>
-							Next Month →
-						</Link>
+						{(() => {
+							const currentIndex = months.findIndex(
+								(m) => m.id === selectedMonth.id,
+							);
+							const next = months[currentIndex - 1];
+							return next ? (
+								<Link
+									to={`/admin/${next.id}`}
+									prefetch="viewport"
+									className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10`}
+								>
+									Next Month →
+								</Link>
+							) : (
+								<span className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg pointer-events-none opacity-50">
+									Next Month →
+								</span>
+							);
+						})()}
 					</div>
 
 					{statusUpdateFetcher.data?.error && (
