@@ -1,4 +1,4 @@
-import { type Client, createClient } from "@libsql/client";
+import { createClient, type Client } from "@libsql/client";
 import { config } from "dotenv";
 
 config();
@@ -15,4 +15,10 @@ function getClient(): Client {
 	return cachedClient;
 }
 
-export const db = getClient();
+export const db: Client = new Proxy({} as Client, {
+	get(_target, prop: keyof Client) {
+		const client = getClient();
+		// @ts-expect-error dynamic proxy access
+		return client[prop];
+	},
+});

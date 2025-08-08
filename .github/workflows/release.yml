@@ -32,6 +32,9 @@ jobs:
 
       - name: Build and push
         uses: docker/build-push-action@v5
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         with:
           context: .
           platforms: linux/amd64,linux/arm64
