@@ -412,7 +412,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 						</div>
 
 						{/* Divider */}
-						<Draggable draggableId="divider" index={rankedGames.length}>
+						<Draggable
+							draggableId="divider"
+							index={rankedGames.length}
+							isDragDisabled
+						>
 							{(provided) => (
 								<div
 									ref={provided.innerRef}

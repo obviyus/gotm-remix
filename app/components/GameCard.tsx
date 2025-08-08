@@ -84,7 +84,7 @@ export default function GameCard({
 					: status === "jury"
 						? "border-blue-500"
 						: "border-zinc-800/50"
-			} hover:border-zinc-700/50 transition-all duration-500 flex h-52 min-w-0`}
+			} hover:border-zinc-700/50 transition-colors duration-200 will-change-transform flex h-52 min-w-0`}
 		>
 			{/* Cover Image */}
 			<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
