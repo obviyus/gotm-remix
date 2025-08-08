@@ -32,9 +32,6 @@ jobs:
 
       - name: Build and push
         uses: docker/build-push-action@v5
-        env:
-          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
-          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -45,6 +42,3 @@ jobs:
             ghcr.io/obviyus/gotm-remix:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          secrets: |
-            id=TURSO_DATABASE_URL,env=TURSO_DATABASE_URL
-            id=TURSO_AUTH_TOKEN,env=TURSO_AUTH_TOKEN
