@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM oven/bun AS base
 
 # set for base and all layer that inherit from it
@@ -18,7 +19,12 @@ COPY --from=deps /app/node_modules /app/node_modules
 
 COPY . .
 
-RUN bun run build
+# Allow build-time DB access for prerender via BuildKit secrets
+RUN --mount=type=secret,id=TURSO_DATABASE_URL \
+    --mount=type=secret,id=TURSO_AUTH_TOKEN \
+    TURSO_DATABASE_URL="$(cat /run/secrets/TURSO_DATABASE_URL 2>/dev/null || echo)" \
+    TURSO_AUTH_TOKEN="$(cat /run/secrets/TURSO_AUTH_TOKEN 2>/dev/null || echo)" \
+    bun run build
 
 # Finally, build the production image with minimal footprint
 FROM base
