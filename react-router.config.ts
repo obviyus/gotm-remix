@@ -4,7 +4,10 @@ export default {
 	ssr: true,
 	async prerender() {
 		// If DB env is not available at build time, skip dynamic paths to avoid failing CI builds
-		if (!process.env.TURSO_DATABASE_URL) {
+		if (
+			!process.env.TURSO_DATABASE_URL ||
+			process.env.TURSO_DATABASE_URL === ""
+		) {
 			console.warn("TURSO_DATABASE_URL is not set, skipping prerender");
 			return [];
 		}
