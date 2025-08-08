@@ -46,8 +46,5 @@ export default [
 	]),
 
 	// API routes
-	...prefix("api", [
-		route("votes", "./routes/api.votes.ts"),
-		route("nominations", "./routes/api.nominations.ts"),
-	]),
+	...prefix("api", [route("votes", "./routes/api.votes.ts")]),
 ] satisfies RouteConfig;

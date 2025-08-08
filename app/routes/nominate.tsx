@@ -18,7 +18,7 @@ import { searchGames } from "~/server/igdb.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import { getSession } from "~/sessions";
-import type { Nomination, NominationFormData } from "~/types";
+import type { Nomination } from "~/types";
 import type { Route } from "./+types/nominate";
 
 interface NominationResponse {
@@ -70,15 +70,218 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
+	const method = request.method.toUpperCase();
 	const formData = await request.formData();
-	const query = formData.get("query");
+	const intent = (formData.get("intent") || "").toString();
 
-	if (typeof query !== "string") {
-		return Response.json({ games: [] });
+	// Handle search (POST + intent=search) to keep existing UX
+	if (method === "POST" && intent === "search") {
+		const query = formData.get("query");
+		if (typeof query !== "string" || !query.trim()) {
+			return Response.json({ games: [] });
+		}
+		const games = await searchGames(query);
+		return Response.json({ games });
 	}
 
-	const games = await searchGames(query);
-	return Response.json({ games });
+	// All mutations below require auth
+	const session = await getSession(request.headers.get("Cookie"));
+	const discordId = session.get("discordId");
+	if (!discordId) {
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
+	}
+
+	// Reuse previous winners check
+	const winners = await db.execute("SELECT DISTINCT game_id FROM winners");
+	const previousWinners = winners.rows.map((w) => (w.game_id ?? "").toString());
+
+	if (method === "POST" && intent === "createNomination") {
+		try {
+			const monthId = formData.get("monthId")?.toString() ?? "";
+			const short = formData.get("short") === "true";
+			const pitch = formData.get("pitch")?.toString() || null;
+
+			const gameIdStr = formData.get("gameId")?.toString();
+			const gameName = formData.get("gameName")?.toString() || "";
+			const gameCover = formData.get("gameCover")?.toString() || null;
+			const gameYear = formData.get("gameYear")?.toString() || null;
+			const gameUrl = formData.get("gameUrl")?.toString() || null;
+
+			if (!monthId || !gameIdStr || !gameName) {
+				return Response.json(
+					{ error: "Missing required fields" },
+					{ status: 400 },
+				);
+			}
+
+			// Reject previous winners
+			if (previousWinners.includes(gameIdStr)) {
+				return Response.json(
+					{ error: "This game has already won GOTM in a previous month" },
+					{ status: 400 },
+				);
+			}
+
+			// Check if user already nominated/pitched this game for the month
+			const existing = await db.execute({
+				sql: "SELECT n.*, p.discord_id as pitch_discord_id FROM nominations n LEFT JOIN pitches p ON n.id = p.nomination_id WHERE n.month_id = ? AND n.game_id = ? AND p.discord_id = ?",
+				args: [monthId, gameIdStr, discordId],
+			});
+
+			if (existing.rows.length > 0) {
+				return Response.json(
+					{
+						error:
+							"You have already nominated or pitched this game for this month",
+					},
+					{ status: 400 },
+				);
+			}
+
+			// Normalize cover size like before
+			const normalizedCover =
+				gameCover?.replace("t_thumb", "t_cover_big") || null;
+
+			// Insert nomination
+			const nomination = await db.execute({
+				sql: "INSERT INTO nominations (month_id, game_id, discord_id, short, game_name, game_year, game_cover, game_url, jury_selected, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())",
+				args: [
+					monthId,
+					gameIdStr,
+					discordId,
+					short ? 1 : 0,
+					gameName,
+					gameYear || null,
+					normalizedCover,
+					gameUrl || null,
+					0,
+				],
+			});
+
+			if (pitch && nomination.lastInsertRowid) {
+				await db.execute({
+					sql: "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
+					args: [nomination.lastInsertRowid, discordId, pitch],
+				});
+			}
+
+			return Response.json({
+				success: true,
+				nominationId: nomination.lastInsertRowid
+					? Number(nomination.lastInsertRowid)
+					: null,
+			});
+		} catch (error) {
+			console.error("Error processing nomination:", error);
+			return Response.json(
+				{
+					error:
+						"Failed to process nomination. Please make sure all required fields are provided.",
+				},
+				{ status: 500 },
+			);
+		}
+	}
+
+	if (method === "PATCH") {
+		try {
+			const nominationIdStr = formData.get("nominationId")?.toString();
+			const pitch = formData.get("pitch")?.toString() || null;
+			const nominationId = nominationIdStr
+				? Number.parseInt(nominationIdStr, 10)
+				: null;
+			if (!nominationId || Number.isNaN(nominationId)) {
+				return Response.json(
+					{ error: "Invalid nomination ID" },
+					{ status: 400 },
+				);
+			}
+
+			// Fetch nomination and any existing pitch by this user
+			const nomination = await db.execute({
+				sql: `SELECT n.*, p.discord_id as pitch_discord_id
+                      FROM nominations n
+                      LEFT JOIN pitches p ON n.id = p.nomination_id AND p.discord_id = ?
+                      WHERE n.id = ?`,
+				args: [discordId, nominationId],
+			});
+
+			if (nomination.rows.length === 0) {
+				return Response.json(
+					{ error: "Nomination not found" },
+					{ status: 404 },
+				);
+			}
+
+			const gameId = nomination.rows[0].game_id?.toString() ?? "";
+			if (previousWinners.includes(gameId)) {
+				return Response.json(
+					{ error: "Cannot modify nominations for previous GOTM winners" },
+					{ status: 400 },
+				);
+			}
+
+			const isOwner = nomination.rows[0].discord_id === discordId;
+			const hasExistingPitch =
+				nomination.rows[0].pitch_discord_id === discordId;
+
+			if (!isOwner && hasExistingPitch) {
+				return Response.json(
+					{ error: "You have already added a pitch to this nomination" },
+					{ status: 400 },
+				);
+			}
+
+			if (hasExistingPitch) {
+				await db.execute({
+					sql: "UPDATE pitches SET pitch = ?, updated_at = unixepoch() WHERE nomination_id = ? AND discord_id = ?",
+					args: [pitch, nominationId, discordId],
+				});
+			} else {
+				await db.execute({
+					sql: "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
+					args: [nominationId, discordId, pitch],
+				});
+			}
+
+			return Response.json({ success: true });
+		} catch (error) {
+			console.error("Error processing edit:", error);
+			return Response.json(
+				{ error: "Failed to process edit. Please try again." },
+				{ status: 500 },
+			);
+		}
+	}
+
+	if (method === "DELETE") {
+		const nominationId = formData.get("nominationId")?.toString();
+		if (!nominationId) {
+			return Response.json({ error: "Missing nomination ID" }, { status: 400 });
+		}
+
+		// Verify ownership
+		const nomination = await db.execute({
+			sql: "SELECT id FROM nominations WHERE id = ? AND discord_id = ?",
+			args: [nominationId, discordId],
+		});
+
+		if (nomination.rows.length === 0) {
+			return Response.json(
+				{ error: "Nomination not found or unauthorized" },
+				{ status: 404 },
+			);
+		}
+
+		await db.execute({
+			sql: "DELETE FROM nominations WHERE id = ?",
+			args: [nominationId],
+		});
+
+		return Response.json({ success: true });
+	}
+
+	return Response.json({ error: "Invalid action" }, { status: 400 });
 }
 
 export default function Nominate({ loaderData }: Route.ComponentProps) {
@@ -128,10 +331,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!searchTerm.trim()) return;
-		search.submit(
-			{ query: searchTerm },
-			{ method: "post", action: "/nominate" },
-		);
+		search.submit({ intent: "search", query: searchTerm }, { method: "post" });
 	};
 
 	const handleGameSelect = (
@@ -184,12 +384,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		nominate.submit(
 			{
 				nominationId: editingNomination.id,
-				pitch: editPitch.trim() || null,
+				pitch: editPitch.trim() || "",
 			},
 			{
 				method: "PATCH",
-				action: "/api/nominations",
-				encType: "application/json",
 			},
 		);
 
@@ -204,11 +402,9 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		nominate.submit(
 			{
 				nominationId: deletingNomination.id.toString(),
-				_action: "delete",
 			},
 			{
 				method: "DELETE",
-				action: "/api/nominations",
 			},
 		);
 
@@ -219,28 +415,20 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const handleGameLength = (isShort: boolean) => {
 		if (!selectedGame) return;
 
-		// Build the nomination data with type checking
-		const nominationData: NominationFormData = {
-			game: {
-				id: Number(selectedGame.gameId),
-				name: selectedGame.gameName,
-				cover: selectedGame.gameCover,
-				gameYear: selectedGame.gameYear,
-				url: selectedGame.gameUrl,
-			},
-			monthId: monthId?.toString() ?? "",
-			short: isShort,
-			pitch: pitch.trim() || null,
-		};
-
-		// Submit as stringified JSON
+		// Submit directly to this route to trigger automatic revalidation
 		nominate.submit(
-			{ json: JSON.stringify(nominationData) },
 			{
-				method: "POST",
-				action: "/api/nominations",
-				encType: "application/json",
+				intent: "createNomination",
+				monthId: monthId?.toString() ?? "",
+				short: String(isShort),
+				pitch: pitch.trim() || "",
+				gameId: String(selectedGame.gameId),
+				gameName: selectedGame.gameName,
+				gameCover: selectedGame.gameCover || "",
+				gameYear: selectedGame.gameYear || "",
+				gameUrl: selectedGame.gameUrl || "",
 			},
+			{ method: "POST" },
 		);
 
 		setIsOpen(false);
@@ -435,6 +623,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 								placeholder="Search for games..."
 								className="flex-1 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500"
 							/>
+							<input type="hidden" name="intent" value="search" />
 							<button
 								type="submit"
 								disabled={isSearching || !searchTerm.trim()}
