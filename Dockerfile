@@ -22,8 +22,8 @@ COPY . .
 # Allow build-time DB access for prerender via BuildKit secrets
 RUN --mount=type=secret,id=TURSO_DATABASE_URL \
     --mount=type=secret,id=TURSO_AUTH_TOKEN \
-    TURSO_DATABASE_URL="$(cat /run/secrets/TURSO_DATABASE_URL 2>/dev/null || echo)" \
-    TURSO_AUTH_TOKEN="$(cat /run/secrets/TURSO_AUTH_TOKEN 2>/dev/null || echo)" \
+    TURSO_DATABASE_URL="$(cat /run/secrets/TURSO_DATABASE_URL)" \
+    TURSO_AUTH_TOKEN="$(cat /run/secrets/TURSO_AUTH_TOKEN)" \
     bun run build
 
 # Finally, build the production image with minimal footprint
