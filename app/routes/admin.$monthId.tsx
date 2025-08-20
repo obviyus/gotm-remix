@@ -1,7 +1,12 @@
 import type { Row, Value } from "@libsql/client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, redirect, useFetcher, useNavigate } from "react-router";
 import PitchesModal from "~/components/PitchesModal";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
 import { db } from "~/server/database.server";
 import { getMonth, getThemeCategories } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
@@ -271,6 +276,15 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const [csvCopied, setCsvCopied] = useState(false);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 
+	// Generate unique IDs for form elements
+	const statusSelectId = useId();
+	const yearInputId = useId();
+	const monthInputId = useId();
+	const createStatusSelectId = useId();
+	const themeCategorySelectId = useId();
+	const themeNameInputId = useId();
+	const themeDescriptionTextareaId = useId();
+
 	// Clear error when submission is successful
 	useEffect(() => {
 		if (
@@ -412,13 +426,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							<input type="hidden" name="monthId" value={selectedMonth.id} />
 							<input type="hidden" name="intent" value="updateStatus" />
 							<label
-								htmlFor="status"
+								htmlFor={statusSelectId}
 								className="text-sm font-medium text-zinc-400 sr-only sm:not-sr-only"
 							>
 								Status:
 							</label>
 							<select
-								id="status"
+								id={statusSelectId}
 								name="status"
 								value={selectedMonth.status}
 								onChange={(e) => e.target.form?.requestSubmit()}
@@ -444,37 +458,49 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							);
 							const prev = months[currentIndex + 1];
 							return prev ? (
-								<Link
-									to={`/admin/${prev.id}`}
-									prefetch="viewport"
-									className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10`}
+								<Button
+									asChild
+									variant="outline"
+									size="sm"
+									className="px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40"
+								>
+									<Link to={`/admin/${prev.id}`} prefetch="viewport">
+										← Previous Month
+									</Link>
+								</Button>
+							) : (
+								<Button
+									variant="outline"
+									size="sm"
+									disabled
+									className="px-3 py-1.5 text-zinc-400 opacity-50"
 								>
 									← Previous Month
-								</Link>
-							) : (
-								<span className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg pointer-events-none opacity-50">
-									← Previous Month
-								</span>
+								</Button>
 							);
 						})()}
 
 						<div className="flex gap-2">
-							<button
+							<Button
 								type="button"
 								onClick={() => setShowCreateForm(!showCreateForm)}
-								className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-emerald-400 border border-emerald-400/20 hover:bg-emerald-500/10"
+								variant="outline"
+								size="sm"
+								className="bg-transparent text-emerald-400 hover:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10"
 							>
 								{showCreateForm ? "Cancel" : "Create New Month"}
-							</button>
+							</Button>
 
 							{nominations.length > 0 && (
-								<button
+								<Button
 									type="button"
 									onClick={handleCopyAsCSV}
-									className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-zinc-200 border border-zinc-400/20 hover:bg-zinc-500/10"
+									variant="outline"
+									size="sm"
+									className="bg-transparent text-zinc-200 hover:text-zinc-200 border border-zinc-600/30 hover:bg-zinc-700/20"
 								>
 									{csvCopied ? "Copied!" : "Export CSV"}
-								</button>
+								</Button>
 							)}
 						</div>
 
@@ -484,17 +510,25 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							);
 							const next = months[currentIndex - 1];
 							return next ? (
-								<Link
-									to={`/admin/${next.id}`}
-									prefetch="viewport"
-									className={`inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg text-zinc-200 shadow-sm border border-zinc-400/20 hover:bg-zinc-500/10`}
+								<Button
+									asChild
+									variant="outline"
+									size="sm"
+									className="px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40"
+								>
+									<Link to={`/admin/${next.id}`} prefetch="viewport">
+										Next Month →
+									</Link>
+								</Button>
+							) : (
+								<Button
+									variant="outline"
+									size="sm"
+									disabled
+									className="px-3 py-1.5 text-zinc-400 opacity-50"
 								>
 									Next Month →
-								</Link>
-							) : (
-								<span className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg pointer-events-none opacity-50">
-									Next Month →
-								</span>
+								</Button>
 							);
 						})()}
 					</div>
@@ -509,138 +543,137 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 
 			{/* Create New Month Form (Collapsible) */}
 			{showCreateForm && (
-				<section className="mb-8 bg-black/20 p-4 rounded-lg border border-white/10">
-					<h2 className="text-lg font-semibold mb-4 text-zinc-200">
-						Create New Month
-					</h2>
-					<createMonthFetcher.Form method="POST">
-						<input type="hidden" name="intent" value="createMonth" />
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-							<div>
-								<label
-									htmlFor="year"
-									className="block text-sm font-medium text-zinc-400 mb-1"
-								>
-									Year
-								</label>
-								<input
-									type="number"
-									id="year"
-									name="year"
-									min="2000"
-									max="2100"
-									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
-								/>
+				<Card className="mb-8 bg-black/20 border-white/10">
+					<CardHeader>
+						<CardTitle className="text-zinc-200">Create New Month</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<createMonthFetcher.Form method="POST">
+							<input type="hidden" name="intent" value="createMonth" />
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+								<div>
+									<Label
+										htmlFor={yearInputId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Year
+									</Label>
+									<Input
+										type="number"
+										id={yearInputId}
+										name="year"
+										min="2000"
+										max="2100"
+										required
+										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor={monthInputId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Month (1-12)
+									</Label>
+									<Input
+										type="number"
+										id={monthInputId}
+										name="month"
+										min="1"
+										max="12"
+										required
+										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor={createStatusSelectId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Initial Status
+									</Label>
+									<select
+										id={createStatusSelectId}
+										name="status"
+										required
+										className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+									>
+										{monthStatuses.map((status) => (
+											<option key={status} value={status} className="py-1">
+												{status.charAt(0).toUpperCase() + status.slice(1)}
+											</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<Label
+										htmlFor={themeCategorySelectId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Theme Category
+									</Label>
+									<select
+										id={themeCategorySelectId}
+										name="themeCategoryId"
+										required
+										className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+									>
+										<option value="">Select a category</option>
+										{themeCategories.map((category) => (
+											<option key={category.id} value={category.id}>
+												{category.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<Label
+										htmlFor={themeNameInputId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Theme Name
+									</Label>
+									<Input
+										type="text"
+										id={themeNameInputId}
+										name="themeName"
+										required
+										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										placeholder="Enter theme name"
+									/>
+								</div>
+								<div className="md:col-span-2">
+									<Label
+										htmlFor={themeDescriptionTextareaId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Theme Description
+									</Label>
+									<Textarea
+										id={themeDescriptionTextareaId}
+										name="themeDescription"
+										rows={2}
+										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										placeholder="Enter theme description (optional)"
+									/>
+								</div>
 							</div>
-							<div>
-								<label
-									htmlFor="month"
-									className="block text-sm font-medium text-zinc-400 mb-1"
+							<div className="flex justify-end">
+								<Button
+									type="submit"
+									disabled={createMonthFetcher.state !== "idle"}
+									variant="outline"
+									className="text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
 								>
-									Month (1-12)
-								</label>
-								<input
-									type="number"
-									id="month"
-									name="month"
-									min="1"
-									max="12"
-									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
-								/>
+									{createMonthFetcher.state !== "idle"
+										? "Creating..."
+										: "Create Month"}
+								</Button>
 							</div>
-							<div>
-								<label
-									htmlFor="status"
-									className="block text-sm font-medium text-zinc-400 mb-1"
-								>
-									Initial Status
-								</label>
-								<select
-									id="status"
-									name="status"
-									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
-								>
-									{monthStatuses.map((status) => (
-										<option key={status} value={status} className="py-1">
-											{status.charAt(0).toUpperCase() + status.slice(1)}
-										</option>
-									))}
-								</select>
-							</div>
-							<div>
-								<label
-									htmlFor="themeCategory"
-									className="block text-sm font-medium text-zinc-400 mb-1"
-								>
-									Theme Category
-								</label>
-								<select
-									id="themeCategory"
-									name="themeCategoryId"
-									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
-								>
-									<option value="">Select a category</option>
-									{themeCategories.map((category) => (
-										<option key={category.id} value={category.id}>
-											{category.name}
-										</option>
-									))}
-								</select>
-							</div>
-							<div>
-								<label
-									htmlFor="themeName"
-									className="block text-sm font-medium text-zinc-400 mb-1"
-								>
-									Theme Name
-								</label>
-								<input
-									type="text"
-									id="themeName"
-									name="themeName"
-									required
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
-									placeholder="Enter theme name"
-								/>
-							</div>
-							<div className="md:col-span-2">
-								<label
-									htmlFor="themeDescription"
-									className="block text-sm font-medium text-zinc-400 mb-1"
-								>
-									Theme Description
-								</label>
-								<textarea
-									id="themeDescription"
-									name="themeDescription"
-									rows={2}
-									className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
-									placeholder="Enter theme description (optional)"
-								/>
-							</div>
-						</div>
-						<div className="flex justify-end">
-							<button
-								type="submit"
-								disabled={createMonthFetcher.state !== "idle"}
-								className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-									createMonthFetcher.state !== "idle"
-										? "opacity-50 cursor-not-allowed"
-										: "text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
-								}`}
-							>
-								{createMonthFetcher.state !== "idle"
-									? "Creating..."
-									: "Create Month"}
-							</button>
-						</div>
-						{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-					</createMonthFetcher.Form>
-				</section>
+							{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+						</createMonthFetcher.Form>
+					</CardContent>
+				</Card>
 			)}
 
 			{/* Jury Selection Section */}
@@ -723,19 +756,21 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 												</span>
 											</td>
 											<td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-												<button
+												<Button
 													type="button"
 													onClick={() => {
 														setSelectedNomination(nomination);
 														setIsPitchesModalOpen(true);
 													}}
-													className="inline-flex items-center justify-center px-2 py-1 text-xs rounded bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700/60 transition-colors"
+													variant="outline"
+													size="sm"
+													className="px-2 py-1 text-xs bg-transparent text-zinc-300 hover:text-zinc-300 border-zinc-700 hover:bg-zinc-800/40"
 												>
 													{(
 														nominations.find((n) => n.id === nomination.id)
 															?.pitches || []
 													).length || 0}
-												</button>
+												</Button>
 											</td>
 											<td className="px-4 py-3 whitespace-nowrap text-center">
 												<button
