@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, redirect, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -284,6 +284,25 @@ export async function action({ request }: Route.ActionArgs) {
 	return Response.json({ error: "Invalid action" }, { status: 400 });
 }
 
+const GameSkeleton = () => (
+	<div className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 flex h-52 min-w-0">
+		<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
+			<div className="absolute inset-0 bg-zinc-800 animate-pulse" />
+		</div>
+		<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
+			<div className="min-w-0 space-y-2">
+				<div className="flex justify-between items-start gap-2">
+					<div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse" />
+					<div className="h-4 bg-zinc-800 rounded w-12 shrink-0 animate-pulse" />
+				</div>
+			</div>
+			<div className="flex flex-col gap-2 mt-auto min-w-0">
+				<div className="h-9 bg-zinc-800 rounded w-full animate-pulse" />
+			</div>
+		</div>
+	</div>
+);
+
 export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const {
 		games: initialGames,
@@ -301,6 +320,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const isSearching =
 		search.state === "submitting" || search.state === "loading";
 	const hasSearched = search.data !== undefined; // Track if a search was performed
+
+	// Generate unique IDs for form elements
+	const pitchId = useId();
+	const editPitchId = useId();
 
 	// New state for modal
 	const [isOpen, setIsOpen] = useState(false);
@@ -524,25 +547,6 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		);
 	}
 
-	const GameSkeleton = () => (
-		<div className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 flex h-52 min-w-0">
-			<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
-				<div className="absolute inset-0 bg-zinc-800 animate-pulse" />
-			</div>
-			<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
-				<div className="min-w-0 space-y-2">
-					<div className="flex justify-between items-start gap-2">
-						<div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse" />
-						<div className="h-4 bg-zinc-800 rounded w-12 shrink-0 animate-pulse" />
-					</div>
-				</div>
-				<div className="flex flex-col gap-2 mt-auto min-w-0">
-					<div className="h-9 bg-zinc-800 rounded w-full animate-pulse" />
-				</div>
-			</div>
-		</div>
-	);
-
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 			<h1 className="text-3xl font-bold mb-8">Nominate Games</h1>
@@ -754,11 +758,11 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 					{/* Pitch Input */}
 					<div className="mb-6">
-						<Label htmlFor="pitch" className="text-zinc-400">
+						<Label htmlFor={pitchId} className="text-zinc-400">
 							Pitch (Optional)
 						</Label>
 						<Textarea
-							id="pitch"
+							id={pitchId}
 							name="pitch"
 							rows={3}
 							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
@@ -827,11 +831,11 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					</DialogHeader>
 
 					<div className="mb-6">
-						<Label htmlFor="editPitch" className="text-zinc-400">
+						<Label htmlFor={editPitchId} className="text-zinc-400">
 							Pitch
 						</Label>
 						<Textarea
-							id="editPitch"
+							id={editPitchId}
 							rows={3}
 							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
 							value={editPitch}
