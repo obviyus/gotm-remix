@@ -10,7 +10,8 @@ import {
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import { Card } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
 import type { Route } from "./+types/stats";
@@ -655,6 +656,14 @@ export async function loader(): Promise<StatsLoaderData> {
 
 // Main component optimized for minimal re-renders - data is pre-processed in loader
 export default function StatsPage({ loaderData }: Route.ComponentProps) {
+	// Generate unique IDs for accessibility
+	const overviewId = useId();
+	const gamesId = useId();
+	const participationId = useId();
+	const juryId = useId();
+	const winnersId = useId();
+	const funStatsId = useId();
+
 	// Destructure once to avoid object property access in render
 	const {
 		totalStats,
@@ -676,137 +685,208 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-12 text-white">
 			{/* Overview Section */}
-			<section aria-labelledby="overview-title">
-				<h2
-					id="overview-title"
-					className="text-2xl font-semibold text-white mb-6"
-				>
+			<section aria-labelledby={overviewId}>
+				<h2 id={overviewId} className="text-2xl font-semibold text-white mb-6">
 					Overall Stats
 				</h2>
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-					<StatCard
-						title="Total Nominations"
-						value={totalStats.total_nominations}
-					/>
-					<StatCard
-						title="Unique Nominations"
-						value={totalStats.unique_games}
-					/>
-					<StatCard title="Total Votes Cast" value={totalStats.total_votes} />
-					<StatCard
-						title="Total Pitches Submitted"
-						value={totalStats.total_pitches}
-					/>
-					<StatCard
-						title="Total Winners Selected"
-						value={totalStats.total_winners}
-					/>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Total Nominations
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_nominations}
+						</p>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Unique Nominations
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.unique_games}
+						</p>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Total Votes Cast
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_votes}
+						</p>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Total Pitches Submitted
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_pitches}
+						</p>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Total Winners Selected
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_winners}
+						</p>
+					</Card>
 				</div>
 			</section>
 
 			{/* Games Section */}
-			<section aria-labelledby="games-title">
-				<h2 id="games-title" className="text-2xl font-semibold text-white mb-6">
+			<section aria-labelledby={gamesId}>
+				<h2 id={gamesId} className="text-2xl font-semibold text-white mb-6">
 					Game Insights
 				</h2>
 				<div className="mb-8">
-					<ChartCard
-						title="Top Nominated Games (Jury Selected vs Not Selected)"
-						className="h-96 p-8"
-					>
-						<TopGamesFinalistChart data={topGamesFinalist} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-8 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Top Nominated Games (Jury Selected vs Not Selected)
+						</h3>
+						<div className="h-full">
+							<TopGamesFinalistChart data={topGamesFinalist} />
+						</div>
+					</Card>
 				</div>
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-					<ChartCard title="Nominations by Game Release Year" className="h-96">
-						<YearlyNominationsChart data={yearStats} />
-					</ChartCard>
-					<ChartCard title="Short vs. Long Game Nominations" className="h-96">
-						<ShortVsLongChart data={shortVsLong} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Nominations by Game Release Year
+						</h3>
+						<div className="h-full">
+							<YearlyNominationsChart data={yearStats} />
+						</div>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Short vs. Long Game Nominations
+						</h3>
+						<div className="h-full">
+							<ShortVsLongChart data={shortVsLong} />
+						</div>
+					</Card>
 				</div>
 			</section>
 
 			{/* Participation Section */}
-			<section aria-labelledby="participation-title">
+			<section aria-labelledby={participationId}>
 				<h2
-					id="participation-title"
+					id={participationId}
 					className="text-2xl font-semibold text-white mb-6"
 				>
 					Community Participation
 				</h2>
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-					<StatCard
-						title="Unique Nominators"
-						value={totalStats.total_nominators}
-					/>
-					<StatCard title="Unique Voters" value={totalStats.total_voters} />
-					<StatCard
-						title="Active Jury Members"
-						value={totalStats.total_jury_members}
-					/>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Unique Nominators
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_nominators}
+						</p>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Unique Voters
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_voters}
+						</p>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
+							Active Jury Members
+						</h3>
+						<p className="text-3xl font-bold text-white">
+							{totalStats.total_jury_members}
+						</p>
+					</Card>
 				</div>
 				<div className="w-full">
-					<ChartCard
-						title="Monthly Participation (Nominators vs Voters)"
-						className="h-96"
-					>
-						<ParticipationChart data={monthlyStats} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Monthly Participation (Nominators vs Voters)
+						</h3>
+						<div className="h-full">
+							<ParticipationChart data={monthlyStats} />
+						</div>
+					</Card>
 				</div>
 			</section>
 
 			{/* Jury Section */}
-			<section aria-labelledby="jury-title">
-				<h2 id="jury-title" className="text-2xl font-semibold text-white mb-6">
+			<section aria-labelledby={juryId}>
+				<h2 id={juryId} className="text-2xl font-semibold text-white mb-6">
 					Jury Insights
 				</h2>
 				<div className="grid grid-cols-1 gap-8">
-					<ChartCard title="Monthly Jury Selection Counts" className="h-96">
-						<JurySelectionChart data={jurySelectionStats} />
-					</ChartCard>
-					<ChartCard title="Monthly Jury Selection Percentage" className="h-96">
-						<JurySelectionPercentageChart data={jurySelectionStats} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Monthly Jury Selection Counts
+						</h3>
+						<div className="h-full">
+							<JurySelectionChart data={jurySelectionStats} />
+						</div>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Monthly Jury Selection Percentage
+						</h3>
+						<div className="h-full">
+							<JurySelectionPercentageChart data={jurySelectionStats} />
+						</div>
+					</Card>
 				</div>
 			</section>
 
 			{/* Winners Section */}
-			<section aria-labelledby="winners-title">
-				<h2
-					id="winners-title"
-					className="text-2xl font-semibold text-white mb-6"
-				>
+			<section aria-labelledby={winnersId}>
+				<h2 id={winnersId} className="text-2xl font-semibold text-white mb-6">
 					Winners Insights
 				</h2>
 				<div className="grid grid-cols-1 gap-8 mb-8">
-					<ChartCard title="Games with Most First Place Votes" className="h-96">
-						<TopScoringNominationsChart data={topScoringNominations} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Games with Most First Place Votes
+						</h3>
+						<div className="h-full">
+							<TopScoringNominationsChart data={topScoringNominations} />
+						</div>
+					</Card>
 				</div>
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-					<ChartCard title="Winners by Release Year" className="h-96">
-						<WinnersByYearChart data={winnersByYear} />
-					</ChartCard>
-					<ChartCard title="Victory Margins" className="h-96">
-						<VotingMarginsChart data={votingMargins} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Winners by Release Year
+						</h3>
+						<div className="h-full">
+							<WinnersByYearChart data={winnersByYear} />
+						</div>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Victory Margins
+						</h3>
+						<div className="h-full">
+							<VotingMarginsChart data={votingMargins} />
+						</div>
+					</Card>
 				</div>
 			</section>
 
 			{/* Fun Stats Section */}
-			<section aria-labelledby="fun-stats-title">
-				<h2
-					id="fun-stats-title"
-					className="text-2xl font-semibold text-white mb-6"
-				>
+			<section aria-labelledby={funStatsId}>
+				<h2 id={funStatsId} className="text-2xl font-semibold text-white mb-6">
 					Fun Stats
 				</h2>
 
 				{/* Speed Runs */}
 				{speedRuns.length > 0 && (
 					<div className="mb-8">
-						<ChartCard title="Fastest time from Release to Win" className="p-6">
+						<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700">
+							<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+								Fastest time from Release to Win
+							</h3>
 							<div className="space-y-3">
 								<p className="text-zinc-400 text-sm mb-4">
 									Games that won GOTM shortly after release
@@ -833,22 +913,35 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 									</div>
 								))}
 							</div>
-						</ChartCard>
+						</Card>
 					</div>
 				)}
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-					<ChartCard title="Nominators with Most Wins" className="h-96">
-						<PowerNominatorsChart data={powerNominators} />
-					</ChartCard>
-					<ChartCard title="Pitch Success Rate" className="h-96">
-						<PitchSuccessRateChart data={pitchSuccessRate} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Nominators with Most Wins
+						</h3>
+						<div className="h-full">
+							<PowerNominatorsChart data={powerNominators} />
+						</div>
+					</Card>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Pitch Success Rate
+						</h3>
+						<div className="h-full">
+							<PitchSuccessRateChart data={pitchSuccessRate} />
+						</div>
+					</Card>
 				</div>
 
 				{/* Discord Dynasties */}
 				<div className="mb-8">
-					<ChartCard title="Longest Participation Streaks" className="p-6">
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Longest Participation Streaks
+						</h3>
 						<div className="space-y-3">
 							<p className="text-zinc-400 text-sm mb-4">
 								Users with the longest consecutive months of participation
@@ -865,13 +958,18 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 								</div>
 							))}
 						</div>
-					</ChartCard>
+					</Card>
 				</div>
 
 				<div className="w-full">
-					<ChartCard title="Monthly Nominations Trend" className="h-96">
-						<MonthlyNominationCountsChart data={monthlyNominationCounts} />
-					</ChartCard>
+					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+							Monthly Nominations Trend
+						</h3>
+						<div className="h-full">
+							<MonthlyNominationCountsChart data={monthlyNominationCounts} />
+						</div>
+					</Card>
 				</div>
 			</section>
 		</div>
@@ -887,43 +985,16 @@ function formatMonthYear(monthYear: string): string {
 	}
 
 	const [year, month] = monthYear.split("-");
-	const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
+	const date = new Date(
+		Number.parseInt(year, 10),
+		Number.parseInt(month, 10) - 1,
+	);
 	const formatted = date.toLocaleDateString("en-US", {
 		month: "long",
 		year: "numeric",
 	});
 	formatMonthYearCache.set(monthYear, formatted);
 	return formatted;
-}
-
-// Component for stat cards
-function StatCard({ title, value }: { title: string; value: number | string }) {
-	return (
-		<div className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-			<h3 className="text-zinc-400 text-sm font-medium mb-1.5">{title}</h3>
-			<p className="text-3xl font-bold text-white">{value}</p>
-		</div>
-	);
-}
-
-// Component for chart cards
-function ChartCard({
-	title,
-	children,
-	className = "",
-}: {
-	title: string;
-	children: React.ReactNode;
-	className?: string;
-}) {
-	return (
-		<div
-			className={`bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 ${className}`}
-		>
-			<h3 className="text-zinc-200 text-lg font-semibold mb-4">{title}</h3>
-			<div className="h-full">{children}</div>
-		</div>
-	);
 }
 
 // Optimized chart components with memoization and reduced re-renders
