@@ -267,7 +267,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const saveVote = async (short: boolean, order: string[]) => {
 		const validOrder = order
 			.filter((id) => id && id !== "divider")
-			.map((id) => Number.parseInt(id));
+			.map((id) => Number.parseInt(id, 10));
 
 		if (validOrder.length === 0) {
 			await deleteVote(short);
