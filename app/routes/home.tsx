@@ -1,5 +1,5 @@
+import { defer } from "@react-router/node";
 import { useMemo, useState } from "react";
-import { defer } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
