@@ -6,58 +6,91 @@ import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import type { Result } from "~/server/voting.server";
 import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/home";
 
-export async function loader() {
+type NominationsByType = {
+	short: Nomination[];
+	long: Nomination[];
+};
+
+type ResultsByType = {
+	long: Result[];
+	short: Result[];
+};
+
+type LoaderData = {
+	month: Awaited<ReturnType<typeof getCurrentMonth>>;
+	gameUrls: Awaited<ReturnType<typeof getGameUrls>>;
+	nominations?: NominationsByType;
+	results?: ResultsByType;
+};
+
+function groupNominationsByType(nominations: Nomination[]): NominationsByType {
+	return nominations.reduce<NominationsByType>(
+		(acc, nomination) => {
+			if (nomination.short) {
+				acc.short.push(nomination);
+			} else {
+				acc.long.push(nomination);
+			}
+			return acc;
+		},
+		{ short: [], long: [] },
+	);
+}
+
+async function getResults(monthId: number): Promise<ResultsByType> {
+	const [long, short] = await Promise.all([
+		calculateVotingResults(monthId, false),
+		calculateVotingResults(monthId, true),
+	]);
+	return { long, short };
+}
+
+export async function loader(): Promise<LoaderData> {
 	const month = await getCurrentMonth();
-	const gameUrls = await getGameUrls(month.id);
+	const gameUrlsPromise = getGameUrls(month.id);
 
-	if (month.status === "nominating" || month.status === "jury") {
-		const nominations = await getNominationsForMonth(month.id);
+	switch (month.status) {
+		case "nominating":
+		case "jury": {
+			const nominationsPromise = getNominationsForMonth(month.id).then(
+				groupNominationsByType,
+			);
+			const [gameUrls, nominations] = await Promise.all([
+				gameUrlsPromise,
+				nominationsPromise,
+			]);
 
-		// Group nominations by type
-		const nominationsByType = nominations.reduce(
-			(acc, nom) => {
-				const nomination = nom as unknown as Nomination;
-				if (nomination.short) {
-					acc.short.push(nomination);
-				} else {
-					acc.long.push(nomination);
-				}
-				return acc;
-			},
-			{ short: [] as Nomination[], long: [] as Nomination[] },
-		);
+			return {
+				month,
+				nominations,
+				gameUrls,
+			} satisfies LoaderData;
+		}
+		case "voting":
+		case "over":
+		case "playing": {
+			const resultsPromise = getResults(month.id);
+			const [gameUrls, results] = await Promise.all([
+				gameUrlsPromise,
+				resultsPromise,
+			]);
 
-		return {
-			month,
-			nominations: nominationsByType,
-			gameUrls,
-		};
+			return {
+				month,
+				results,
+				gameUrls,
+			} satisfies LoaderData;
+		}
+		default: {
+			const gameUrls = await gameUrlsPromise;
+			return { month, gameUrls } satisfies LoaderData;
+		}
 	}
-
-	if (
-		month.status === "voting" ||
-		month.status === "over" ||
-		month.status === "playing"
-	) {
-		// Calculate results and get URLs in parallel
-		const results = await Promise.all([
-			calculateVotingResults(month.id, false),
-			calculateVotingResults(month.id, true),
-		]).then(([long, short]) => ({ long, short }));
-
-		return {
-			month,
-			results,
-			gameUrls,
-		};
-	}
-
-	// Default case: just return the month info
-	return { month, results: undefined, gameUrls };
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {
