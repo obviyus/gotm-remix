@@ -1,4 +1,3 @@
-import { defer } from "@react-router/node";
 import { useMemo, useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -50,7 +49,7 @@ async function getResults(monthId: number): Promise<ResultsByType> {
 	]);
 	return { long, short };
 }
-export async function loader() {
+export async function loader(): Promise<LoaderData> {
 	const month = await getCurrentMonth();
 	const gameUrlsPromise = getGameUrls(month.id);
 
@@ -65,11 +64,11 @@ export async function loader() {
 				nominationsPromise,
 			]);
 
-			return defer<LoaderData>({
+			return {
 				month,
 				nominations,
 				gameUrls,
-			});
+			} satisfies LoaderData;
 		}
 		case "voting":
 		case "over":
@@ -80,15 +79,15 @@ export async function loader() {
 				resultsPromise,
 			]);
 
-			return defer<LoaderData>({
+			return {
 				month,
 				results,
 				gameUrls,
-			});
+			} satisfies LoaderData;
 		}
 		default: {
 			const gameUrls = await gameUrlsPromise;
-			return defer<LoaderData>({ month, gameUrls });
+			return { month, gameUrls } satisfies LoaderData;
 		}
 	}
 }
