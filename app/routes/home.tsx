@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
@@ -99,14 +99,8 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
 
-	const longGamesCanvasId = useMemo(
-		() => `longGamesChart-${month.month}-${month.year}`,
-		[month],
-	);
-	const shortGamesCanvasId = useMemo(
-		() => `shortGamesChart-${month.month}-${month.year}`,
-		[month],
-	);
+	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
+	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
 
 	const showWinner =
 		month.status === "over" ||
