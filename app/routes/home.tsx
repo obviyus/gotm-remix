@@ -49,6 +49,7 @@ async function getResults(monthId: number): Promise<ResultsByType> {
 	]);
 	return { long, short };
 }
+
 export async function loader(): Promise<LoaderData> {
 	const month = await getCurrentMonth();
 	const gameUrlsPromise = getGameUrls(month.id);
