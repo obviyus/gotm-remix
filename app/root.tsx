@@ -9,14 +9,14 @@ export const meta: MetaFunction = () => {
 		{
 			name: "description",
 			content:
-				"Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month.",
+				"Vote for the PG Discord Game of the Month!",
 		},
 		{ name: "theme-color", content: "#18181B" }, // zinc-900 color
 		{ property: "og:title", content: "PG Game of the Month" },
 		{
 			property: "og:description",
 			content:
-				"Vote for and discover the PG Discord Game of the Month! Join our community in selecting and playing both short and long games every month.",
+				"Vote for the PG Discord Game of the Month!",
 		},
 		{ property: "og:type", content: "website" },
 		{ property: "og:url", content: "https://pg-gotm.com" },

@@ -215,11 +215,12 @@ export async function loader(): Promise<StatsLoaderData> {
 				monthly_stats AS (
 					SELECT 
 						m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
+						-- Use DISTINCT to avoid fan-out from joining votes inflating counts
 						COUNT(DISTINCT CASE WHEN n.discord_id IS NOT NULL THEN n.discord_id END) AS nominators,
 						COUNT(DISTINCT CASE WHEN v.discord_id IS NOT NULL THEN v.discord_id END) AS voters,
-						COUNT(n.id) AS nomination_count,
-						COUNT(CASE WHEN n.jury_selected = 1 THEN 1 END) AS selected,
-						COUNT(n.id) AS total
+						COUNT(DISTINCT n.id) AS nomination_count,
+						COUNT(DISTINCT CASE WHEN n.jury_selected = 1 THEN n.id END) AS selected,
+						COUNT(DISTINCT n.id) AS total
 					FROM months m
 					LEFT JOIN nominations n ON m.id = n.month_id
 					LEFT JOIN votes v ON m.id = v.month_id
