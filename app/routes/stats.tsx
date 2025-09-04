@@ -80,16 +80,18 @@ interface YearStats {
 }
 
 interface MonthlyParticipationStats {
-	monthYear: string;
-	nominators: number;
-	voters: number;
+    monthYear: string;
+    nominators: number;
+    voters: number;
+    themeShort?: string | null;
 }
 
 interface JurySelectionStatsType {
-	monthYear: string;
-	selected: number;
-	total: number;
-	selectPercentage: number;
+    monthYear: string;
+    selected: number;
+    total: number;
+    selectPercentage: number;
+    themeShort?: string | null;
 }
 
 interface ShortVsLongStatsType {
@@ -140,8 +142,9 @@ interface DiscordDynastyStats {
 }
 
 interface MonthlyNominationCountStats {
-	monthYear: string;
-	count: number;
+    monthYear: string;
+    count: number;
+    themeShort?: string | null;
 }
 
 // Performance-critical data structures - keep flat and minimal for memory efficiency
@@ -215,6 +218,7 @@ export async function loader(): Promise<StatsLoaderData> {
 				monthly_stats AS (
 					SELECT 
 						m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
+						COALESCE(t.name, NULL) AS theme_name,
 						-- Use DISTINCT to avoid fan-out from joining votes inflating counts
 						COUNT(DISTINCT CASE WHEN n.discord_id IS NOT NULL THEN n.discord_id END) AS nominators,
 						COUNT(DISTINCT CASE WHEN v.discord_id IS NOT NULL THEN v.discord_id END) AS voters,
@@ -222,20 +226,21 @@ export async function loader(): Promise<StatsLoaderData> {
 						COUNT(DISTINCT CASE WHEN n.jury_selected = 1 THEN n.id END) AS selected,
 						COUNT(DISTINCT n.id) AS total
 					FROM months m
+					LEFT JOIN themes t ON m.theme_id = t.id
 					LEFT JOIN nominations n ON m.id = n.month_id
 					LEFT JOIN votes v ON m.id = v.month_id
 					GROUP BY m.id, m.year, m.month
 					ORDER BY m.year, m.month
 				)
-			SELECT 'totals' as query_type, total_nominations, unique_games, total_nominators, short_count, long_count, short_nominators, long_nominators FROM total_stats
+			SELECT 'totals' as query_type, total_nominations, unique_games, total_nominators, short_count, long_count, short_nominators, long_nominators, NULL as theme_name FROM total_stats
 			UNION ALL
-			SELECT 'votes' as query_type, total_votes as total_nominations, NULL as unique_games, total_voters as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators FROM vote_stats
+			SELECT 'votes' as query_type, total_votes as total_nominations, NULL as unique_games, total_voters as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators, NULL as theme_name FROM vote_stats
 			UNION ALL
-			SELECT 'other' as query_type, total_jury_members as total_nominations, total_pitches as unique_games, total_winners as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators FROM other_stats
+			SELECT 'other' as query_type, total_jury_members as total_nominations, total_pitches as unique_games, total_winners as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators, NULL as theme_name FROM other_stats
 			UNION ALL
-			SELECT 'year_' || game_year as query_type, nomination_count as total_nominations, NULL as unique_games, NULL as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators FROM year_stats
+			SELECT 'year_' || game_year as query_type, nomination_count as total_nominations, NULL as unique_games, NULL as total_nominators, NULL as short_count, NULL as long_count, NULL as short_nominators, NULL as long_nominators, NULL as theme_name FROM year_stats
 			UNION ALL
-			SELECT 'monthly_' || monthYear as query_type, nomination_count as total_nominations, voters as unique_games, nominators as total_nominators, selected as short_count, total as long_count, NULL as short_nominators, NULL as long_nominators FROM monthly_stats`,
+			SELECT 'monthly_' || monthYear as query_type, nomination_count as total_nominations, voters as unique_games, nominators as total_nominators, selected as short_count, total as long_count, NULL as short_nominators, NULL as long_nominators, theme_name FROM monthly_stats`,
 			}),
 
 			// Mega-query 2: Game-related stats with optimized joins and CTEs
@@ -495,6 +500,7 @@ export async function loader(): Promise<StatsLoaderData> {
 				monthYear,
 				nominators: Number(row.total_nominators),
 				voters: Number(row.unique_games),
+				themeShort: (row as any).theme_name ?? null,
 			});
 			jurySelectionStats.push({
 				monthYear,
@@ -506,10 +512,12 @@ export async function loader(): Promise<StatsLoaderData> {
 								(Number(row.short_count) / Number(row.long_count)) * 100,
 							)
 						: 0,
+				themeShort: (row as any).theme_name ?? null,
 			});
 			monthlyNominationCounts.push({
 				monthYear,
 				count: Number(row.total_nominations),
+				themeShort: (row as any).theme_name ?? null,
 			});
 		}
 	}
@@ -1105,12 +1113,34 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 		() => filteredData.map((item) => item.voters),
 		[filteredData],
 	);
+    const themeLabels = useMemo(
+        () => filteredData.map((item) => item.themeShort ?? ""),
+        [filteredData],
+    );
 
 	const chartConfig = useMemo(
 		() => ({
 			tooltip: {
 				trigger: "axis" as const,
 				axisPointer: { type: "shadow" as const },
+				formatter: (params: unknown) => {
+					const items = params as Array<{
+						axisValue: string;
+						seriesName: string;
+						value: number;
+						marker: string;
+						dataIndex: number;
+					}>;
+					if (!Array.isArray(items) || items.length === 0) return "";
+					const idx = items[0].dataIndex;
+					const month = items[0].axisValue;
+					const theme = themeLabels[idx];
+					const header = theme ? `${month}<br/>Theme: ${theme}` : month;
+					const lines = items
+						.map((it) => `${it.marker} ${it.seriesName}: ${it.value}`)
+						.join("<br/>");
+					return `${header}<br/>${lines}`;
+				},
 			},
 			legend: {
 				data: ["Nominators", "Voters"],
@@ -1158,7 +1188,7 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 				},
 			],
 		}),
-		[formattedLabels, nominatorData, voterData],
+		[formattedLabels, nominatorData, voterData, themeLabels],
 	);
 
 	useEffect(() => {
@@ -1205,6 +1235,24 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 			tooltip: {
 				trigger: "axis",
 				axisPointer: { type: "shadow" },
+				formatter: (params: unknown) => {
+					const items = params as Array<{
+						axisValue: string;
+						seriesName: string;
+						value: number;
+						marker: string;
+						dataIndex: number;
+					}>;
+					if (!Array.isArray(items) || items.length === 0) return "";
+					const idx = items[0].dataIndex;
+					const month = items[0].axisValue;
+					const theme = filteredData[idx]?.themeShort ?? "";
+					const header = theme ? `${month}<br/>Theme: ${theme}` : month;
+					const lines = items
+						.map((it) => `${it.marker} ${it.seriesName}: ${it.value}`)
+						.join("<br/>");
+					return `${header}<br/>${lines}`;
+				},
 			},
 			grid: {
 				left: "6%",
@@ -1283,6 +1331,24 @@ function JurySelectionPercentageChart({
 			tooltip: {
 				trigger: "axis",
 				axisPointer: { type: "shadow" },
+				formatter: (params: unknown) => {
+					const items = params as Array<{
+						axisValue: string;
+						seriesName: string;
+						value: number;
+						marker: string;
+						dataIndex: number;
+					}>;
+					if (!Array.isArray(items) || items.length === 0) return "";
+					const idx = items[0].dataIndex;
+					const month = items[0].axisValue;
+					const theme = filteredData[idx]?.themeShort ?? "";
+					const header = theme ? `${month}<br/>Theme: ${theme}` : month;
+					const lines = items
+						.map((it) => `${it.marker} ${it.seriesName}: ${it.value}`)
+						.join("<br/>");
+					return `${header}<br/>${lines}`;
+				},
 			},
 			grid: {
 				left: "6%",
@@ -1918,6 +1984,24 @@ function MonthlyNominationCountsChart({
 			tooltip: {
 				trigger: "axis",
 				axisPointer: { type: "line" },
+				formatter: (params: unknown) => {
+					const items = params as Array<{
+						axisValue: string;
+						seriesName: string;
+						value: number;
+						marker: string;
+						dataIndex: number;
+					}>;
+					if (!Array.isArray(items) || items.length === 0) return "";
+					const idx = items[0].dataIndex;
+					const month = items[0].axisValue;
+					const theme = filteredData[idx]?.themeShort ?? "";
+					const header = theme ? `${month}<br/>Theme: ${theme}` : month;
+					const lines = items
+						.map((it) => `${it.marker} ${it.seriesName}: ${it.value}`)
+						.join("<br/>");
+					return `${header}<br/>${lines}`;
+				},
 			},
 			grid: {
 				left: "6%",
