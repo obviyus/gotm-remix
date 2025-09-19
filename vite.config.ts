@@ -9,4 +9,9 @@ export default defineConfig({
 		exclude: [...builtinModules],
 	},
 	plugins: [reactRouter(), tsconfigPaths()],
+	resolve: {
+		alias: {
+			'react-dom/server': 'react-dom/server.node',
+		},
+	},
 });

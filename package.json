@@ -4,10 +4,11 @@
 	"sideEffects": false,
 	"type": "module",
 	"scripts": {
-		"build": "react-router build",
-		"dev": "react-router dev",
-		"lint": "biome check ./app/ --fix --unsafe",
-		"start": "bun run server.ts"
+		"build": "bunx --bun react-router build",
+		"dev": "bunx --bun react-router dev",
+		"start": "bun run server.ts",
+		"typecheck": "react-router typegen && tsc",
+		"lint": "biome check --fix ./app/ --unsafe"
 	},
 	"dependencies": {
 		"@hello-pangea/dnd": "^18.0.1",
