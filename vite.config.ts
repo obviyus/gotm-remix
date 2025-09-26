@@ -4,14 +4,18 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // biome-ignore lint/style/useNodejsImportProtocol: using bun
 import { builtinModules } from "module";
 
-export default defineConfig({
+export default defineConfig((config) => ({
 	optimizeDeps: {
 		exclude: [...builtinModules],
 	},
 	plugins: [reactRouter(), tsconfigPaths()],
-	resolve: {
-		alias: {
-			'react-dom/server': 'react-dom/server.node',
-		},
-	},
-});
+	resolve:
+		config.command === "build"
+			? {
+					alias: {
+						"react-dom/server": "react-dom/server.node",
+					},
+				}
+			: undefined,
+
+}));
