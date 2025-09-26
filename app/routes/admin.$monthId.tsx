@@ -337,13 +337,12 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		const escapeCSV = (text: string | null | undefined) => {
 			if (text === null || text === undefined) return "";
 
-			// Ensure text is a string and clean it - replace tabs only
-			const strText = String(text)
+			// Normalize text for TSV compatibility
+			return String(text)
 				.replace(/\t/g, " ")
-				.replace(/\r/g, " ")
+				.replace(/[\r\n]/g, " ")
+				.replace(/"/g, '""')
 				.trim();
-
-			return strText;
 		};
 
 		const longGames = nominations.filter((n) => !n.short);
@@ -352,11 +351,11 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		if (longGames.length > 0) {
 			csvString += "Long Games\t\t\n";
 			for (const nomination of longGames) {
-				if (nomination.pitches && nomination.pitches.length > 0) {
-					// Combine all pitches into a single cell with line breaks
+					if (nomination.pitches && nomination.pitches.length > 0) {
+						// Combine all pitches into a single cell
 					const combinedPitches = nomination.pitches
 						.map((pitch) => escapeCSV(pitch.pitch))
-						.join("\n");
+						.join("; ");
 					csvString += `\t${escapeCSV(nomination.gameName)}\t"${combinedPitches}"\n`;
 				} else {
 					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
@@ -367,11 +366,11 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		if (shortGames.length > 0) {
 			csvString += "Short Games\t\t\n";
 			for (const nomination of shortGames) {
-				if (nomination.pitches && nomination.pitches.length > 0) {
-					// Combine all pitches into a single cell with line breaks
+					if (nomination.pitches && nomination.pitches.length > 0) {
+						// Combine all pitches into a single cell
 					const combinedPitches = nomination.pitches
 						.map((pitch) => escapeCSV(pitch.pitch))
-						.join("\n");
+						.join("; ");
 					csvString += `\t${escapeCSV(nomination.gameName)}\t"${combinedPitches}"\n`;
 				} else {
 					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
