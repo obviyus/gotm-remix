@@ -86,6 +86,7 @@ interface MonthlyParticipationStats {
 	monthYear: string;
 	nominators: number;
 	voters: number;
+	total?: number;
 	themeShort?: string | null;
 }
 
@@ -503,6 +504,7 @@ export async function loader(): Promise<StatsLoaderData> {
 				monthYear,
 				nominators: Number(row.total_nominators),
 				voters: Number(row.unique_games),
+				total: Number(row.total_nominations),
 				themeShort: (row as any).theme_name ?? null,
 			});
 			jurySelectionStats.push({
@@ -1142,7 +1144,8 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 					const lines = items
 						.map((it) => `${it.marker} ${it.seriesName}: ${it.value}`)
 						.join("<br/>");
-					return `${header}<br/>${lines}`;
+					const totalForMonth = filteredData[idx]?.total ?? 0;
+					return `${header}<br/>${lines}<br/>Total Nominations: ${totalForMonth}`;
 				},
 			},
 			legend: {
@@ -1254,7 +1257,8 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 					const lines = items
 						.map((it) => `${it.marker} ${it.seriesName}: ${it.value}`)
 						.join("<br/>");
-					return `${header}<br/>${lines}`;
+					const totalForMonth = filteredData[idx]?.total ?? 0;
+					return `${header}<br/>${lines}<br/>Total Nominations: ${totalForMonth}`;
 				},
 			},
 			grid: {
@@ -1279,11 +1283,11 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 			},
 			series: [
 				{
-					name: "Total Nominations",
+					name: "Not Selected",
 					type: "bar",
 					stack: "games",
 					itemStyle: { color: "#94a3b8" },
-					data: filteredData.map((item) => item.total),
+					data: filteredData.map((item) => Math.max(item.total - item.selected, 0)),
 				},
 				{
 					name: "Selected by Jury",
