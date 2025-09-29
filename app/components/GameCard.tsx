@@ -1,3 +1,4 @@
+import React from "react";
 import type {
 	DraggableProvidedDraggableProps,
 	DraggableProvidedDragHandleProps,
@@ -7,6 +8,14 @@ import { cn } from "~/lib/utils";
 import type { Nomination } from "~/types";
 import { GameCardActions } from "./GameCardActions";
 import { GameCardImage } from "./GameCardImage";
+
+const extractGameYear = (nomination: Nomination) => {
+	if (nomination.gameYear) {
+		return nomination.gameYear;
+	}
+
+	return null;
+};
 
 interface GameCardProps {
 	game: Nomination;
@@ -86,13 +95,8 @@ export default function GameCard({
 	isWinner = false,
 	isJurySelected = false,
 }: GameCardProps) {
-	const getYear = (game: Nomination) => {
-		if (game.gameYear) return game.gameYear;
-		return null;
-	};
-
 	const coverUrl = game.gameCover?.replace("t_thumb", "t_cover_big");
-	const year = getYear(game);
+	const year = extractGameYear(game);
 
 	// Determine status for highlighting and badges
 	// Winner takes precedence over jury selected

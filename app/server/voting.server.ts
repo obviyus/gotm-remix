@@ -272,7 +272,7 @@ export const runRounds = async (
 	}
 
 	// Pre-allocate arrays for sorting
-	const sortBuffer = new Array(nominations.length);
+	const sortBuffer: Array<{ nom: Nomination; primary: number; secondary: number }> = [];
 
 	while (nominations.length > 1) {
 		// Custom sorting with pre-allocated buffer
@@ -350,6 +350,7 @@ export const runRounds = async (
 		}
 
 		currentVoteCount = getCurrentVoteCount(remaining, voteRankingsMap);
+		// eslint-disable-next-line no-await-in-loop
 		nominationWeightedScores = await calculateWeightedScores(
 			remaining,
 			votes,

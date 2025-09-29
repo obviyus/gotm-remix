@@ -1,3 +1,4 @@
+import React from "react";
 import type { Row } from "@libsql/client";
 import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
@@ -15,6 +16,8 @@ import { Card } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
 import type { Route } from "./+types/stats";
+
+const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 
 // Register ECharts components once globally for better performance
 echarts.use([
@@ -80,18 +83,18 @@ interface YearStats {
 }
 
 interface MonthlyParticipationStats {
-    monthYear: string;
-    nominators: number;
-    voters: number;
-    themeShort?: string | null;
+	monthYear: string;
+	nominators: number;
+	voters: number;
+	themeShort?: string | null;
 }
 
 interface JurySelectionStatsType {
-    monthYear: string;
-    selected: number;
-    total: number;
-    selectPercentage: number;
-    themeShort?: string | null;
+	monthYear: string;
+	selected: number;
+	total: number;
+	selectPercentage: number;
+	themeShort?: string | null;
 }
 
 interface ShortVsLongStatsType {
@@ -142,9 +145,9 @@ interface DiscordDynastyStats {
 }
 
 interface MonthlyNominationCountStats {
-    monthYear: string;
-    count: number;
-    themeShort?: string | null;
+	monthYear: string;
+	count: number;
+	themeShort?: string | null;
 }
 
 // Performance-critical data structures - keep flat and minimal for memory efficiency
@@ -509,8 +512,8 @@ export async function loader(): Promise<StatsLoaderData> {
 				selectPercentage:
 					Number(row.long_count) > 0
 						? Math.round(
-								(Number(row.short_count) / Number(row.long_count)) * 100,
-							)
+							(Number(row.short_count) / Number(row.long_count)) * 100,
+						)
 						: 0,
 				themeShort: (row as any).theme_name ?? null,
 			});
@@ -1113,10 +1116,10 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 		() => filteredData.map((item) => item.voters),
 		[filteredData],
 	);
-    const themeLabels = useMemo(
-        () => filteredData.map((item) => item.themeShort ?? ""),
-        [filteredData],
-    );
+	const themeLabels = useMemo(
+		() => filteredData.map((item) => item.themeShort ?? ""),
+		[filteredData],
+	);
 
 	const chartConfig = useMemo(
 		() => ({
@@ -1742,7 +1745,7 @@ function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
 		);
 	}
 
-	return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
+	return <div ref={chartRef} style={FULL_SIZE_STYLE} />;
 }
 
 // Power Nominators Chart

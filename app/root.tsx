@@ -1,6 +1,7 @@
+import React from "react";
 import type { MetaFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
-
+// eslint-disable-next-line import/no-unassigned-import
 import "./tailwind.css";
 
 export const meta: MetaFunction = () => {

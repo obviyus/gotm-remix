@@ -159,11 +159,12 @@ export async function recalculateAllWinners(): Promise<void> {
 			args: [],
 		});
 
-		for (const month of months.rows) {
-			// Calculate and store winners for both short and long games
-			await calculateAndStoreWinner(Number(month.id), true);
-			await calculateAndStoreWinner(Number(month.id), false);
-		}
+		const recalculationTasks = months.rows.flatMap((month) => [
+			calculateAndStoreWinner(Number(month.id), true),
+			calculateAndStoreWinner(Number(month.id), false),
+		]);
+
+		await Promise.all(recalculationTasks);
 	} catch (error) {
 		console.error("[Winner] Error recalculating all winners:", error);
 	}
