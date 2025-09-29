@@ -1,8 +1,6 @@
 import { createRequestHandler } from "react-router";
 import type { ServerBuild } from "react-router";
 import * as build from "./build/server/index.js";
-// biome-ignore lint/style/useNodejsImportProtocol: using bun
-import { join } from "path";
 import { Cron } from "croner";
 import { recalculateAllWinners } from "~/server/winner.server";
 import { sendDiscordWebhook } from "~/server/discord.server";
@@ -45,7 +43,7 @@ function getMonthDates(month: number, year: number) {
 }
 
 // Check daily at midnight for phase transitions
-new Cron("0 0 0 * * *", { timezone: "America/New_York" }, async () => {
+const _dailyPhaseCron = new Cron("0 0 0 * * *", { timezone: "America/New_York" }, async () => {
 	const now = new Date();
 	const currentMonth = now.getMonth() + 1;
 	const currentYear = now.getFullYear();
@@ -72,7 +70,7 @@ new Cron("0 0 0 * * *", { timezone: "America/New_York" }, async () => {
 });
 
 // 1st: Voting Ends, new GotM begins (same for all months)
-new Cron("0 0 0 1 * *", { timezone: "America/New_York" }, async () => {
+const _monthlyResetCron = new Cron("0 0 0 1 * *", { timezone: "America/New_York" }, async () => {
 	await sendDiscordWebhook("Voting ends soon!", {
 		title: "🏆 New Month Begins",
 	});
@@ -84,8 +82,14 @@ Bun.serve({
 		try {
 			const url = new URL(request.url);
 
+			if (url.pathname.includes("..")) {
+				return handler(request, {});
+			}
+
+			const sanitizedPath = url.pathname.replace(/^\//, "");
+
 			// Try serving static files from public directory
-			let file = Bun.file(join("public", url.pathname));
+			let file = Bun.file(`public/${sanitizedPath}`);
 			if (await file.exists()) {
 				const headers = new Headers();
 				headers.set("Cache-Control", "public, max-age=31536000, immutable");
@@ -103,7 +107,7 @@ Bun.serve({
 			// Handle Vite's build output assets
 			if (url.pathname.startsWith("/assets/")) {
 				// Try client build directory
-				file = Bun.file(join("build/client", url.pathname));
+				file = Bun.file(`build/client/${sanitizedPath}`);
 				if (await file.exists()) {
 					const headers = new Headers();
 					if (url.pathname.endsWith(".js")) {

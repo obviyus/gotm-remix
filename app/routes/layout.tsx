@@ -1,3 +1,4 @@
+import React from "react";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
@@ -36,13 +37,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 
 	const getLinkClassName = (path: string, isMobile = false) => {
 		const isActive = location.pathname === path;
-		return `${
-			isMobile ? "block w-full" : "w-[6.5rem] md:w-[7rem] lg:w-[8rem] min-w-max"
-		} items-center justify-center gap-2 px-2 sm:px-3 md:px-4 py-2 text-[0.8rem] md:text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden whitespace-nowrap ${
-			isActive
+		return `${isMobile ? "block w-full" : "w-[6.5rem] md:w-[7rem] lg:w-[8rem] min-w-max"
+			} items-center justify-center gap-2 px-2 sm:px-3 md:px-4 py-2 text-[0.8rem] md:text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden whitespace-nowrap ${isActive
 				? "text-white shadow-sm shadow-blue-600/50 border border-blue-500/50 bg-blue-600/20 border-blue-500/60 shadow-blue-600/60 after:absolute after:inset-0 after:bg-blue-500/20"
 				: "text-white shadow-sm shadow-zinc-500/30 border border-zinc-400/30 hover:bg-zinc-500/20 hover:border-zinc-300/50 hover:shadow-zinc-400/60 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-300/20 after:transition-colors"
-		} flex`;
+			} flex`;
 	};
 
 	const getCenterItem = () => {
@@ -73,6 +72,16 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 
 	const activeTab =
 		navLinks.find((link) => link.path === location.pathname)?.label || "GOTM";
+	const toggleMobileMenu = React.useCallback(() => {
+		setIsMobileMenuOpen((prev) => !prev);
+	}, []);
+	const closeMobileMenu = React.useCallback(() => {
+		setIsMobileMenuOpen(false);
+	}, []);
+	const mobileMenuPointerStyle = React.useMemo(
+		() => ({ pointerEvents: isMobileMenuOpen ? "auto" as const : "none" as const }),
+		[isMobileMenuOpen],
+	);
 
 	return (
 		<div className="min-h-screen flex flex-col bg-zinc-900">
@@ -84,7 +93,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 							<button
 								type="button"
 								className="text-zinc-400 hover:text-zinc-100 focus:outline-none"
-								onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+								onClick={toggleMobileMenu}
 							>
 								<span className="sr-only">Open main menu</span>
 								{!isMobileMenuOpen ? (
@@ -165,14 +174,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 
 				{/* Mobile menu, show/hide based on menu state */}
 				<div
-					className={`md:hidden fixed top-16 left-0 right-0 bg-zinc-900 border-b border-zinc-800 shadow-lg z-50 transition-all duration-200 ease-in-out ${
-						isMobileMenuOpen
-							? "opacity-100 translate-y-0"
-							: "opacity-0 -translate-y-2"
-					}`}
-					style={{
-						pointerEvents: isMobileMenuOpen ? "auto" : "none",
-					}}
+					className={`md:hidden fixed top-16 left-0 right-0 bg-zinc-900 border-b border-zinc-800 shadow-lg z-50 transition-all duration-200 ease-in-out ${isMobileMenuOpen
+						? "opacity-100 translate-y-0"
+						: "opacity-0 -translate-y-2"
+						}`}
+					style={mobileMenuPointerStyle}
 				>
 					<div className="space-y-1 px-2 pb-3 pt-2">
 						{navLinks.map((link) => (
@@ -181,7 +187,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 								to={link.path}
 								prefetch="viewport"
 								className={getLinkClassName(link.path, true)}
-								onClick={() => setIsMobileMenuOpen(false)}
+								onClick={closeMobileMenu}
 							>
 								{link.label}
 							</Link>

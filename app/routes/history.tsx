@@ -1,3 +1,4 @@
+import React from "react";
 import { CalendarDays, Trophy } from "lucide-react";
 import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";

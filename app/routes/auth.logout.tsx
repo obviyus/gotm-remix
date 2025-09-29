@@ -1,3 +1,4 @@
+import React from "react";
 import { redirect } from "react-router";
 import { destroySession, getSession } from "~/sessions";
 import type { Route } from "./+types/auth.logout";

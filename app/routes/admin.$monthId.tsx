@@ -1,3 +1,4 @@
+import React from "react";
 import type { Row, Value } from "@libsql/client";
 import { useEffect, useId, useState } from "react";
 import { Link, redirect, useFetcher, useNavigate } from "react-router";
@@ -13,6 +14,16 @@ import { getNominationsForMonth } from "~/server/nomination.server";
 import { getSession } from "~/sessions";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/admin.$monthId";
+
+const escapeCsvField = (text: string | null | undefined) => {
+	if (text === null || text === undefined) return "";
+
+	return String(text)
+		.replace(/\t/g, " ")
+		.replace(/[\r\n]/g, " ")
+		.replace(/"/g, '""')
+		.trim();
+};
 
 interface ActionResponse {
 	success?: boolean;
@@ -275,6 +286,24 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [csvCopied, setCsvCopied] = useState(false);
 	const [showCreateForm, setShowCreateForm] = useState(false);
+	const handleStatusChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLSelectElement>) => {
+			event.target.form?.requestSubmit();
+		},
+		[],
+	);
+
+	const toggleCreateForm = React.useCallback(() => {
+		setShowCreateForm((previous) => !previous);
+	}, []);
+	const openPitchesModal = React.useCallback((nomination: Nomination) => {
+		setSelectedNomination(nomination);
+		setIsPitchesModalOpen(true);
+	}, []);
+	const closePitchesModal = React.useCallback(() => {
+		setIsPitchesModalOpen(false);
+		setSelectedNomination(null);
+	}, []);
 
 	// Generate unique IDs for form elements
 	const statusSelectId = useId();
@@ -299,16 +328,19 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		}
 	}, [createMonthFetcher.state, createMonthFetcher.data, navigate]);
 
-	const handleToggleJurySelected = (nomination: Nomination) => {
-		jurySelectionFetcher.submit(
-			{
-				intent: "toggleJurySelected",
-				nominationId: nomination.id.toString(),
-				selected: (!nomination.jurySelected).toString(),
-			},
-			{ method: "POST" },
-		);
-	};
+	const handleToggleJurySelected = React.useCallback(
+		(nomination: Nomination) => {
+			jurySelectionFetcher.submit(
+				{
+					intent: "toggleJurySelected",
+					nominationId: nomination.id.toString(),
+					selected: (!nomination.jurySelected).toString(),
+				},
+				{ method: "POST" },
+			);
+		},
+		[jurySelectionFetcher],
+	);
 
 	// Function to determine if a nomination is being processed
 	const isProcessingNomination = (nominationId: number) => {
@@ -329,36 +361,22 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		return jurySelectionFetcher.formData?.get("selected") === "true";
 	};
 
-	const handleCopyAsCSV = () => {
-		// Create CSV with tab delimiters for better compatibilty with Google Sheets
+	const handleCopyAsCSV = React.useCallback(() => {
 		const header = "Category\tGame Name\tSubmitted Pitches\n";
 		let csvString = header;
-
-		const escapeCSV = (text: string | null | undefined) => {
-			if (text === null || text === undefined) return "";
-
-			// Normalize text for TSV compatibility
-			return String(text)
-				.replace(/\t/g, " ")
-				.replace(/[\r\n]/g, " ")
-				.replace(/"/g, '""')
-				.trim();
-		};
-
 		const longGames = nominations.filter((n) => !n.short);
 		const shortGames = nominations.filter((n) => n.short);
 
 		if (longGames.length > 0) {
 			csvString += "Long Games\t\t\n";
 			for (const nomination of longGames) {
-					if (nomination.pitches && nomination.pitches.length > 0) {
-						// Combine all pitches into a single cell
+				if (nomination.pitches && nomination.pitches.length > 0) {
 					const combinedPitches = nomination.pitches
-						.map((pitch) => escapeCSV(pitch.pitch))
+						.map((pitch) => escapeCsvField(pitch.pitch))
 						.join("; ");
-					csvString += `\t${escapeCSV(nomination.gameName)}\t"${combinedPitches}"\n`;
+					csvString += `\t${escapeCsvField(nomination.gameName)}\t"${combinedPitches}"\n`;
 				} else {
-					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
+					csvString += `\t${escapeCsvField(nomination.gameName)}\t\n`;
 				}
 			}
 		}
@@ -366,14 +384,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		if (shortGames.length > 0) {
 			csvString += "Short Games\t\t\n";
 			for (const nomination of shortGames) {
-					if (nomination.pitches && nomination.pitches.length > 0) {
-						// Combine all pitches into a single cell
+				if (nomination.pitches && nomination.pitches.length > 0) {
 					const combinedPitches = nomination.pitches
-						.map((pitch) => escapeCSV(pitch.pitch))
+						.map((pitch) => escapeCsvField(pitch.pitch))
 						.join("; ");
-					csvString += `\t${escapeCSV(nomination.gameName)}\t"${combinedPitches}"\n`;
+					csvString += `\t${escapeCsvField(nomination.gameName)}\t"${combinedPitches}"\n`;
 				} else {
-					csvString += `\t${escapeCSV(nomination.gameName)}\t\n`;
+					csvString += `\t${escapeCsvField(nomination.gameName)}\t\n`;
 				}
 			}
 		}
@@ -382,7 +399,29 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			setCsvCopied(true);
 			setTimeout(() => setCsvCopied(false), 2000);
 		});
-	};
+	}, [nominations]);
+
+	const pitchHandlers = React.useMemo(
+		() =>
+			new Map<number, () => void>(
+				nominations.map((nomination) => [
+					nomination.id,
+					() => openPitchesModal(nomination),
+				] as const),
+			),
+		[nominations, openPitchesModal],
+	);
+
+	const toggleSelectionHandlers = React.useMemo(
+		() =>
+			new Map<number, () => void>(
+				nominations.map((nomination) => [
+					nomination.id,
+					() => handleToggleJurySelected(nomination),
+				] as const),
+			),
+		[nominations, handleToggleJurySelected],
+	);
 
 	const monthStatuses = [
 		"ready",
@@ -411,10 +450,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							{["nominating", "jury", "voting"].includes(
 								selectedMonth.status,
 							) && (
-								<span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
-									Active Month
-								</span>
-							)}
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
+										Active Month
+									</span>
+								)}
 						</div>
 
 						{/* Quick status update */}
@@ -434,7 +473,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								id={statusSelectId}
 								name="status"
 								value={selectedMonth.status}
-								onChange={(e) => e.target.form?.requestSubmit()}
+								onChange={handleStatusChange}
 								className="w-full sm:w-auto rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 							>
 								{monthStatuses.map((status) => (
@@ -482,7 +521,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 						<div className="flex gap-2">
 							<Button
 								type="button"
-								onClick={() => setShowCreateForm(!showCreateForm)}
+								onClick={toggleCreateForm}
 								variant="outline"
 								size="sm"
 								className="bg-transparent text-emerald-400 hover:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10"
@@ -745,11 +784,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 											</td>
 											<td className="px-4 py-3 whitespace-nowrap">
 												<span
-													className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-														nomination.short
+													className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${nomination.short
 															? "bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
 															: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
-													}`}
+														}`}
 												>
 													{nomination.short ? "Short" : "Long"}
 												</span>
@@ -757,10 +795,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 											<td className="px-4 py-3 whitespace-nowrap text-sm text-center">
 												<Button
 													type="button"
-													onClick={() => {
-														setSelectedNomination(nomination);
-														setIsPitchesModalOpen(true);
-													}}
+													onClick={pitchHandlers.get(nomination.id)}
 													variant="outline"
 													size="sm"
 													className="px-2 py-1 text-xs bg-transparent text-zinc-300 hover:text-zinc-300 border-zinc-700 hover:bg-zinc-800/40"
@@ -774,17 +809,15 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 											<td className="px-4 py-3 whitespace-nowrap text-center">
 												<button
 													type="button"
-													onClick={() => handleToggleJurySelected(nomination)}
+													onClick={toggleSelectionHandlers.get(nomination.id)}
 													disabled={isProcessingNomination(nomination.id)}
-													className={`relative inline-flex h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-														isProcessingNomination(nomination.id)
+													className={`relative inline-flex h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isProcessingNomination(nomination.id)
 															? "opacity-70"
 															: ""
-													} ${
-														getNominationSelectedState(nomination)
+														} ${getNominationSelectedState(nomination)
 															? "bg-blue-500"
 															: "bg-zinc-700"
-													}`}
+														}`}
 													aria-pressed={getNominationSelectedState(nomination)}
 												>
 													<span className="sr-only">
@@ -793,11 +826,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 															: "Not selected"}
 													</span>
 													<span
-														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ${
-															getNominationSelectedState(nomination)
+														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ${getNominationSelectedState(nomination)
 																? "translate-x-5"
 																: "translate-x-0"
-														}`}
+															}`}
 													>
 														{isProcessingNomination(nomination.id) && (
 															<span className="absolute inset-0 flex items-center justify-center">
@@ -818,10 +850,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 
 			<PitchesModal
 				isOpen={isPitchesModalOpen}
-				onClose={() => {
-					setIsPitchesModalOpen(false);
-					setSelectedNomination(null);
-				}}
+				onClose={closePitchesModal}
 				nomination={selectedNomination}
 			/>
 		</div>

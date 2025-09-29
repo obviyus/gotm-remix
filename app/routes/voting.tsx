@@ -1,3 +1,4 @@
+import React from "react";
 import {
 	DragDropContext,
 	Draggable,
@@ -216,127 +217,137 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const handleOpenPitches = React.useCallback((nomination: Nomination) => {
+		setSelectedNomination(nomination);
+		setIsViewingPitches(true);
+	}, []);
+	const closePitchesModal = React.useCallback(() => {
+		setIsViewingPitches(false);
+		setSelectedNomination(null);
+	}, []);
 
-	const deleteVote = async (short: boolean) => {
-		voteFetcher.submit(
-			{ monthId, userId, short },
-			{ method: "DELETE", action: "/api/votes" },
-		);
-
-		// Update local state
-		const shortKey = short ? 1 : 0;
-		const games = short ? shortNominations : longNominations;
-
-		setCurrentOrder((prev) => ({
-			...prev,
-			[shortKey]: ["divider", ...games.map((n) => String(n.id))],
-		}));
-
-		if (short) {
-			setVotedShort(false);
-		} else {
-			setVotedLong(false);
-		}
-	};
-
-	const onDragEnd = async (result: DropResult) => {
-		if (!result.destination) return;
-
-		const isShort = result.source.droppableId === "short";
-		const shortKey = isShort ? 1 : 0;
-		const items = Array.from(currentOrder[shortKey]);
-
-		// Handle dragging items
-		const [reorderedItem] = items.splice(result.source.index, 1);
-		items.splice(result.destination.index, 0, reorderedItem);
-
-		// Update the local state
-		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
-
-		// Get items above the divider and save them as votes
-		const newDividerIndex = items.indexOf("divider");
-		const rankedItems = items.slice(0, newDividerIndex);
-
-		if (rankedItems.length > 0) {
-			await saveVote(isShort, rankedItems);
-		} else {
-			await deleteVote(isShort);
-		}
-	};
-
-	const saveVote = async (short: boolean, order: string[]) => {
-		const validOrder = order
-			.filter((id) => id && id !== "divider")
-			.map((id) => Number.parseInt(id, 10));
-
-		if (validOrder.length === 0) {
-			await deleteVote(short);
-			return;
-		}
-
-		voteFetcher.submit(
-			{ monthId, userId, short, order: validOrder },
-			{
-				method: "POST",
-				action: "/api/votes",
-				encType: "application/json",
-			},
-		);
-
-		updateVoteStatus(short, true);
-	};
-
-	const updateVoteStatus = (short: boolean, voted: boolean) => {
+	const updateVoteStatus = React.useCallback((short: boolean, voted: boolean) => {
 		if (short) {
 			setVotedShort(voted);
 		} else {
 			setVotedLong(voted);
 		}
-	};
+	}, []);
 
-	const moveItemAboveDivider = async (isShort: boolean, itemId: string) => {
-		const shortKey = isShort ? 1 : 0;
-		const items = Array.from(currentOrder[shortKey]);
+	const deleteVote = React.useCallback(
+		async (short: boolean) => {
+			voteFetcher.submit(
+				{ monthId, userId, short },
+				{ method: "DELETE", action: "/api/votes" },
+			);
 
-		// Remove the item from its current position
-		const currentIndex = items.indexOf(itemId);
-		if (currentIndex === -1) return;
-		items.splice(currentIndex, 1);
+			const shortKey = short ? 1 : 0;
+			const games = short ? shortNominations : longNominations;
 
-		// Insert just above the divider
-		const newDividerIndex = items.indexOf("divider");
-		items.splice(newDividerIndex, 0, itemId);
+			setCurrentOrder((prev) => ({
+				...prev,
+				[shortKey]: ["divider", ...games.map((n) => String(n.id))],
+			}));
 
-		// Update state and save
-		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
-		const rankedItems = items.slice(0, items.indexOf("divider"));
-		if (rankedItems.length > 0) {
-			await saveVote(isShort, rankedItems);
-		}
-	};
+			updateVoteStatus(short, false);
+		},
+		[longNominations, monthId, shortNominations, updateVoteStatus, userId, voteFetcher],
+	);
 
-	const moveItemBelowDivider = async (isShort: boolean, itemId: string) => {
-		const shortKey = isShort ? 1 : 0;
-		const items = Array.from(currentOrder[shortKey]);
+	const saveVote = React.useCallback(
+		async (short: boolean, order: string[]) => {
+			const validOrder = order
+				.filter((id) => id && id !== "divider")
+				.map((id) => Number.parseInt(id, 10));
 
-		// Remove the item from its current position
-		const currentIndex = items.indexOf(itemId);
-		if (currentIndex === -1) return;
-		items.splice(currentIndex, 1);
+			if (validOrder.length === 0) {
+				await deleteVote(short);
+				return;
+			}
 
-		// Insert just below the divider
-		const dividerIndex = items.indexOf("divider");
-		items.splice(dividerIndex + 1, 0, itemId);
+			voteFetcher.submit(
+				{ monthId, userId, short, order: validOrder },
+				{
+					method: "POST",
+					action: "/api/votes",
+					encType: "application/json",
+				},
+			);
 
-		// Update state and save
-		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
-		const rankedItems = items.slice(0, dividerIndex);
-		if (rankedItems.length > 0) {
-			await saveVote(isShort, rankedItems);
-		} else {
-			await deleteVote(isShort);
-		}
-	};
+			updateVoteStatus(short, true);
+		}, [deleteVote, monthId, updateVoteStatus, userId, voteFetcher]);
+
+	const onDragEnd = React.useCallback(
+		async (result: DropResult) => {
+			if (!result.destination) return;
+
+			const isShort = result.source.droppableId === "short";
+			const shortKey = isShort ? 1 : 0;
+			const items = Array.from(currentOrder[shortKey]);
+
+			// Handle dragging items
+			const [reorderedItem] = items.splice(result.source.index, 1);
+			items.splice(result.destination.index, 0, reorderedItem);
+
+			// Update the local state
+			setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
+
+			// Get items above the divider and save them as votes
+			const newDividerIndex = items.indexOf("divider");
+			const rankedItems = items.slice(0, newDividerIndex);
+
+			if (rankedItems.length > 0) {
+				await saveVote(isShort, rankedItems);
+			} else {
+				await deleteVote(isShort);
+			}
+		}, [currentOrder, deleteVote, saveVote]);
+
+	const moveItemAboveDivider = React.useCallback(
+		async (isShort: boolean, itemId: string) => {
+			const shortKey = isShort ? 1 : 0;
+			const items = Array.from(currentOrder[shortKey]);
+
+			// Remove the item from its current position
+			const currentIndex = items.indexOf(itemId);
+			if (currentIndex === -1) return;
+			items.splice(currentIndex, 1);
+
+			// Insert just above the divider
+			const newDividerIndex = items.indexOf("divider");
+			items.splice(newDividerIndex, 0, itemId);
+
+			// Update state and save
+			setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
+			const rankedItems = items.slice(0, items.indexOf("divider"));
+			if (rankedItems.length > 0) {
+				await saveVote(isShort, rankedItems);
+			}
+		}, [currentOrder, saveVote]);
+
+	const moveItemBelowDivider = React.useCallback(
+		async (isShort: boolean, itemId: string) => {
+			const shortKey = isShort ? 1 : 0;
+			const items = Array.from(currentOrder[shortKey]);
+
+			// Remove the item from its current position
+			const currentIndex = items.indexOf(itemId);
+			if (currentIndex === -1) return;
+			items.splice(currentIndex, 1);
+
+			// Insert just below the divider
+			const dividerIndex = items.indexOf("divider");
+			items.splice(dividerIndex + 1, 0, itemId);
+
+			// Update state and save
+			setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
+			const rankedItems = items.slice(0, dividerIndex);
+			if (rankedItems.length > 0) {
+				await saveVote(isShort, rankedItems);
+			} else {
+				await deleteVote(isShort);
+			}
+		}, [currentOrder, deleteVote, saveVote]);
 
 	const renderGames = (games: Nomination[], isShort: boolean) => {
 		const shortKey = isShort ? 1 : 0;
@@ -369,6 +380,22 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 				return aIndex - bIndex;
 			});
 
+		const viewPitchHandlers = new Map<string, () => void>(
+			games.map((game) => [String(game.id), () => handleOpenPitches(game)] as const),
+		);
+		const unrankHandlers = new Map<string, () => void>(
+			rankedGames.map((game) => [
+				String(game.id),
+				() => moveItemBelowDivider(isShort, String(game.id)),
+			] as const),
+		);
+		const rankHandlers = new Map<string, () => void>(
+			unrankedGames.map((game) => [
+				String(game.id),
+				() => moveItemAboveDivider(isShort, String(game.id)),
+			] as const),
+		);
+
 		return (
 			<Droppable droppableId={isShort ? "short" : "long"}>
 				{(provided) => (
@@ -395,13 +422,8 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 												dragHandleProps={provided.dragHandleProps ?? undefined}
 												innerRef={provided.innerRef}
 												isRanked={true}
-												onUnrank={() =>
-													moveItemBelowDivider(isShort, String(game.id))
-												}
-												onViewPitches={() => {
-													setSelectedNomination(game);
-													setIsViewingPitches(true);
-												}}
+												onUnrank={unrankHandlers.get(String(game.id))}
+												onViewPitches={viewPitchHandlers.get(String(game.id))}
 												pitchCount={game.pitches?.length || 0}
 												showVotingButtons={true}
 											/>
@@ -451,13 +473,8 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 												dragHandleProps={provided.dragHandleProps ?? undefined}
 												innerRef={provided.innerRef}
 												isRanked={false}
-												onRank={() =>
-													moveItemAboveDivider(isShort, String(game.id))
-												}
-												onViewPitches={() => {
-													setSelectedNomination(game);
-													setIsViewingPitches(true);
-												}}
+												onRank={rankHandlers.get(String(game.id))}
+												onViewPitches={viewPitchHandlers.get(String(game.id))}
 												pitchCount={game.pitches?.length || 0}
 												showVotingButtons={true}
 											/>
@@ -473,6 +490,66 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		);
 	};
 
+	const statusBadges = React.useMemo(
+		() => ({
+			long: {
+				text: votedLong ? "Voted" : "Not Voted",
+				isSuccess: votedLong,
+			},
+			short: {
+				text: votedShort ? "Voted" : "Not Voted",
+				isSuccess: votedShort,
+			},
+		}),
+		[votedLong, votedShort],
+	);
+
+	const handleClearLongVote = React.useCallback(() => {
+		void deleteVote(false);
+	}, [deleteVote]);
+
+	const handleClearShortVote = React.useCallback(() => {
+		void deleteVote(true);
+	}, [deleteVote]);
+
+	const longAction = React.useMemo(() => {
+		if (!votedLong) {
+			return null;
+		}
+
+		return (
+			<button
+				type="button"
+				className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+				onClick={handleClearLongVote}
+			>
+				<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+					<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+					Clear Vote
+				</span>
+			</button>
+		);
+	}, [handleClearLongVote, votedLong]);
+
+	const shortAction = React.useMemo(() => {
+		if (!votedShort) {
+			return null;
+		}
+
+		return (
+			<button
+				type="button"
+				className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+				onClick={handleClearShortVote}
+			>
+				<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+					<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+					Clear Vote
+				</span>
+			</button>
+		);
+	}, [handleClearShortVote, votedShort]);
+
 	return (
 		<TwoColumnLayout
 			title="Drag and Drop the games"
@@ -481,24 +558,8 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		>
 			<Column
 				title="Long Games"
-				statusBadge={{
-					text: votedLong ? "Voted" : "Not Voted",
-					isSuccess: votedLong,
-				}}
-				action={
-					votedLong && (
-						<button
-							type="button"
-							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-							onClick={() => deleteVote(false)}
-						>
-							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
-								Clear Vote
-							</span>
-						</button>
-					)
-				}
+				statusBadge={statusBadges.long}
+				action={longAction}
 			>
 				<DragDropContext onDragEnd={onDragEnd}>
 					{renderGames(longNominations, false)}
@@ -507,24 +568,8 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 
 			<Column
 				title="Short Games"
-				statusBadge={{
-					text: votedShort ? "Voted" : "Not Voted",
-					isSuccess: votedShort,
-				}}
-				action={
-					votedShort && (
-						<button
-							type="button"
-							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-							onClick={() => deleteVote(true)}
-						>
-							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
-								Clear Vote
-							</span>
-						</button>
-					)
-				}
+				statusBadge={statusBadges.short}
+				action={shortAction}
 			>
 				<DragDropContext onDragEnd={onDragEnd}>
 					{renderGames(shortNominations, true)}
@@ -533,10 +578,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 
 			<PitchesModal
 				isOpen={isViewingPitches}
-				onClose={() => {
-					setIsViewingPitches(false);
-					setSelectedNomination(null);
-				}}
+				onClose={closePitchesModal}
 				nomination={selectedNomination}
 			/>
 		</TwoColumnLayout>

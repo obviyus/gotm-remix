@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -27,6 +28,42 @@ type LoaderData = {
 	nominations?: NominationsByType;
 	results?: ResultsByType;
 };
+
+const EMPTY_RESULTS: Result[] = [];
+
+interface NominationsListProps {
+	games: Nomination[];
+	onViewPitches: (nomination: Nomination) => void;
+}
+
+function NominationsList({ games, onViewPitches }: NominationsListProps) {
+	const pitchHandlers = React.useMemo(() => {
+		return new Map<number, () => void>(
+			games.map((game) => [game.id, () => onViewPitches(game)] as const),
+		);
+	}, [games, onViewPitches]);
+
+	return (
+		<div className="space-y-4">
+			{games.map((game) => {
+				const viewPitches = pitchHandlers.get(game.id);
+				if (!viewPitches) {
+					return null;
+				}
+
+				return (
+					<GameCard
+						key={game.id}
+						game={game}
+						onViewPitches={viewPitches}
+						pitchCount={game.pitches.length}
+						showPitchesButton
+					/>
+				);
+			})}
+		</div>
+	);
+}
 
 function groupNominationsByType(nominations: Nomination[]): NominationsByType {
 	return nominations.reduce<NominationsByType>(
@@ -98,6 +135,44 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const handleViewPitches = React.useCallback((nomination: Nomination) => {
+		setSelectedNomination(nomination);
+		setIsViewingPitches(true);
+	}, []);
+	const handleCloseModal = React.useCallback(() => {
+		setIsViewingPitches(false);
+		setSelectedNomination(null);
+	}, []);
+
+	const columnStatus = React.useMemo(() => {
+		if (!nominations) {
+			return null;
+		}
+
+		const longCount = nominations.long.length;
+		const shortCount = nominations.short.length;
+
+		return {
+			long: {
+				text: `${longCount} nominations`,
+				isSuccess: longCount > 0,
+			},
+			short: {
+				text: `${shortCount} nominations`,
+				isSuccess: shortCount > 0,
+			},
+		};
+	}, [nominations]);
+
+	const longResults = React.useMemo(
+		() => results?.long ?? EMPTY_RESULTS,
+		[results?.long],
+	);
+
+	const shortResults = React.useMemo(
+		() => results?.short ?? EMPTY_RESULTS,
+		[results?.short],
+	);
 
 	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
@@ -106,23 +181,6 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 		month.status === "over" ||
 		month.status === "complete" ||
 		month.status === "playing";
-
-	const renderNominationsList = (games: Nomination[]) => (
-		<div className="space-y-4">
-			{games.map((game) => (
-				<GameCard
-					key={game.id}
-					game={game}
-					onViewPitches={() => {
-						setSelectedNomination(game);
-						setIsViewingPitches(true);
-					}}
-					pitchCount={game.pitches.length}
-					showPitchesButton={true}
-				/>
-			))}
-		</div>
-	);
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -138,22 +196,22 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 					>
 						<Column
 							title="Long Games"
-							statusBadge={{
-								text: `${nominations.long.length} nominations`,
-								isSuccess: nominations.long.length > 0,
-							}}
+							statusBadge={columnStatus?.long}
 						>
-							{renderNominationsList(nominations.long)}
+							<NominationsList
+								games={nominations.long}
+								onViewPitches={handleViewPitches}
+							/>
 						</Column>
 
 						<Column
 							title="Short Games"
-							statusBadge={{
-								text: `${nominations.short.length} nominations`,
-								isSuccess: nominations.short.length > 0,
-							}}
+							statusBadge={columnStatus?.short}
 						>
-							{renderNominationsList(nominations.short)}
+							<NominationsList
+								games={nominations.short}
+								onViewPitches={handleViewPitches}
+							/>
 						</Column>
 					</TwoColumnLayout>
 				) : month.status === "jury" && nominations ? (
@@ -178,22 +236,22 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 						>
 							<Column
 								title="Long Games"
-								statusBadge={{
-									text: `${nominations.long.length} nominations`,
-									isSuccess: nominations.long.length > 0,
-								}}
+								statusBadge={columnStatus?.long}
 							>
-								{renderNominationsList(nominations.long)}
+								<NominationsList
+									games={nominations.long}
+									onViewPitches={handleViewPitches}
+								/>
 							</Column>
 
 							<Column
 								title="Short Games"
-								statusBadge={{
-									text: `${nominations.short.length} nominations`,
-									isSuccess: nominations.short.length > 0,
-								}}
+								statusBadge={columnStatus?.short}
 							>
-								{renderNominationsList(nominations.short)}
+								<NominationsList
+									games={nominations.short}
+									onViewPitches={handleViewPitches}
+								/>
 							</Column>
 						</TwoColumnLayout>
 					</>
@@ -201,13 +259,13 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 					<div className="space-y-6">
 						<VotingResultsChart
 							canvasId={longGamesCanvasId}
-							results={results?.long || []}
+							results={longResults}
 							gameUrls={gameUrls}
 							showWinner={showWinner}
 						/>
 						<VotingResultsChart
 							canvasId={shortGamesCanvasId}
-							results={results?.short || []}
+							results={shortResults}
 							gameUrls={gameUrls}
 							showWinner={showWinner}
 						/>
@@ -217,10 +275,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
 			<PitchesModal
 				isOpen={isViewingPitches}
-				onClose={() => {
-					setIsViewingPitches(false);
-					setSelectedNomination(null);
-				}}
+				onClose={handleCloseModal}
 				nomination={selectedNomination}
 			/>
 		</div>

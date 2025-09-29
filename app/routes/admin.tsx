@@ -1,3 +1,4 @@
+import React from "react";
 import { redirect } from "react-router";
 import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";

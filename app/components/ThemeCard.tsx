@@ -1,3 +1,4 @@
+import React from "react";
 import type { Month } from "~/types";
 
 export default function ThemeCard(month: Month) {

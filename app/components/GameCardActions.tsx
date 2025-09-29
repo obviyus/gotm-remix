@@ -1,3 +1,4 @@
+import React from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -47,6 +48,24 @@ export function GameCardActions({
 	onEdit,
 	onDelete,
 }: GameCardActionsProps) {
+	const handleNominateClick = React.useCallback(() => {
+		if (onNominate) {
+			onNominate(game);
+		}
+	}, [onNominate, game]);
+
+	const handleEditClick = React.useCallback(() => {
+		if (onEdit) {
+			onEdit(game);
+		}
+	}, [onEdit, game]);
+
+	const handleDeleteClick = React.useCallback(() => {
+		if (onDelete) {
+			onDelete(game);
+		}
+	}, [onDelete, game]);
+
 	return (
 		<div className="flex flex-col gap-2 mt-auto min-w-0">
 			{showVotingButtons && (
@@ -54,11 +73,10 @@ export function GameCardActions({
 					<button
 						type="button"
 						onClick={isRanked ? onUnrank : onRank}
-						className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-							isRanked
-								? "text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-								: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-						}`}
+						className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${isRanked
+							? "text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+							: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+							}`}
 					>
 						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
 							{isRanked ? (
@@ -114,19 +132,18 @@ export function GameCardActions({
 			{onNominate && (
 				<button
 					type="button"
-					onClick={() => onNominate(game)}
+					onClick={handleNominateClick}
 					disabled={
 						buttonDisabled ||
 						(alreadyNominated && isCurrentUserNomination) ||
 						isPreviousWinner
 					}
-					className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-						isPreviousWinner
-							? "text-amber-500 shadow-sm shadow-amber-500/20 border border-amber-400/20 hover:bg-amber-500/10 hover:border-amber-400/30 hover:shadow-amber-500/40 after:absolute after:inset-0 after:bg-amber-400/0 hover:after:bg-amber-400/5 after:transition-colors"
-							: alreadyNominated && !isCurrentUserNomination
-								? "text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
-								: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-					} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-zinc-400 disabled:border-zinc-400/20`}
+					className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${isPreviousWinner
+						? "text-amber-500 shadow-sm shadow-amber-500/20 border border-amber-400/20 hover:bg-amber-500/10 hover:border-amber-400/30 hover:shadow-amber-500/40 after:absolute after:inset-0 after:bg-amber-400/0 hover:after:bg-amber-400/5 after:transition-colors"
+						: alreadyNominated && !isCurrentUserNomination
+							? "text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
+							: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
+						} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-zinc-400 disabled:border-zinc-400/20`}
 				>
 					<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105 group-disabled:transform-none">
 						{buttonText ||
@@ -164,7 +181,7 @@ export function GameCardActions({
 							{onEdit && (
 								<button
 									type="button"
-									onClick={() => onEdit(game)}
+									onClick={handleEditClick}
 									className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors w-full"
 									title={game.pitches.length > 0 ? "Edit pitch" : "Add pitch"}
 								>
@@ -177,7 +194,7 @@ export function GameCardActions({
 							{onDelete && (
 								<button
 									type="button"
-									onClick={() => onDelete(game)}
+									onClick={handleDeleteClick}
 									className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors w-full"
 									title="Delete nomination"
 								>

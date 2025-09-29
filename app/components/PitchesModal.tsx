@@ -1,3 +1,4 @@
+import React from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -21,12 +22,21 @@ export default function PitchesModal({
 	onClose,
 	nomination,
 }: PitchesModalProps) {
+	const handleOpenChange = React.useCallback(
+		(open: boolean) => {
+			if (!open) {
+				onClose();
+			}
+		},
+		[onClose],
+	);
+
 	if (!nomination) {
 		return null;
 	}
 
 	return (
-		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+		<Dialog open={isOpen} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-3xl bg-gray-900 border-gray-700 shadow-2xl">
 				<DialogHeader className="pb-4">
 					<DialogTitle className="text-xl font-bold text-white">

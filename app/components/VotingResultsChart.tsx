@@ -1,3 +1,4 @@
+import React from "react";
 import { SankeyChart, type SankeySeriesOption } from "echarts/charts";
 import {
 	TooltipComponent,
@@ -55,10 +56,12 @@ const getWinner = (results: SankeyDataPoint[]): string | null => {
 	if (results.length === 0) return null;
 	const sourceNodes = new Set(results.map((r) => r.source));
 	const targetNodes = new Set(results.map((r) => r.target));
-	const finalNodes = [...targetNodes].filter((node) => !sourceNodes.has(node));
-	const winnerNode = finalNodes[0] ?? results[results.length - 1]?.target;
+	const winnerNode = [...targetNodes].find((node) => !sourceNodes.has(node)) ??
+		results[results.length - 1]?.target;
 	return winnerNode ? getBaseGameName(winnerNode) : null;
 };
+
+const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 
 export function VotingResultsChart({
 	canvasId,
@@ -267,7 +270,7 @@ export function VotingResultsChart({
 			</div>
 			<div className="relative h-[24rem] w-full sm:h-[28rem] overflow-x-auto">
 				<div className="min-w-[600px] h-full">
-					<div ref={chartRef} style={{ width: "100%", height: "100%" }} />
+					<div ref={chartRef} style={FULL_SIZE_STYLE} />
 					{!processedData && (
 						<div className="absolute inset-0 flex h-full items-center justify-center pointer-events-none">
 							<p className="text-base font-medium text-zinc-400 sm:text-lg">

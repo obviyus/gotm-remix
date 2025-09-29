@@ -48,7 +48,9 @@ async function getIGDBToken() {
 		return cachedToken;
 	} catch (error) {
 		console.error("Failed to get IGDB token:", error);
-		throw new Error("Failed to authenticate with IGDB");
+		throw new Error("Failed to authenticate with IGDB", {
+			cause: error,
+		});
 	}
 }
 

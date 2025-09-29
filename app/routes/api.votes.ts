@@ -85,13 +85,14 @@ export async function action({ request }: Route.ActionArgs) {
 
 		// Insert new rankings if provided
 		if (data.order && data.order.length > 0) {
-			// SQLite doesn't support multi-value INSERT, so we'll do them one by one
-			for (const [index, nominationId] of data.order.entries()) {
-				await db.execute({
+			const rankingInsertPromises = data.order.map((nominationId, index) =>
+				db.execute({
 					sql: "INSERT INTO rankings (vote_id, nomination_id, rank, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
 					args: [voteId, nominationId, index + 1],
-				});
-			}
+				}),
+			);
+
+			await Promise.all(rankingInsertPromises);
 		}
 
 		// Invalidate cache after successful vote

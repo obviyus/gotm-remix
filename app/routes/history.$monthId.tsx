@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -10,6 +11,79 @@ import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
 import { getWinner } from "~/server/winner.server";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/history.$monthId";
+
+type LoaderData = Route.ComponentProps["loaderData"];
+type WinnersByLength = LoaderData["winners"];
+
+interface SortedNominationsListProps {
+	games: Nomination[];
+	isShort: boolean;
+	showWinner: boolean;
+	winners: WinnersByLength;
+	onViewPitches: (nomination: Nomination) => void;
+}
+
+function SortedNominationsList({
+	games,
+	isShort,
+	showWinner,
+	winners,
+	onViewPitches,
+}: SortedNominationsListProps) {
+	const sortedGames = React.useMemo(() => {
+		return [...games].sort((a, b) => {
+			if (!showWinner) {
+				if (a.jurySelected && !b.jurySelected) return -1;
+				if (!a.jurySelected && b.jurySelected) return 1;
+				return 0;
+			}
+
+			const winnerForLength = isShort ? winners.short : winners.long;
+			const aIsWinner = winnerForLength?.id === a.id;
+			const bIsWinner = winnerForLength?.id === b.id;
+
+			if (aIsWinner && !bIsWinner) return -1;
+			if (!aIsWinner && bIsWinner) return 1;
+			if (a.jurySelected && !b.jurySelected) return -1;
+			if (!a.jurySelected && b.jurySelected) return 1;
+			return 0;
+		});
+	}, [games, isShort, showWinner, winners.long, winners.short]);
+
+	const pitchHandlers = React.useMemo(
+		() =>
+			new Map<number, () => void>(
+				sortedGames.map((game) => [game.id, () => onViewPitches(game)] as const),
+			),
+		[sortedGames, onViewPitches],
+	);
+
+	return (
+		<div className="space-y-4">
+			{sortedGames.map((game) => {
+				const viewPitches = pitchHandlers.get(game.id);
+				if (!viewPitches) {
+					return null;
+				}
+
+				const winnerForLength = isShort ? winners.short : winners.long;
+				const isWinner = showWinner && winnerForLength?.id === game.id;
+
+				return (
+					<GameCard
+						key={game.id}
+						game={game}
+						onViewPitches={viewPitches}
+						pitchCount={game.pitches.length}
+						showPitchesButton
+						isWinner={isWinner}
+						isJurySelected={game.jurySelected}
+					/>
+				);
+			})}
+		</div>
+	);
+}
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const monthId = Number(params.monthId);
@@ -69,6 +143,30 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const handleViewPitches = React.useCallback((nomination: Nomination) => {
+		setSelectedNomination(nomination);
+		setIsViewingPitches(true);
+	}, []);
+	const handleCloseModal = React.useCallback(() => {
+		setIsViewingPitches(false);
+		setSelectedNomination(null);
+	}, []);
+
+	const columnStatus = React.useMemo(() => {
+		const longCount = nominations.long.length;
+		const shortCount = nominations.short.length;
+
+		return {
+			long: {
+				text: `${longCount} nominations`,
+				isSuccess: longCount > 0,
+			},
+			short: {
+				text: `${shortCount} nominations`,
+				isSuccess: shortCount > 0,
+			},
+		};
+	}, [nominations.long.length, nominations.short.length]);
 
 	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
@@ -86,58 +184,6 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 		if (winners.short?.gameId) winnerGameIds.push(winners.short.gameId);
 		if (winners.long?.gameId) winnerGameIds.push(winners.long.gameId);
 	}
-
-	const renderNominationsList = (games: Nomination[], isShort: boolean) => {
-		// Sort games: winners first, then jury selected, then the rest
-		const sortedGames = [...games].sort((a, b) => {
-			if (!showWinner) {
-				// If not showing winners, just sort by jury selection
-				if (a.jurySelected && !b.jurySelected) return -1;
-				if (!a.jurySelected && b.jurySelected) return 1;
-				return 0;
-			}
-
-			const aIsWinner = isShort
-				? winners.short?.id === a.id
-				: winners.long?.id === a.id;
-			const bIsWinner = isShort
-				? winners.short?.id === b.id
-				: winners.long?.id === b.id;
-
-			if (aIsWinner && !bIsWinner) return -1;
-			if (!aIsWinner && bIsWinner) return 1;
-			if (a.jurySelected && !b.jurySelected) return -1;
-			if (!a.jurySelected && b.jurySelected) return 1;
-			return 0;
-		});
-
-		return (
-			<div className="space-y-4">
-				{sortedGames.map((game) => {
-					const isWinner =
-						showWinner &&
-						(isShort
-							? winners.short?.id === game.id
-							: winners.long?.id === game.id);
-
-					return (
-						<GameCard
-							key={game.id}
-							game={game}
-							onViewPitches={() => {
-								setSelectedNomination(game);
-								setIsViewingPitches(true);
-							}}
-							pitchCount={game.pitches.length}
-							showPitchesButton={true}
-							isWinner={isWinner}
-							isJurySelected={game.jurySelected}
-						/>
-					);
-				})}
-			</div>
-		);
-	};
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -167,32 +213,35 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 				>
 					<Column
 						title="Long Games"
-						statusBadge={{
-							text: `${nominations.long.length} nominations`,
-							isSuccess: nominations.long.length > 0,
-						}}
+						statusBadge={columnStatus.long}
 					>
-						{renderNominationsList(nominations.long, false)}
+						<SortedNominationsList
+							games={nominations.long}
+							isShort={false}
+							showWinner={showWinner}
+							winners={winners}
+							onViewPitches={handleViewPitches}
+						/>
 					</Column>
 
 					<Column
 						title="Short Games"
-						statusBadge={{
-							text: `${nominations.short.length} nominations`,
-							isSuccess: nominations.short.length > 0,
-						}}
+						statusBadge={columnStatus.short}
 					>
-						{renderNominationsList(nominations.short, true)}
+						<SortedNominationsList
+							games={nominations.short}
+							isShort
+							showWinner={showWinner}
+							winners={winners}
+							onViewPitches={handleViewPitches}
+						/>
 					</Column>
 				</TwoColumnLayout>
 			</div>
 
 			<PitchesModal
 				isOpen={isViewingPitches}
-				onClose={() => {
-					setIsViewingPitches(false);
-					setSelectedNomination(null);
-				}}
+				onClose={handleCloseModal}
 				nomination={selectedNomination}
 			/>
 		</div>
