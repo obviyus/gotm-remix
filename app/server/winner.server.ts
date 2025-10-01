@@ -1,6 +1,14 @@
 import { db } from "~/server/database.server";
 import { calculateVotingResults } from "~/server/voting.server";
 import type { Nomination } from "~/types";
+import { getWinnerName } from "~/utils/votingResults";
+
+const normalizeGameName = (value: string): string =>
+	value
+		.normalize("NFKC")
+		.replace(/\s+/g, " ")
+		.trim()
+		.toLowerCase();
 
 export async function calculateAndStoreWinner(
 	monthId: number,
@@ -14,11 +22,10 @@ export async function calculateAndStoreWinner(
 		}
 
 		// Find the winner from the results
-		// The winner is the target of the last edge in the results array
-		const lastResult = results[results.length - 1];
-		const winnerNameWithVotes = lastResult.target;
-		const winnerName = winnerNameWithVotes.split(" (")[0];
-
+		const winnerName = getWinnerName(results);
+		if (!winnerName) {
+			return null;
+		}
 		// Get nomination details for the winner
 		const nominations = await db.execute({
 			sql: `SELECT game_id,
@@ -31,17 +38,22 @@ export async function calculateAndStoreWinner(
              FROM nominations
              WHERE month_id = ?1
                AND short = ?2
-               AND game_name = ?3
-               AND jury_selected = 1
-             LIMIT 1;`,
-			args: [monthId, short ? 1 : 0, winnerName],
+               AND jury_selected = 1;`,
+			args: [monthId, short ? 1 : 0],
 		});
 
 		if (!nominations.rows.length) {
 			return null;
 		}
 
-		const nomination = nominations.rows[0];
+		const normalizedWinner = normalizeGameName(winnerName);
+		const nomination = nominations.rows.find(
+			(row) => normalizeGameName(String(row.game_name)) === normalizedWinner,
+		);
+
+		if (!nomination) {
+			return null;
+		}
 		const winner: Nomination = {
 			id: Number(nomination.nomination_id),
 			gameId: String(nomination.game_id),
@@ -55,6 +67,14 @@ export async function calculateAndStoreWinner(
 			discordId: String(nomination.discord_id),
 			pitches: [],
 		};
+
+		// Replace any previously stored winner for this month/ballot length
+		await db.execute({
+			sql: `DELETE FROM winners
+			      WHERE month_id = ?1
+			        AND short = ?2;`,
+			args: [winner.monthId, winner.short ? 1 : 0],
+		});
 
 		// Update or insert the winner using SQLite's UPSERT syntax
 		await db.execute({
@@ -110,10 +130,13 @@ export async function getWinner(
                     game_name,
                     game_year,
                     game_cover,
-                    game_url
+                    game_url,
+                    updated_at
              FROM winners
              WHERE month_id = ?1
-               AND short = ?2;`,
+               AND short = ?2
+             ORDER BY updated_at DESC
+             LIMIT 1;`,
 			args: [monthId, short ? 1 : 0],
 		});
 

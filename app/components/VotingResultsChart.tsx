@@ -9,6 +9,7 @@ import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import type { CallbackDataParams } from "echarts/types/dist/shared";
 import { useEffect, useMemo, useRef } from "react";
+import { getBaseGameName, getWinnerName } from "~/utils/votingResults";
 
 echarts.use([SankeyChart, TooltipComponent, CanvasRenderer]);
 type ECOption = ComposeOption<SankeySeriesOption | TooltipComponentOption>;
@@ -47,19 +48,6 @@ const COLOR_PALETTE = [
 	"#facc15", // yellow-400
 	"#2dd4bf", // teal-400
 ];
-
-function getBaseGameName(nodeName: string): string {
-	return nodeName.replace(/\s*\(\d+\)\s*$/, "").trim();
-}
-
-const getWinner = (results: SankeyDataPoint[]): string | null => {
-	if (results.length === 0) return null;
-	const sourceNodes = new Set(results.map((r) => r.source));
-	const targetNodes = new Set(results.map((r) => r.target));
-	const winnerNode = [...targetNodes].find((node) => !sourceNodes.has(node)) ??
-		results[results.length - 1]?.target;
-	return winnerNode ? getBaseGameName(winnerNode) : null;
-};
 
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 
@@ -241,7 +229,7 @@ export function VotingResultsChart({
 	}, []);
 
 	const chartTitle = canvasId.startsWith("long") ? "Long" : "Short";
-	const winner = useMemo(() => getWinner(results), [results]);
+	const winner = useMemo(() => getWinnerName(results), [results]);
 	const winnerUrl = winner ? gameUrls[winner] : null;
 
 	return (
