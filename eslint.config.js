@@ -1,7 +1,8 @@
 import oxlint from 'eslint-plugin-oxlint';
 import reactHooks from 'eslint-plugin-react-hooks';
+import { defineConfig } from 'eslint/config';
 
-export default [
+export default defineConfig([
   // Only the RC hooks rules we want (Compiler-aligned)
   {
     files: ['**/*.{ts,tsx,js,jsx}'],
@@ -19,4 +20,4 @@ export default [
   {
     ignores: ['.react-router/**', '**/*.ts', '**/*.tsx']
   }
-];
+]);
