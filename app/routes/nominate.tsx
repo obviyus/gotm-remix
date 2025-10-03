@@ -1,4 +1,4 @@
-import React from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useId, useState } from "react";
 import { Link, redirect, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
@@ -49,7 +49,7 @@ function SearchResultCard({
 	onNominateGame,
 	onOpenNominationModal,
 }: SearchResultCardProps) {
-	const handleNominateClick = React.useCallback(() => {
+	const handleNominateClick = () => {
 		if (isPreviousWinner) {
 			return;
 		}
@@ -60,7 +60,7 @@ function SearchResultCard({
 		}
 
 		onNominateGame(game);
-	}, [existingNomination, game, isPreviousWinner, onNominateGame, onOpenNominationModal]);
+	};
 
 	return (
 		<GameCard
@@ -143,7 +143,9 @@ export async function action({ request }: Route.ActionArgs) {
 
 	// Reuse previous winners check
 	const winners = await db.execute("SELECT DISTINCT game_id FROM winners");
-	const previousWinners = new Set(winners.rows.map((w) => (w.game_id ?? "").toString()));
+	const previousWinners = new Set(
+		winners.rows.map((w) => (w.game_id ?? "").toString()),
+	);
 
 	if (method === "POST" && intent === "createNomination") {
 		try {
@@ -401,223 +403,184 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
 
-	const handleSearch = React.useCallback(
-		(e: React.FormEvent<HTMLFormElement>) => {
-			e.preventDefault();
-			if (!searchTerm.trim()) return;
-			search.submit({ intent: "search", query: searchTerm }, { method: "post" });
-		},
-		[search, searchTerm],
-	);
+	const handleSearch = (e: FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		if (!searchTerm.trim()) return;
+		search.submit({ intent: "search", query: searchTerm }, { method: "post" });
+	};
 
-	const handleGameSelect = React.useCallback(
-		(
-			game: Nomination,
-			existingNomination?: Nomination,
-		) => {
-			if (hasReachedNominationLimit && !existingNomination) {
-				// Don't allow new nominations if limit reached
-				return;
-			}
+	const handleGameSelect = (
+		game: Nomination,
+		existingNomination?: Nomination,
+	) => {
+		if (hasReachedNominationLimit && !existingNomination) {
+			return;
+		}
 
-			if (existingNomination) {
-				// If game is already nominated, go straight to pitch dialog
-				setEditingNomination(existingNomination);
-				setEditPitch(
-					existingNomination.pitches.find((p) => p.discordId === userDiscordId)
-						?.pitch || "",
-				);
-				setIsEditOpen(true);
-			} else {
-				// Otherwise show the nomination dialog
-				setSelectedGame(game);
-				setIsOpen(true);
-			}
-		},
-		[hasReachedNominationLimit, userDiscordId],
-	);
+		if (existingNomination) {
+			setEditingNomination(existingNomination);
+			setEditPitch(
+				existingNomination.pitches.find((p) => p.discordId === userDiscordId)
+					?.pitch || "",
+			);
+			setIsEditOpen(true);
+			return;
+		}
 
-	const handleEdit = React.useCallback(
-		(nomination: Nomination) => {
-			const fullNomination = userNominations.find((n) => n.id === nomination.id);
-			if (fullNomination) {
-				setEditingNomination(fullNomination);
-				setEditPitch(
-					fullNomination.pitches.find((p) => p.discordId === userDiscordId)
-						?.pitch || "",
-				);
-				setIsEditOpen(true);
-			}
-		},
-		[userDiscordId, userNominations],
-	);
+		setSelectedGame(game);
+		setIsOpen(true);
+	};
 
-	const handleDelete = React.useCallback(
-		(nomination: Nomination) => {
-			const fullNomination = userNominations.find((n) => n.id === nomination.id);
-			if (fullNomination) {
-				setDeletingNomination(fullNomination);
-				setIsDeleteOpen(true);
-			}
-		},
-		[userNominations],
-	);
+	const handleEdit = (nomination: Nomination) => {
+		const fullNomination = userNominations.find((n) => n.id === nomination.id);
+		if (!fullNomination) {
+			return;
+		}
 
-	const handleEditSubmit = React.useCallback(() => {
-		if (!editingNomination) return;
+		setEditingNomination(fullNomination);
+		setEditPitch(
+			fullNomination.pitches.find((p) => p.discordId === userDiscordId)
+				?.pitch || "",
+		);
+		setIsEditOpen(true);
+	};
+
+	const handleDelete = (nomination: Nomination) => {
+		const fullNomination = userNominations.find((n) => n.id === nomination.id);
+		if (!fullNomination) {
+			return;
+		}
+
+		setDeletingNomination(fullNomination);
+		setIsDeleteOpen(true);
+	};
+
+	const handleEditSubmit = () => {
+		if (!editingNomination) {
+			return;
+		}
 
 		nominate.submit(
 			{
 				nominationId: editingNomination.id,
 				pitch: editPitch.trim() || "",
 			},
-			{
-				method: "PATCH",
-			},
+			{ method: "PATCH" },
 		);
 
 		setIsEditOpen(false);
 		setEditingNomination(null);
 		setEditPitch("");
-	}, [editPitch, editingNomination, nominate]);
+	};
 
-	const handleDeleteConfirm = React.useCallback(() => {
-		if (!deletingNomination) return;
+	const handleDeleteConfirm = () => {
+		if (!deletingNomination) {
+			return;
+		}
 
 		nominate.submit(
 			{
 				nominationId: deletingNomination.id.toString(),
 			},
-			{
-				method: "DELETE",
-			},
+			{ method: "DELETE" },
 		);
 
 		setIsDeleteOpen(false);
 		setDeletingNomination(null);
-	}, [deletingNomination, nominate]);
+	};
 
-	const handleGameLength = React.useCallback(
-		(isShort: boolean) => {
-			if (!selectedGame) return;
+	const handleGameLength = (isShort: boolean) => {
+		if (!selectedGame) {
+			return;
+		}
 
-			// Submit directly to this route to trigger automatic revalidation
-			nominate.submit(
-				{
-					intent: "createNomination",
-					monthId: monthId?.toString() ?? "",
-					short: String(isShort),
-					pitch: pitch.trim() || "",
-					gameId: String(selectedGame.gameId),
-					gameName: selectedGame.gameName,
-					gameCover: selectedGame.gameCover || "",
-					gameYear: selectedGame.gameYear || "",
-					gameUrl: selectedGame.gameUrl || "",
-				},
-				{ method: "POST" },
-			);
+		nominate.submit(
+			{
+				intent: "createNomination",
+				monthId: monthId?.toString() ?? "",
+				short: String(isShort),
+				pitch: pitch.trim() || "",
+				gameId: String(selectedGame.gameId),
+				gameName: selectedGame.gameName,
+				gameCover: selectedGame.gameCover || "",
+				gameYear: selectedGame.gameYear || "",
+				gameUrl: selectedGame.gameUrl || "",
+			},
+			{ method: "POST" },
+		);
 
-			setIsOpen(false);
-			setSelectedGame(null);
-			setPitch("");
-		}, [monthId, nominate, pitch, selectedGame]);
+		setIsOpen(false);
+		setSelectedGame(null);
+		setPitch("");
+	};
 
-	const selectShortGame = React.useCallback(() => {
+	const selectShortGame = () => {
 		handleGameLength(true);
-	}, [handleGameLength]);
+	};
 
-	const selectLongGame = React.useCallback(() => {
+	const selectLongGame = () => {
 		handleGameLength(false);
-	}, [handleGameLength]);
+	};
 
-	const handleEditPitchChange = React.useCallback(
-		(event: React.ChangeEvent<HTMLTextAreaElement>) => {
-			setEditPitch(event.target.value);
-		},
-		[],
-	);
+	const handleEditPitchChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+		setEditPitch(event.target.value);
+	};
 
-	const handleEditDialogOpenChange = React.useCallback(
-		(open: boolean) => {
-			setIsEditOpen(open);
-			if (!open) {
-				setEditPitch("");
-			}
-		},
-		[],
-	);
+	const handleEditDialogOpenChange = (open: boolean) => {
+		setIsEditOpen(open);
+		if (!open) {
+			setEditPitch("");
+		}
+	};
 
-	const handleDeleteDialogOpenChange = React.useCallback(
-		(open: boolean) => {
-			setIsDeleteOpen(open);
-			if (!open) {
-				setDeletingNomination(null);
-			}
-		},
-		[],
-	);
+	const handleDeleteDialogOpenChange = (open: boolean) => {
+		setIsDeleteOpen(open);
+		if (!open) {
+			setDeletingNomination(null);
+		}
+	};
 
-	const closeEditModal = React.useCallback(() => {
+	const closeEditModal = () => {
 		setIsEditOpen(false);
 		setEditPitch("");
-	}, []);
+	};
 
-	const closeDeleteModal = React.useCallback(() => {
+	const closeDeleteModal = () => {
 		setIsDeleteOpen(false);
 		setDeletingNomination(null);
-	}, []);
+	};
 
-	const closePitchesModal = React.useCallback(() => {
+	const closePitchesModal = () => {
 		setIsViewingPitches(false);
 		setSelectedNomination(null);
-	}, []);
+	};
 
-	const handleViewPitches = React.useCallback((nomination: Nomination) => {
+	const handleViewPitches = (nomination: Nomination) => {
 		setSelectedNomination(nomination);
 		setIsViewingPitches(true);
-	}, []);
+	};
 
-	const openNominationModal = React.useCallback((nomination: Nomination) => {
+	const openNominationModal = (nomination: Nomination) => {
 		setEditingNomination(nomination);
 		setEditPitch("");
 		setIsEditOpen(true);
-	}, []);
+	};
 
-	const handleSearchTermChange = React.useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>) => {
-			setSearchTerm(event.target.value);
-		},
-		[],
-	);
+	const handleSearchTermChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setSearchTerm(event.target.value);
+	};
 
-	const userNominationPitchHandlers = React.useMemo(
-		() =>
-			new Map<number, () => void>(
-				userNominations.map((nomination) => [
-					nomination.id,
-					() => handleViewPitches(nomination),
-				] as const),
-			),
-		[userNominations, handleViewPitches],
-	);
+	const handleNominationDialogOpenChange = (open: boolean) => {
+		setIsOpen(open);
+		if (!open) {
+			setPitch("");
+			setSelectedGame(null);
+		}
+	};
 
-	const handleNominationDialogOpenChange = React.useCallback(
-		(open: boolean) => {
-			setIsOpen(open);
-			if (!open) {
-				setPitch("");
-				setSelectedGame(null);
-			}
-		},
-		[],
-	);
-
-	const handlePitchChange = React.useCallback(
-		(event: React.ChangeEvent<HTMLTextAreaElement>) => {
-			setPitch(event.target.value);
-		},
-		[],
-	);
+	const handlePitchChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+		setPitch(event.target.value);
+	};
 
 	if (!monthId || monthStatus !== "nominating") {
 		return (
@@ -716,25 +679,18 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				<div className="mb-8">
 					<h2 className="text-xl font-semibold mb-4">Your Nominations</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-						{userNominations.map((nomination) => {
-							const viewPitches = userNominationPitchHandlers.get(nomination.id);
-							if (!viewPitches) {
-								return null;
-							}
-
-							return (
-								<GameCard
-									game={nomination}
-									key={nomination.id}
-									variant="nomination"
-									onEdit={handleEdit}
-									onDelete={handleDelete}
-									onViewPitches={viewPitches}
-									pitchCount={nomination.pitches.length}
-									showVotingButtons={false}
-								/>
-							);
-						})}
+						{userNominations.map((nomination) => (
+							<GameCard
+								game={nomination}
+								key={nomination.id}
+								variant="nomination"
+								onEdit={handleEdit}
+								onDelete={handleDelete}
+								onViewPitches={() => handleViewPitches(nomination)}
+								pitchCount={nomination.pitches.length}
+								showVotingButtons={false}
+							/>
+						))}
 					</div>
 				</div>
 			)}
@@ -868,10 +824,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{/* Game Length Selection Modal */}
-			<Dialog
-				open={isOpen}
-				onOpenChange={handleNominationDialogOpenChange}
-			>
+			<Dialog open={isOpen} onOpenChange={handleNominationDialogOpenChange}>
 				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
@@ -923,10 +876,11 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 								type="button"
 								onClick={selectShortGame}
 								disabled={Boolean(shortNomination)}
-								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${shortNomination
-									? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
-									: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
-									}`}
+								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
+									shortNomination
+										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
+										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
+								}`}
 							>
 								<span>Short Game</span>
 								<span className="text-xs opacity-80">(&lt; 12 hours)</span>
@@ -938,10 +892,11 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 								type="button"
 								onClick={selectLongGame}
 								disabled={Boolean(longNomination)}
-								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${longNomination
-									? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
-									: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
-									}`}
+								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
+									longNomination
+										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
+										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
+								}`}
 							>
 								<span>Long Game</span>
 								<span className="text-xs opacity-80">(&gt; 12 hours)</span>
@@ -955,10 +910,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			</Dialog>
 
 			{/* Edit Modal */}
-			<Dialog
-				open={isEditOpen}
-				onOpenChange={handleEditDialogOpenChange}
-			>
+			<Dialog open={isEditOpen} onOpenChange={handleEditDialogOpenChange}>
 				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
@@ -1004,10 +956,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			</Dialog>
 
 			{/* Delete Confirmation Modal */}
-			<Dialog
-				open={isDeleteOpen}
-				onOpenChange={handleDeleteDialogOpenChange}
-			>
+			<Dialog open={isDeleteOpen} onOpenChange={handleDeleteDialogOpenChange}>
 				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">

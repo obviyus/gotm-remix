@@ -1,4 +1,3 @@
-import React from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -22,14 +21,11 @@ export default function PitchesModal({
 	onClose,
 	nomination,
 }: PitchesModalProps) {
-	const handleOpenChange = React.useCallback(
-		(open: boolean) => {
-			if (!open) {
-				onClose();
-			}
-		},
-		[onClose],
-	);
+	const handleOpenChange = (open: boolean) => {
+		if (!open) {
+			onClose();
+		}
+	};
 
 	if (!nomination) {
 		return null;

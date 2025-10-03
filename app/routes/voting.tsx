@@ -1,4 +1,3 @@
-import React from "react";
 import {
 	DragDropContext,
 	Draggable,
@@ -217,137 +216,121 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
-	const handleOpenPitches = React.useCallback((nomination: Nomination) => {
+	const handleOpenPitches = (nomination: Nomination) => {
 		setSelectedNomination(nomination);
 		setIsViewingPitches(true);
-	}, []);
-	const closePitchesModal = React.useCallback(() => {
+	};
+	const closePitchesModal = () => {
 		setIsViewingPitches(false);
 		setSelectedNomination(null);
-	}, []);
+	};
 
-	const updateVoteStatus = React.useCallback((short: boolean, voted: boolean) => {
+	const updateVoteStatus = (short: boolean, voted: boolean) => {
 		if (short) {
 			setVotedShort(voted);
 		} else {
 			setVotedLong(voted);
 		}
-	}, []);
+	};
 
-	const deleteVote = React.useCallback(
-		async (short: boolean) => {
-			voteFetcher.submit(
-				{ monthId, userId, short },
-				{ method: "DELETE", action: "/api/votes" },
-			);
+	const deleteVote = async (short: boolean) => {
+		voteFetcher.submit(
+			{ monthId, userId, short },
+			{ method: "DELETE", action: "/api/votes" },
+		);
 
-			const shortKey = short ? 1 : 0;
-			const games = short ? shortNominations : longNominations;
+		const shortKey = short ? 1 : 0;
+		const games = short ? shortNominations : longNominations;
 
-			setCurrentOrder((prev) => ({
-				...prev,
-				[shortKey]: ["divider", ...games.map((n) => String(n.id))],
-			}));
+		setCurrentOrder((prev) => ({
+			...prev,
+			[shortKey]: ["divider", ...games.map((n) => String(n.id))],
+		}));
 
-			updateVoteStatus(short, false);
-		},
-		[longNominations, monthId, shortNominations, updateVoteStatus, userId, voteFetcher],
-	);
+		updateVoteStatus(short, false);
+	};
 
-	const saveVote = React.useCallback(
-		async (short: boolean, order: string[]) => {
-			const validOrder = order
-				.filter((id) => id && id !== "divider")
-				.map((id) => Number.parseInt(id, 10));
+	const saveVote = async (short: boolean, order: string[]) => {
+		const validOrder = order
+			.filter((id) => id && id !== "divider")
+			.map((id) => Number.parseInt(id, 10));
 
-			if (validOrder.length === 0) {
-				await deleteVote(short);
-				return;
-			}
+		if (validOrder.length === 0) {
+			await deleteVote(short);
+			return;
+		}
 
-			voteFetcher.submit(
-				{ monthId, userId, short, order: validOrder },
-				{
-					method: "POST",
-					action: "/api/votes",
-					encType: "application/json",
-				},
-			);
+		voteFetcher.submit(
+			{ monthId, userId, short, order: validOrder },
+			{
+				method: "POST",
+				action: "/api/votes",
+				encType: "application/json",
+			},
+		);
 
-			updateVoteStatus(short, true);
-		}, [deleteVote, monthId, updateVoteStatus, userId, voteFetcher]);
+		updateVoteStatus(short, true);
+	};
 
-	const onDragEnd = React.useCallback(
-		async (result: DropResult) => {
-			if (!result.destination) return;
+	const onDragEnd = async (result: DropResult) => {
+		if (!result.destination) return;
 
-			const isShort = result.source.droppableId === "short";
-			const shortKey = isShort ? 1 : 0;
-			const items = Array.from(currentOrder[shortKey]);
+		const isShort = result.source.droppableId === "short";
+		const shortKey = isShort ? 1 : 0;
+		const items = Array.from(currentOrder[shortKey]);
 
-			// Handle dragging items
-			const [reorderedItem] = items.splice(result.source.index, 1);
-			items.splice(result.destination.index, 0, reorderedItem);
+		const [reorderedItem] = items.splice(result.source.index, 1);
+		items.splice(result.destination.index, 0, reorderedItem);
 
-			// Update the local state
-			setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
+		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
 
-			// Get items above the divider and save them as votes
-			const newDividerIndex = items.indexOf("divider");
-			const rankedItems = items.slice(0, newDividerIndex);
+		const newDividerIndex = items.indexOf("divider");
+		const rankedItems = items.slice(0, newDividerIndex);
 
-			if (rankedItems.length > 0) {
-				await saveVote(isShort, rankedItems);
-			} else {
-				await deleteVote(isShort);
-			}
-		}, [currentOrder, deleteVote, saveVote]);
+		if (rankedItems.length > 0) {
+			await saveVote(isShort, rankedItems);
+		} else {
+			await deleteVote(isShort);
+		}
+	};
 
-	const moveItemAboveDivider = React.useCallback(
-		async (isShort: boolean, itemId: string) => {
-			const shortKey = isShort ? 1 : 0;
-			const items = Array.from(currentOrder[shortKey]);
+	const moveItemAboveDivider = async (isShort: boolean, itemId: string) => {
+		const shortKey = isShort ? 1 : 0;
+		const items = Array.from(currentOrder[shortKey]);
 
-			// Remove the item from its current position
-			const currentIndex = items.indexOf(itemId);
-			if (currentIndex === -1) return;
-			items.splice(currentIndex, 1);
+		const currentIndex = items.indexOf(itemId);
+		if (currentIndex === -1) return;
+		items.splice(currentIndex, 1);
 
-			// Insert just above the divider
-			const newDividerIndex = items.indexOf("divider");
-			items.splice(newDividerIndex, 0, itemId);
+		const newDividerIndex = items.indexOf("divider");
+		items.splice(newDividerIndex, 0, itemId);
 
-			// Update state and save
-			setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
-			const rankedItems = items.slice(0, items.indexOf("divider"));
-			if (rankedItems.length > 0) {
-				await saveVote(isShort, rankedItems);
-			}
-		}, [currentOrder, saveVote]);
+		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
+		const rankedItems = items.slice(0, items.indexOf("divider"));
+		if (rankedItems.length > 0) {
+			await saveVote(isShort, rankedItems);
+		}
+	};
 
-	const moveItemBelowDivider = React.useCallback(
-		async (isShort: boolean, itemId: string) => {
-			const shortKey = isShort ? 1 : 0;
-			const items = Array.from(currentOrder[shortKey]);
+	const moveItemBelowDivider = async (isShort: boolean, itemId: string) => {
+		const shortKey = isShort ? 1 : 0;
+		const items = Array.from(currentOrder[shortKey]);
 
-			// Remove the item from its current position
-			const currentIndex = items.indexOf(itemId);
-			if (currentIndex === -1) return;
-			items.splice(currentIndex, 1);
+		const currentIndex = items.indexOf(itemId);
+		if (currentIndex === -1) return;
+		items.splice(currentIndex, 1);
 
-			// Insert just below the divider
-			const dividerIndex = items.indexOf("divider");
-			items.splice(dividerIndex + 1, 0, itemId);
+		const dividerIndex = items.indexOf("divider");
+		items.splice(dividerIndex + 1, 0, itemId);
 
-			// Update state and save
-			setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
-			const rankedItems = items.slice(0, dividerIndex);
-			if (rankedItems.length > 0) {
-				await saveVote(isShort, rankedItems);
-			} else {
-				await deleteVote(isShort);
-			}
-		}, [currentOrder, deleteVote, saveVote]);
+		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
+		const rankedItems = items.slice(0, dividerIndex);
+		if (rankedItems.length > 0) {
+			await saveVote(isShort, rankedItems);
+		} else {
+			await deleteVote(isShort);
+		}
+	};
 
 	const renderGames = (games: Nomination[], isShort: boolean) => {
 		const shortKey = isShort ? 1 : 0;
@@ -490,34 +473,27 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		);
 	};
 
-	const statusBadges = React.useMemo(
-		() => ({
-			long: {
-				text: votedLong ? "Voted" : "Not Voted",
-				isSuccess: votedLong,
-			},
-			short: {
-				text: votedShort ? "Voted" : "Not Voted",
-				isSuccess: votedShort,
-			},
-		}),
-		[votedLong, votedShort],
-	);
+	const statusBadges = {
+		long: {
+			text: votedLong ? "Voted" : "Not Voted",
+			isSuccess: votedLong,
+		},
+		short: {
+			text: votedShort ? "Voted" : "Not Voted",
+			isSuccess: votedShort,
+		},
+	};
 
-	const handleClearLongVote = React.useCallback(() => {
+	const handleClearLongVote = () => {
 		void deleteVote(false);
-	}, [deleteVote]);
+	};
 
-	const handleClearShortVote = React.useCallback(() => {
+	const handleClearShortVote = () => {
 		void deleteVote(true);
-	}, [deleteVote]);
+	};
 
-	const longAction = React.useMemo(() => {
-		if (!votedLong) {
-			return null;
-		}
-
-		return (
+	const longAction = votedLong
+		? (
 			<button
 				type="button"
 				className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
@@ -528,15 +504,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 					Clear Vote
 				</span>
 			</button>
-		);
-	}, [handleClearLongVote, votedLong]);
+		)
+		: null;
 
-	const shortAction = React.useMemo(() => {
-		if (!votedShort) {
-			return null;
-		}
-
-		return (
+	const shortAction = votedShort
+		? (
 			<button
 				type="button"
 				className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
@@ -547,8 +519,8 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 					Clear Vote
 				</span>
 			</button>
-		);
-	}, [handleClearShortVote, votedShort]);
+		)
+		: null;
 
 	return (
 		<TwoColumnLayout

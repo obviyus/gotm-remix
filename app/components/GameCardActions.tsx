@@ -1,4 +1,3 @@
-import React from "react";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -48,23 +47,23 @@ export function GameCardActions({
 	onEdit,
 	onDelete,
 }: GameCardActionsProps) {
-	const handleNominateClick = React.useCallback(() => {
+	const handleNominateClick = () => {
 		if (onNominate) {
 			onNominate(game);
 		}
-	}, [onNominate, game]);
+	};
 
-	const handleEditClick = React.useCallback(() => {
+	const handleEditClick = () => {
 		if (onEdit) {
 			onEdit(game);
 		}
-	}, [onEdit, game]);
+	};
 
-	const handleDeleteClick = React.useCallback(() => {
+	const handleDeleteClick = () => {
 		if (onDelete) {
 			onDelete(game);
 		}
-	}, [onDelete, game]);
+	};
 
 	return (
 		<div className="flex flex-col gap-2 mt-auto min-w-0">

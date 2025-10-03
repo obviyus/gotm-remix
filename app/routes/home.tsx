@@ -1,4 +1,3 @@
-import React from "react";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -37,25 +36,14 @@ interface NominationsListProps {
 }
 
 function NominationsList({ games, onViewPitches }: NominationsListProps) {
-	const pitchHandlers = React.useMemo(() => {
-		return new Map<number, () => void>(
-			games.map((game) => [game.id, () => onViewPitches(game)] as const),
-		);
-	}, [games, onViewPitches]);
-
 	return (
 		<div className="space-y-4">
 			{games.map((game) => {
-				const viewPitches = pitchHandlers.get(game.id);
-				if (!viewPitches) {
-					return null;
-				}
-
 				return (
 					<GameCard
 						key={game.id}
 						game={game}
-						onViewPitches={viewPitches}
+						onViewPitches={() => onViewPitches(game)}
 						pitchCount={game.pitches.length}
 						showPitchesButton
 					/>
@@ -135,44 +123,30 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
-	const handleViewPitches = React.useCallback((nomination: Nomination) => {
+	const handleViewPitches = (nomination: Nomination) => {
 		setSelectedNomination(nomination);
 		setIsViewingPitches(true);
-	}, []);
-	const handleCloseModal = React.useCallback(() => {
+	};
+	const handleCloseModal = () => {
 		setIsViewingPitches(false);
 		setSelectedNomination(null);
-	}, []);
+	};
 
-	const columnStatus = React.useMemo(() => {
-		if (!nominations) {
-			return null;
-		}
-
-		const longCount = nominations.long.length;
-		const shortCount = nominations.short.length;
-
-		return {
+	const columnStatus = nominations
+		? {
 			long: {
-				text: `${longCount} nominations`,
-				isSuccess: longCount > 0,
+				text: `${nominations.long.length} nominations`,
+				isSuccess: nominations.long.length > 0,
 			},
 			short: {
-				text: `${shortCount} nominations`,
-				isSuccess: shortCount > 0,
+				text: `${nominations.short.length} nominations`,
+				isSuccess: nominations.short.length > 0,
 			},
-		};
-	}, [nominations]);
+		}
+		: null;
 
-	const longResults = React.useMemo(
-		() => results?.long ?? EMPTY_RESULTS,
-		[results?.long],
-	);
-
-	const shortResults = React.useMemo(
-		() => results?.short ?? EMPTY_RESULTS,
-		[results?.short],
-	);
+	const longResults = results?.long ?? EMPTY_RESULTS;
+	const shortResults = results?.short ?? EMPTY_RESULTS;
 
 	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;

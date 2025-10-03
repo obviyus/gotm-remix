@@ -1,4 +1,3 @@
-import React from "react";
 import { useState } from "react";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -30,50 +29,38 @@ function SortedNominationsList({
 	winners,
 	onViewPitches,
 }: SortedNominationsListProps) {
-	const sortedGames = React.useMemo(() => {
-		return [...games].sort((a, b) => {
-			if (!showWinner) {
-				if (a.jurySelected && !b.jurySelected) return -1;
-				if (!a.jurySelected && b.jurySelected) return 1;
-				return 0;
-			}
-
-			const winnerForLength = isShort ? winners.short : winners.long;
-			const aIsWinner = winnerForLength?.id === a.id;
-			const bIsWinner = winnerForLength?.id === b.id;
-
-			if (aIsWinner && !bIsWinner) return -1;
-			if (!aIsWinner && bIsWinner) return 1;
+	const winnerForLength = isShort ? winners.short : winners.long;
+	const sortedGames = [...games].sort((a, b) => {
+		if (!showWinner) {
 			if (a.jurySelected && !b.jurySelected) return -1;
 			if (!a.jurySelected && b.jurySelected) return 1;
 			return 0;
-		});
-	}, [games, isShort, showWinner, winners.long, winners.short]);
+		}
 
-	const pitchHandlers = React.useMemo(
-		() =>
-			new Map<number, () => void>(
-				sortedGames.map((game) => [game.id, () => onViewPitches(game)] as const),
-			),
-		[sortedGames, onViewPitches],
-	);
+		const aIsWinner = winnerForLength?.id === a.id;
+		const bIsWinner = winnerForLength?.id === b.id;
+
+		if (aIsWinner !== bIsWinner) {
+			return aIsWinner ? -1 : 1;
+		}
+
+		if (a.jurySelected !== b.jurySelected) {
+			return a.jurySelected ? -1 : 1;
+		}
+
+		return 0;
+	});
 
 	return (
 		<div className="space-y-4">
 			{sortedGames.map((game) => {
-				const viewPitches = pitchHandlers.get(game.id);
-				if (!viewPitches) {
-					return null;
-				}
-
-				const winnerForLength = isShort ? winners.short : winners.long;
 				const isWinner = showWinner && winnerForLength?.id === game.id;
 
 				return (
 					<GameCard
 						key={game.id}
 						game={game}
-						onViewPitches={viewPitches}
+						onViewPitches={() => onViewPitches(game)}
 						pitchCount={game.pitches.length}
 						showPitchesButton
 						isWinner={isWinner}
@@ -143,30 +130,25 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
-	const handleViewPitches = React.useCallback((nomination: Nomination) => {
+	const handleViewPitches = (nomination: Nomination) => {
 		setSelectedNomination(nomination);
 		setIsViewingPitches(true);
-	}, []);
-	const handleCloseModal = React.useCallback(() => {
+	};
+	const handleCloseModal = () => {
 		setIsViewingPitches(false);
 		setSelectedNomination(null);
-	}, []);
+	};
 
-	const columnStatus = React.useMemo(() => {
-		const longCount = nominations.long.length;
-		const shortCount = nominations.short.length;
-
-		return {
-			long: {
-				text: `${longCount} nominations`,
-				isSuccess: longCount > 0,
-			},
-			short: {
-				text: `${shortCount} nominations`,
-				isSuccess: shortCount > 0,
-			},
-		};
-	}, [nominations.long.length, nominations.short.length]);
+	const columnStatus = {
+		long: {
+			text: `${nominations.long.length} nominations`,
+			isSuccess: nominations.long.length > 0,
+		},
+		short: {
+			text: `${nominations.short.length} nominations`,
+			isSuccess: nominations.short.length > 0,
+		},
+	};
 
 	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;

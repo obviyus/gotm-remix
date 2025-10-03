@@ -1,4 +1,3 @@
-import React from "react";
 import type { Row } from "@libsql/client";
 import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
@@ -11,7 +10,7 @@ import {
 } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Card } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
@@ -34,40 +33,6 @@ echarts.use([
 ]);
 
 // Custom hook for optimized ECharts instance management
-function useOptimizedChart() {
-	const chartRef = useRef<HTMLDivElement>(null);
-	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
-
-	const initChart = useCallback(() => {
-		if (!chartRef.current || chartInstanceRef.current) return;
-		chartInstanceRef.current = echarts.init(chartRef.current);
-	}, []);
-
-	const setOption = useCallback(
-		(option: echarts.EChartsCoreOption) => {
-			if (!chartInstanceRef.current) {
-				initChart();
-			}
-			chartInstanceRef.current?.setOption(option, true); // notMerge=true for better performance
-		},
-		[initChart],
-	);
-
-	const dispose = useCallback(() => {
-		if (chartInstanceRef.current) {
-			chartInstanceRef.current.dispose();
-			chartInstanceRef.current = null;
-		}
-	}, []);
-
-	useEffect(() => {
-		initChart();
-		return dispose;
-	}, [initChart, dispose]);
-
-	return { chartRef, setOption, dispose };
-}
-
 // Type definitions
 interface TopGamesFinalistStats {
 	id: string;
@@ -1017,23 +982,39 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
-	// Memoize filtered data to avoid recomputation on every render
-	const validData = useMemo(() => {
-		return data.filter(
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		return () => {
+			chartInstanceRef.current?.dispose();
+			chartInstanceRef.current = null;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!chartInstanceRef.current) {
+			if (!chartRef.current) {
+				return;
+			}
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		const validData = data.filter(
 			(item) =>
 				item.year &&
 				item.year !== "null" &&
 				item.year !== "undefined" &&
 				!Number.isNaN(Number(item.year)),
 		);
-	}, [data]);
 
-	// Memoize chart configuration to prevent unnecessary object creation
-	const chartConfig = useMemo(
-		() => ({
+		chartInstanceRef.current.setOption({
 			tooltip: {
-				trigger: "axis" as const,
-				axisPointer: { type: "shadow" as const },
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
 			},
 			grid: {
 				left: "6%",
@@ -1043,7 +1024,7 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 				containLabel: true,
 			},
 			xAxis: {
-				type: "category" as const,
+				type: "category",
 				data: validData.map((item) => item.year),
 				axisLabel: {
 					color: "#94a3b8",
@@ -1051,13 +1032,13 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 				},
 			},
 			yAxis: {
-				type: "value" as const,
+				type: "value",
 				axisLabel: { color: "#94a3b8" },
 			},
 			series: [
 				{
 					name: "Nominations",
-					type: "bar" as const,
+					type: "bar",
 					barWidth: "60%",
 					data: validData.map((item) => item.count),
 					itemStyle: {
@@ -1065,26 +1046,9 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 					},
 				},
 			],
-		}),
-		[validData],
-	);
+		});
 
-	useEffect(() => {
-		if (!chartRef.current) return;
-
-		if (!chartInstanceRef.current) {
-			chartInstanceRef.current = echarts.init(chartRef.current);
-		}
-
-		chartInstanceRef.current.setOption(chartConfig);
-
-		return () => {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.dispose();
-				chartInstanceRef.current = null;
-			}
-		};
-	}, [chartConfig]);
+	}, [data]);
 
 	return <div ref={chartRef} className="w-full h-full" />;
 }
@@ -1093,41 +1057,47 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
-	// Memoize filtered data to avoid O(n²) filtering on every render
-	const filteredData = useMemo(() => {
+	useEffect(() => {
+		if (!chartRef.current) {
+			return;
+		}
+
+		chartInstanceRef.current = echarts.init(chartRef.current);
+
+		return () => {
+			chartInstanceRef.current?.dispose();
+			chartInstanceRef.current = null;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!chartInstanceRef.current) {
+			if (!chartRef.current) {
+				return;
+			}
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
 		let foundParticipation = false;
-		return data.filter((item) => {
+		const filteredData = data.filter((item) => {
 			const hasParticipation = item.nominators > 0 || item.voters > 0;
-			if (hasParticipation) foundParticipation = true;
+			if (hasParticipation) {
+				foundParticipation = true;
+			}
 			return foundParticipation;
 		});
-	}, [data]);
 
-	// Pre-compute formatted labels to avoid repeated formatting
-	const formattedLabels = useMemo(
-		() => filteredData.map((item) => formatMonthYear(item.monthYear)),
-		[filteredData],
-	);
+		const formattedLabels = filteredData.map((item) =>
+			formatMonthYear(item.monthYear),
+		);
+		const nominatorData = filteredData.map((item) => item.nominators);
+		const voterData = filteredData.map((item) => item.voters);
+		const themeLabels = filteredData.map((item) => item.themeShort ?? "");
 
-	// Pre-extract data arrays
-	const nominatorData = useMemo(
-		() => filteredData.map((item) => item.nominators),
-		[filteredData],
-	);
-	const voterData = useMemo(
-		() => filteredData.map((item) => item.voters),
-		[filteredData],
-	);
-	const themeLabels = useMemo(
-		() => filteredData.map((item) => item.themeShort ?? ""),
-		[filteredData],
-	);
-
-	const chartConfig = useMemo(
-		() => ({
+		chartInstanceRef.current.setOption({
 			tooltip: {
-				trigger: "axis" as const,
-				axisPointer: { type: "shadow" as const },
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
 				formatter: (params: unknown) => {
 					const items = params as Array<{
 						axisValue: string;
@@ -1136,7 +1106,9 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 						marker: string;
 						dataIndex: number;
 					}>;
-					if (!Array.isArray(items) || items.length === 0) return "";
+					if (!Array.isArray(items) || items.length === 0) {
+						return "";
+					}
 					const idx = items[0].dataIndex;
 					const month = items[0].axisValue;
 					const theme = themeLabels[idx];
@@ -1162,21 +1134,22 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 				containLabel: true,
 			},
 			xAxis: {
-				type: "category" as const,
+				type: "category",
 				data: formattedLabels,
 				axisLabel: {
 					color: "#94a3b8",
 					rotate: 45,
+					margin: 15,
 				},
 			},
 			yAxis: {
-				type: "value" as const,
+				type: "value",
 				axisLabel: { color: "#94a3b8" },
 			},
 			series: [
 				{
 					name: "Nominators",
-					type: "line" as const,
+					type: "line",
 					data: nominatorData,
 					smooth: true,
 					lineStyle: { width: 3 },
@@ -1185,7 +1158,7 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 				},
 				{
 					name: "Voters",
-					type: "line" as const,
+					type: "line",
 					data: voterData,
 					smooth: true,
 					lineStyle: { width: 3 },
@@ -1193,26 +1166,8 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 					symbolSize: 8,
 				},
 			],
-		}),
-		[formattedLabels, nominatorData, voterData, themeLabels],
-	);
-
-	useEffect(() => {
-		if (!chartRef.current) return;
-
-		if (!chartInstanceRef.current) {
-			chartInstanceRef.current = echarts.init(chartRef.current);
-		}
-
-		chartInstanceRef.current.setOption(chartConfig);
-
-		return () => {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.dispose();
-				chartInstanceRef.current = null;
-			}
-		};
-	}, [chartConfig]);
+		});
+	}, [data]);
 
 	return <div ref={chartRef} className="w-full h-full" />;
 }
@@ -1621,40 +1576,53 @@ function TopScoringNominationsChart({
 }
 
 function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
-	const { chartRef, setOption } = useOptimizedChart();
+	const chartRef = useRef<HTMLDivElement>(null);
+	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
-	// Pre-compute data arrays to avoid repeated mapping
-	const gameNames = useMemo(() => data.map((item) => item.name), [data]);
-	const finalistData = useMemo(
-		() => data.map((item) => item.finalistNominations),
-		[data],
-	);
-	const nonFinalistData = useMemo(
-		() => data.map((item) => item.nonFinalistNominations),
-		[data],
-	);
+	useEffect(() => {
+		if (!chartRef.current) {
+			return;
+		}
 
-	const chartConfig = useMemo(
-		() => ({
+		chartInstanceRef.current = echarts.init(chartRef.current);
+
+		return () => {
+			chartInstanceRef.current?.dispose();
+			chartInstanceRef.current = null;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!chartInstanceRef.current) {
+			if (!chartRef.current) {
+				return;
+			}
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		if (data.length === 0) {
+			chartInstanceRef.current.clear();
+			return;
+		}
+
+		const gameNames = data.map((item) => item.name);
+		const finalistData = data.map((item) => item.finalistNominations);
+		const nonFinalistData = data.map((item) => item.nonFinalistNominations);
+
+		chartInstanceRef.current.setOption({
 			tooltip: {
-				trigger: "axis" as const,
-				axisPointer: {
-					type: "shadow" as const,
-				},
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
 				backgroundColor: "rgba(31, 41, 55, 0.8)",
 				borderColor: "rgba(55, 65, 81, 1)",
-				textStyle: {
-					color: "#e5e7eb",
-				},
+				textStyle: { color: "#e5e7eb" },
 			},
 			legend: {
 				data: ["Jury Selected", "Not Selected"],
-				textStyle: {
-					color: "#d1d5db",
-				},
+				textStyle: { color: "#d1d5db" },
 				top: "2%",
 				left: "center",
-				orient: "horizontal" as const,
+				orient: "horizontal",
 			},
 			grid: {
 				left: "5%",
@@ -1665,81 +1633,52 @@ function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
 			},
 			xAxis: [
 				{
-					type: "category" as const,
+					type: "category",
 					data: gameNames,
 					axisLabel: {
 						color: "#9ca3af",
 						interval: 0,
 						rotate: 30,
 						fontSize: 11,
-						overflow: "truncate" as const,
+						overflow: "truncate",
 						width: 120,
 					},
 					axisLine: {
-						lineStyle: {
-							color: "#4b5563",
-						},
+						lineStyle: { color: "#4b5563" },
 					},
 				},
 			],
 			yAxis: [
 				{
-					type: "value" as const,
+					type: "value",
 					name: "Number of Nominations",
-					axisLabel: {
-						color: "#9ca3b8",
-					},
-					nameTextStyle: {
-						color: "#d1d5db",
-					},
-					splitLine: {
-						lineStyle: {
-							color: "#374151",
-						},
-					},
-					axisLine: {
-						lineStyle: {
-							color: "#4b5563",
-						},
-					},
+					axisLabel: { color: "#9ca3b8" },
+					nameTextStyle: { color: "#d1d5db" },
+					splitLine: { lineStyle: { color: "#374151" } },
+					axisLine: { lineStyle: { color: "#4b5563" } },
 				},
 			],
 			series: [
 				{
 					name: "Jury Selected",
-					type: "bar" as const,
+					type: "bar",
 					stack: "Total",
-					emphasis: {
-						focus: "series" as const,
-					},
+					emphasis: { focus: "series" },
 					data: finalistData,
-					itemStyle: {
-						color: "#34d399",
-					},
+					itemStyle: { color: "#34d399" },
 				},
 				{
 					name: "Not Selected",
-					type: "bar" as const,
+					type: "bar",
 					stack: "Total",
-					emphasis: {
-						focus: "series" as const,
-					},
+					emphasis: { focus: "series" },
 					data: nonFinalistData,
-					itemStyle: {
-						color: "#fbbf24",
-					},
+					itemStyle: { color: "#fbbf24" },
 				},
 			],
 			backgroundColor: "transparent",
-		}),
-		[gameNames, finalistData, nonFinalistData],
-	);
-
-	useEffect(() => {
-		if (data.length > 0) {
-			setOption(chartConfig);
-		}
-	}, [chartConfig, data.length, setOption]);
+		});
+	}, [data]);
 
 	if (data.length === 0) {
 		return (

@@ -1,4 +1,3 @@
-import React from "react";
 import { SankeyChart, type SankeySeriesOption } from "echarts/charts";
 import {
 	TooltipComponent,
@@ -8,7 +7,7 @@ import type { ComposeOption, ECharts } from "echarts/core";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import type { CallbackDataParams } from "echarts/types/dist/shared";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getBaseGameName, getWinnerName } from "~/utils/votingResults";
 
 echarts.use([SankeyChart, TooltipComponent, CanvasRenderer]);
@@ -28,6 +27,17 @@ interface SankeyDataPoint {
 	source: string;
 	target: string;
 	weight: string | number;
+}
+
+interface SankeyProcessedData {
+	nodes: Array<{
+		name: string;
+		itemStyle: { color: string; borderWidth: number };
+		label: { position: "inside" | "left" | "right" | "top" | "bottom" };
+	}>;
+	links: Array<{ source: string; target: string; value: number }>;
+	initialNodes: Set<string>;
+	finalNodes: Set<string>;
 }
 
 interface VotingResultsChartProps {
@@ -51,6 +61,69 @@ const COLOR_PALETTE = [
 
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 
+function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null {
+	if (!results || results.length === 0) {
+		return null;
+	}
+
+	const filteredResults = results.filter(({ weight }) => Number(weight) > 0.01);
+	if (filteredResults.length === 0) {
+		return null;
+	}
+
+	const uniqueNodeNames = new Set<string>();
+	for (const { source, target } of filteredResults) {
+		uniqueNodeNames.add(source);
+		uniqueNodeNames.add(target);
+	}
+
+	const uniqueBaseGames = new Set<string>(
+		Array.from(uniqueNodeNames).map(getBaseGameName),
+	);
+	const gameColors = new Map<string, string>();
+	Array.from(uniqueBaseGames).forEach((game, index) => {
+		gameColors.set(game, COLOR_PALETTE[index % COLOR_PALETTE.length]);
+	});
+
+	const allSources = new Set(filteredResults.map((r) => r.source));
+	const allTargets = new Set(filteredResults.map((r) => r.target));
+	const initialNodes = new Set(
+		[...allSources].filter((node) => !allTargets.has(node)),
+	);
+	const finalNodes = new Set(
+		[...allTargets].filter((node) => !allSources.has(node)),
+	);
+
+	const nodes = Array.from(uniqueNodeNames).map((nodeName) => {
+		const baseGame = getBaseGameName(nodeName);
+		const color = gameColors.get(baseGame) || "#94a3b8";
+		const isInitialNode = initialNodes.has(nodeName);
+		const isFinalNode = finalNodes.has(nodeName);
+
+		let labelPosition: "inside" | "left" | "right" | "top" | "bottom" =
+			"inside";
+		if (isInitialNode) {
+			labelPosition = "right";
+		} else if (isFinalNode) {
+			labelPosition = "left";
+		}
+
+		return {
+			name: nodeName,
+			itemStyle: { color, borderWidth: 0 },
+			label: { position: labelPosition },
+		};
+	});
+
+	const links = filteredResults.map(({ source, target, weight }) => ({
+		source,
+		target,
+		value: Number(weight),
+	}));
+
+	return { nodes, links, initialNodes, finalNodes };
+}
+
 export function VotingResultsChart({
 	canvasId,
 	results,
@@ -59,86 +132,31 @@ export function VotingResultsChart({
 }: VotingResultsChartProps) {
 	const chartRef = useRef<HTMLDivElement | null>(null);
 	const chartInstanceRef = useRef<ECharts | null>(null);
-
-	// --- Updated useMemo ---
-	const processedData = useMemo(() => {
-		if (!results || results.length === 0) return null;
-		const filteredResults = results.filter(
-			({ weight }) => Number(weight) > 0.01,
-		);
-		if (filteredResults.length === 0) return null;
-
-		const uniqueNodeNames = new Set<string>();
-		for (const { source, target } of filteredResults) {
-			uniqueNodeNames.add(source);
-			uniqueNodeNames.add(target);
-		}
-
-		const uniqueBaseGames = new Set<string>(
-			Array.from(uniqueNodeNames).map(getBaseGameName),
-		);
-		const gameColors = new Map<string, string>();
-		Array.from(uniqueBaseGames).forEach((game, index) => {
-			gameColors.set(game, COLOR_PALETTE[index % COLOR_PALETTE.length]);
-		});
-
-		const allSources = new Set(filteredResults.map((r) => r.source));
-		const allTargets = new Set(filteredResults.map((r) => r.target));
-		const initialNodes = new Set(
-			[...allSources].filter((node) => !allTargets.has(node)),
-		);
-		const finalNodes = new Set(
-			[...allTargets].filter((node) => !allSources.has(node)),
-		);
-
-		const echartsNodes = Array.from(uniqueNodeNames).map((nodeName) => {
-			const baseGame = getBaseGameName(nodeName);
-			const color = gameColors.get(baseGame) || "#94a3b8";
-			const isInitialNode = initialNodes.has(nodeName);
-			const isFinalNode = finalNodes.has(nodeName);
-
-			let labelPosition: "inside" | "left" | "right" | "top" | "bottom" =
-				"inside"; // Typed as a valid position
-			if (isInitialNode) {
-				labelPosition = "right";
-			} else if (isFinalNode) {
-				labelPosition = "left";
-			}
-
-			const nodeConfig = {
-				name: nodeName,
-				itemStyle: { color: color, borderWidth: 0 },
-				label: {
-					position: labelPosition,
-				},
-			};
-			return nodeConfig;
-		});
-
-		const echartsLinks = filteredResults.map(({ source, target, weight }) => ({
-			source: source,
-			target: target,
-			value: Number(weight),
-		}));
-
-		return {
-			nodes: echartsNodes,
-			links: echartsLinks,
-			initialNodes,
-			finalNodes,
-		};
-	}, [results]);
+	const [processedData, setProcessedData] =
+		useState<SankeyProcessedData | null>(null);
 
 	useEffect(() => {
-		if (!chartRef.current) return;
+		if (!chartRef.current) {
+			return;
+		}
 
-		let options: ECOption | null = null;
-		if (processedData) {
-			const { nodes, links, initialNodes, finalNodes } = processedData;
-			options = {
-				tooltip: {
-					// Tooltip config remains the same
-					trigger: "item",
+		if (!chartInstanceRef.current) {
+			chartInstanceRef.current = echarts.init(chartRef.current);
+		}
+
+		const sankeyData = buildSankeyData(results);
+		setProcessedData(sankeyData);
+
+		if (!sankeyData) {
+			chartInstanceRef.current?.clear();
+			return;
+		}
+
+		const { nodes, links, initialNodes, finalNodes } = sankeyData;
+		const options: ECOption = {
+			tooltip: {
+				// Tooltip config remains the same
+				trigger: "item",
 					triggerOn: "mousemove",
 					formatter: (params: CallbackDataParams | CallbackDataParams[]) => {
 						const param = Array.isArray(params) ? params[0] : params;
@@ -192,20 +210,10 @@ export function VotingResultsChart({
 						lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.7 },
 					},
 				],
-			};
-		}
+		};
 
-		if (options) {
-			if (!chartInstanceRef.current) {
-				chartInstanceRef.current = echarts.init(chartRef.current);
-			}
-			chartInstanceRef.current.setOption(options, true);
-		} else {
-			if (chartInstanceRef.current) {
-				chartInstanceRef.current.clear();
-			}
-		}
-	}, [processedData]);
+		chartInstanceRef.current.setOption(options, true);
+	}, [results]);
 
 	useEffect(() => {
 		const chartInstance = chartInstanceRef.current;
@@ -229,7 +237,7 @@ export function VotingResultsChart({
 	}, []);
 
 	const chartTitle = canvasId.startsWith("long") ? "Long" : "Short";
-	const winner = useMemo(() => getWinnerName(results), [results]);
+	const winner = getWinnerName(results);
 	const winnerUrl = winner ? gameUrls[winner] : null;
 
 	return (
