@@ -19,7 +19,7 @@ import { searchGames } from "~/server/igdb.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import { getSession } from "~/sessions";
-import type { Nomination } from "~/types";
+import type { Nomination, Pitch } from "~/types";
 import type { Route } from "./+types/nominate";
 
 interface NominationResponse {
@@ -35,6 +35,7 @@ interface SearchResultCardProps {
 	isPreviousWinner: boolean;
 	buttonText: string;
 	buttonDisabled: boolean;
+	canNominateMore: boolean;
 	onNominateGame: (game: Nomination) => void;
 	onOpenNominationModal: (nomination: Nomination) => void;
 }
@@ -46,11 +47,15 @@ function SearchResultCard({
 	isPreviousWinner,
 	buttonText,
 	buttonDisabled,
+	canNominateMore,
 	onNominateGame,
 	onOpenNominationModal,
 }: SearchResultCardProps) {
+	const disableNominationAction =
+		buttonDisabled || (!existingNomination && !canNominateMore);
+
 	const handleNominateClick = () => {
-		if (isPreviousWinner) {
+		if (isPreviousWinner || disableNominationAction) {
 			return;
 		}
 
@@ -72,8 +77,85 @@ function SearchResultCard({
 			isCurrentUserNomination={isCurrentUserNomination}
 			isPreviousWinner={isPreviousWinner}
 			buttonText={buttonText}
-			buttonDisabled={buttonDisabled}
+			buttonDisabled={disableNominationAction}
 		/>
+	);
+}
+
+interface PitchCardProps {
+	nomination: Nomination;
+	pitch: Pitch;
+	onEditPitch: (nomination: Nomination) => void;
+	onDeletePitch: (nomination: Nomination) => void;
+	onViewPitches: (nomination: Nomination) => void;
+}
+
+function PitchCard({
+	nomination,
+	pitch,
+	onEditPitch,
+	onDeletePitch,
+	onViewPitches,
+}: PitchCardProps) {
+	const coverUrl = nomination.gameCover?.replace("t_thumb", "t_cover_big");
+	const year = nomination.gameYear;
+
+	return (
+		<div className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl border border-zinc-800/50 transition-colors duration-200 flex">
+			{coverUrl ? (
+				<div className="w-[6.5rem] sm:w-[7.5rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
+					<img
+						src={coverUrl}
+						alt={nomination.gameName}
+						className="h-full w-full object-cover"
+						loading="lazy"
+					/>
+				</div>
+			) : (
+				<div className="w-[6.5rem] sm:w-[7.5rem] flex-shrink-0 overflow-hidden rounded-l-xl bg-zinc-800/60" />
+			)}
+
+			<div className="flex-1 p-4 sm:p-5 flex flex-col gap-3 overflow-hidden min-w-0">
+				<div className="flex items-start justify-between gap-4">
+					<div className="min-w-0">
+						<h3 className="text-base font-semibold text-zinc-100 truncate">
+							{nomination.gameName}
+						</h3>
+						{year && (
+							<p className="text-xs text-zinc-500 font-medium mt-1">{year}</p>
+						)}
+					</div>
+					<button
+						type="button"
+						onClick={() => onViewPitches(nomination)}
+						className="inline-flex shrink-0 items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40"
+					>
+						View pitches
+					</button>
+				</div>
+
+				<div className="text-sm text-zinc-200 bg-black/20 border border-white/5 rounded-lg p-3 whitespace-pre-line leading-relaxed line-clamp-4">
+					{pitch.pitch}
+				</div>
+
+				<div className="flex flex-wrap justify-end gap-2">
+					<button
+						type="button"
+						onClick={() => onEditPitch(nomination)}
+						className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40"
+					>
+						Edit pitch
+					</button>
+					<button
+						type="button"
+						onClick={() => onDeletePitch(nomination)}
+						className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
+					>
+						Delete pitch
+					</button>
+				</div>
+			</div>
+		</div>
 	);
 }
 
@@ -238,7 +320,6 @@ export async function action({ request }: Route.ActionArgs) {
 	if (method === "PATCH") {
 		try {
 			const nominationIdStr = formData.get("nominationId")?.toString();
-			const pitch = formData.get("pitch")?.toString() || null;
 			const nominationId = nominationIdStr
 				? Number.parseInt(nominationIdStr, 10)
 				: null;
@@ -273,13 +354,31 @@ export async function action({ request }: Route.ActionArgs) {
 				);
 			}
 
-			const isOwner = nomination.rows[0].discord_id === discordId;
 			const hasExistingPitch =
 				nomination.rows[0].pitch_discord_id === discordId;
+			const patchIntent = intent || "savePitch";
 
-			if (!isOwner && hasExistingPitch) {
+			if (patchIntent === "deletePitch") {
+				if (!hasExistingPitch) {
+					return Response.json(
+						{ error: "No existing pitch to delete" },
+						{ status: 400 },
+					);
+				}
+
+				await db.execute({
+					sql: "DELETE FROM pitches WHERE nomination_id = ? AND discord_id = ?",
+					args: [nominationId, discordId],
+				});
+
+				return Response.json({ success: true });
+			}
+
+			const pitchInput = formData.get("pitch");
+			const pitch = typeof pitchInput === "string" ? pitchInput.trim() : "";
+			if (!pitch) {
 				return Response.json(
-					{ error: "You have already added a pitch to this nomination" },
+					{ error: "Pitch cannot be empty" },
 					{ status: 400 },
 				);
 			}
@@ -369,9 +468,6 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const games = search.data?.games || initialGames;
 	const [searchTerm, setSearchTerm] = useState("");
 	const nominate = useFetcher<NominationResponse>();
-	const isSearching =
-		search.state === "submitting" || search.state === "loading";
-	const hasSearched = search.data !== undefined; // Track if a search was performed
 
 	// Generate unique IDs for form elements
 	const pitchId = useId();
@@ -393,18 +489,73 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [deletingNomination, setDeletingNomination] =
 		useState<Nomination | null>(null);
+	const [isDeletePitchOpen, setIsDeletePitchOpen] = useState(false);
+	const [pitchToDelete, setPitchToDelete] = useState<Nomination | null>(null);
 
 	// Track short and long nominations
 	const shortNomination = userNominations.find((n) => n.short);
 	const longNomination = userNominations.find((n) => !n.short);
 	const hasReachedNominationLimit = shortNomination && longNomination;
 
+	const nominationsWithUserPitches = allNominations.filter((nomination) =>
+		nomination.pitches.some((pitchEntry) => pitchEntry.discordId === userDiscordId),
+	);
+	const userPitchNominations = nominationsWithUserPitches.filter(
+		(nomination) => nomination.discordId !== userDiscordId,
+	);
+
+	const shouldUseLocalSearch = Boolean(hasReachedNominationLimit);
+	const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+	const filteredLocalNominations = shouldUseLocalSearch
+		? allNominations.filter((nomination) =>
+				nomination.gameName.toLowerCase().includes(normalizedSearchTerm),
+			)
+		: [];
+	const displayedGames = shouldUseLocalSearch ? filteredLocalNominations : games;
+	const filteredDisplayedGames = displayedGames.filter((game) => {
+		const rawGameId = game.gameId ?? game.id;
+		const igdbId = rawGameId ? String(rawGameId) : "";
+		const existingNomination = shouldUseLocalSearch
+			? game
+			: allNominations.find((nomination) => nomination.gameId === igdbId);
+		if (!existingNomination) {
+			return true;
+		}
+
+		const hasUserPitch = existingNomination.pitches.some(
+			(pitchEntry) => pitchEntry.discordId === userDiscordId,
+		);
+		return !hasUserPitch;
+	});
+	const isSearching = shouldUseLocalSearch
+		? false
+		: search.state === "submitting" || search.state === "loading";
+	const hasSearched = shouldUseLocalSearch
+		? normalizedSearchTerm.length > 0
+		: search.data !== undefined;
+	const searchPlaceholder = shouldUseLocalSearch
+		? "Search existing nominations..."
+		: "Search for games...";
+	const searchButtonLabel = shouldUseLocalSearch
+		? "Filter"
+		: isSearching
+			? "Searching..."
+			: "Search";
+
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const editingPitchEntry = editingNomination?.pitches.find(
+		(pitchEntry) => pitchEntry.discordId === userDiscordId,
+	);
+	const hasExistingEditingPitch = Boolean(editingPitchEntry);
+	const isSaveDisabled = editPitch.trim().length === 0;
 
 	const handleSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		if (shouldUseLocalSearch) {
+			return;
+		}
 		if (!searchTerm.trim()) return;
 		search.submit({ intent: "search", query: searchTerm }, { method: "post" });
 	};
@@ -418,12 +569,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		}
 
 		if (existingNomination) {
-			setEditingNomination(existingNomination);
-			setEditPitch(
-				existingNomination.pitches.find((p) => p.discordId === userDiscordId)
-					?.pitch || "",
-			);
-			setIsEditOpen(true);
+			openNominationModal(existingNomination);
 			return;
 		}
 
@@ -437,12 +583,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		setEditingNomination(fullNomination);
-		setEditPitch(
-			fullNomination.pitches.find((p) => p.discordId === userDiscordId)
-				?.pitch || "",
-		);
-		setIsEditOpen(true);
+		openNominationModal(fullNomination);
 	};
 
 	const handleDelete = (nomination: Nomination) => {
@@ -455,15 +596,25 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		setIsDeleteOpen(true);
 	};
 
+	const handlePitchEdit = (nomination: Nomination) => {
+		openNominationModal(nomination);
+	};
+
+	const openDeletePitchDialog = (nomination: Nomination) => {
+		setPitchToDelete(nomination);
+		setIsDeletePitchOpen(true);
+	};
+
 	const handleEditSubmit = () => {
-		if (!editingNomination) {
+		if (!editingNomination || isSaveDisabled) {
 			return;
 		}
 
 		nominate.submit(
 			{
-				nominationId: editingNomination.id,
-				pitch: editPitch.trim() || "",
+				intent: "savePitch",
+				nominationId: editingNomination.id.toString(),
+				pitch: editPitch.trim(),
 			},
 			{ method: "PATCH" },
 		);
@@ -550,6 +701,33 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		setDeletingNomination(null);
 	};
 
+	const handleDeletePitchDialogOpenChange = (open: boolean) => {
+		setIsDeletePitchOpen(open);
+		if (!open) {
+			setPitchToDelete(null);
+		}
+	};
+
+	const handleDeletePitchConfirm = () => {
+		if (!pitchToDelete) {
+			return;
+		}
+
+		nominate.submit(
+			{
+				intent: "deletePitch",
+				nominationId: pitchToDelete.id.toString(),
+			},
+			{ method: "PATCH" },
+		);
+
+		setIsDeletePitchOpen(false);
+		setPitchToDelete(null);
+		setIsEditOpen(false);
+		setEditingNomination(null);
+		setEditPitch("");
+	};
+
 	const closePitchesModal = () => {
 		setIsViewingPitches(false);
 		setSelectedNomination(null);
@@ -562,7 +740,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 	const openNominationModal = (nomination: Nomination) => {
 		setEditingNomination(nomination);
-		setEditPitch("");
+		setEditPitch(
+			nomination.pitches.find((p) => p.discordId === userDiscordId)?.pitch ||
+				"",
+		);
 		setIsEditOpen(true);
 	};
 
@@ -695,6 +876,33 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				</div>
 			)}
 
+			{userPitchNominations.length > 0 && (
+				<div className="mb-8">
+					<h2 className="text-xl font-semibold mb-4">Your Pitches</h2>
+					<div className="space-y-4">
+						{userPitchNominations.map((nomination) => {
+							const currentPitch = nomination.pitches.find(
+								(pitchEntry) => pitchEntry.discordId === userDiscordId,
+							);
+							if (!currentPitch) {
+								return null;
+							}
+
+							return (
+								<PitchCard
+									key={nomination.id}
+									nomination={nomination}
+									pitch={currentPitch}
+									onEditPitch={handlePitchEdit}
+									onDeletePitch={openDeletePitchDialog}
+									onViewPitches={handleViewPitches}
+								/>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
 			{nominate.data?.error && (
 				<div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
 					{nominate.data.error}
@@ -707,121 +915,168 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				</div>
 			)}
 
-			{!hasReachedNominationLimit && (
-				<div>
-					<div className="mb-4">
-						<h3 className="text-lg font-medium text-zinc-200">
-							Nomination Status:
-						</h3>
-						<ul className="mt-2 space-y-1 text-sm text-zinc-400">
-							<li className="flex items-center">
-								<span
-									className={
-										shortNomination ? "text-emerald-400" : "text-zinc-400"
-									}
-								>
-									{shortNomination ? "✓" : "○"} Short Game (
-									{shortNomination ? "Nominated" : "Available"})
-								</span>
-							</li>
-							<li className="flex items-center">
-								<span
-									className={
-										longNomination ? "text-emerald-400" : "text-zinc-400"
-									}
-								>
-									{longNomination ? "✓" : "○"} Long Game (
-									{longNomination ? "Nominated" : "Available"})
-								</span>
-							</li>
-						</ul>
-					</div>
-
-					<search.Form method="post" onSubmit={handleSearch} className="mb-8">
-						<div className="flex gap-4">
-							<Input
-								type="search"
-								name="query"
-								value={searchTerm}
-								onChange={handleSearchTermChange}
-								placeholder="Search for games..."
-								className="flex-1 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500"
-							/>
-							<input type="hidden" name="intent" value="search" />
-							<button
-								type="submit"
-								disabled={isSearching || !searchTerm.trim()}
-								className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
-							>
-								{isSearching ? "Searching..." : "Search"}
-							</button>
-						</div>
-					</search.Form>
-					{isSearching ? (
-						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-							{Array.from({ length: 10 }).map((_, i) => (
-								<GameSkeleton key={`skeleton-${Date.now()}-${i}`} />
-							))}
-						</div>
-					) : games.length > 0 ? (
-						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-							{games.map((game: Nomination) => {
-								const existingNomination = allNominations.find(
-									(n) => n.gameId === game.gameId.toString(),
-								);
-								const isCurrentUserNomination =
-									existingNomination?.discordId === userDiscordId;
-								const isPreviousWinner = previousWinners.includes(
-									game.id.toString(),
-								);
-
-								let buttonText = "Nominate";
-								if (isPreviousWinner) {
-									buttonText = "Previous GOTM";
-								} else if (isCurrentUserNomination) {
-									buttonText = "Edit Pitch";
-								} else if (existingNomination) {
-									buttonText = "Add Pitch";
+			<div>
+				<div className="mb-4">
+					<h3 className="text-lg font-medium text-zinc-200">
+						Nomination Status:
+					</h3>
+					<ul className="mt-2 space-y-1 text-sm text-zinc-400">
+						<li className="flex items-center">
+							<span
+								className={
+									shortNomination ? "text-emerald-400" : "text-zinc-400"
 								}
+							>
+								{shortNomination ? "✓" : "○"} Short Game (
+								{shortNomination ? "Nominated" : "Available"})
+							</span>
+						</li>
+						<li className="flex items-center">
+							<span
+								className={
+									longNomination ? "text-emerald-400" : "text-zinc-400"
+								}
+							>
+								{longNomination ? "✓" : "○"} Long Game (
+								{longNomination ? "Nominated" : "Available"})
+							</span>
+						</li>
+					</ul>
+				</div>
 
-								return (
-									<SearchResultCard
-										key={game.id}
-										game={game}
-										existingNomination={existingNomination}
-										isCurrentUserNomination={isCurrentUserNomination}
-										isPreviousWinner={isPreviousWinner}
-										buttonText={buttonText}
-										buttonDisabled={isPreviousWinner}
-										onNominateGame={handleGameSelect}
-										onOpenNominationModal={openNominationModal}
-									/>
-								);
-							})}
-						</div>
-					) : hasSearched && searchTerm ? (
+				{hasReachedNominationLimit && (
+					<div className="mb-6 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+						You have nominated a short and a long game. You can still add
+						pitches to existing nominations using the search below.
+					</div>
+				)}
+
+				<search.Form method="post" onSubmit={handleSearch} className="mb-8">
+					<div className="flex gap-4">
+						<Input
+							type="search"
+							name="query"
+							value={searchTerm}
+							onChange={handleSearchTermChange}
+							placeholder={searchPlaceholder}
+							className="flex-1 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500"
+						/>
+						<input type="hidden" name="intent" value="search" />
+						<button
+							type="submit"
+							disabled={
+								!shouldUseLocalSearch && (isSearching || !searchTerm.trim())
+							}
+							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
+						>
+							{searchButtonLabel}
+						</button>
+					</div>
+				</search.Form>
+				{isSearching ? (
+					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+						{Array.from({ length: 10 }).map((_, i) => (
+							<GameSkeleton key={`skeleton-${Date.now()}-${i}`} />
+						))}
+					</div>
+					) : filteredDisplayedGames.length > 0 ? (
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+							{filteredDisplayedGames.map((game: Nomination) => {
+								const rawGameId = game.gameId ?? game.id;
+								const igdbId = rawGameId ? String(rawGameId) : "";
+								const existingNomination = shouldUseLocalSearch
+									? game
+									: allNominations.find((n) => n.gameId === igdbId);
+							const isCurrentUserNomination =
+								existingNomination?.discordId === userDiscordId;
+							const isPreviousWinner =
+								igdbId !== "" && previousWinners.includes(igdbId);
+							const canNominateMore = !hasReachedNominationLimit;
+							const blockNewNomination =
+								!existingNomination && !canNominateMore;
+
+							let buttonText = "Nominate";
+							if (isPreviousWinner) {
+								buttonText = "Previous GOTM";
+							} else if (isCurrentUserNomination) {
+								buttonText = "Edit Pitch";
+							} else if (existingNomination) {
+								buttonText = "Add Pitch";
+							} else if (blockNewNomination) {
+								buttonText = "Nomination limit reached";
+							}
+							const disableButton = isPreviousWinner || blockNewNomination;
+
+							return (
+								<SearchResultCard
+									key={game.id}
+									game={game}
+									existingNomination={existingNomination}
+									isCurrentUserNomination={isCurrentUserNomination}
+									isPreviousWinner={isPreviousWinner}
+									buttonText={buttonText}
+									buttonDisabled={disableButton}
+									canNominateMore={canNominateMore}
+									onNominateGame={handleGameSelect}
+									onOpenNominationModal={openNominationModal}
+								/>
+							);
+						})}
+					</div>
+				) : shouldUseLocalSearch ? (
+					allNominations.length === 0 ? (
 						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
 							<h3 className="text-lg font-semibold text-zinc-200">
-								No results found
+								No nominations yet
 							</h3>
 							<p className="mt-2 text-zinc-400">
-								No games found matching &#34;{searchTerm}&#34;. Try a different
-								search term.
+								Once nominations start rolling in, you can add pitches to them
+								here.
 							</p>
 						</div>
 					) : (
 						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
 							<h3 className="text-lg font-semibold text-zinc-200">
-								Search for games to nominate
+								{normalizedSearchTerm.length > 0 ? (
+									<>
+										No nominations match{" "}
+										<span className="text-emerald-200">
+											&quot;{searchTerm}&quot;
+										</span>
+									</>
+								) : (
+									"You're all caught up"
+								)}
 							</h3>
 							<p className="mt-2 text-zinc-400">
-								Type in the search box above to find games. You can nominate one
-								short game and one long game.
+								{normalizedSearchTerm.length > 0
+									? "Try a different name or browse the full list to find a game to pitch."
+									: "You've already added pitches to every nomination currently available."}
 							</p>
 						</div>
-					)}
-				</div>
-			)}
+					)
+				) : hasSearched ? (
+					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
+						<h3 className="text-lg font-semibold text-zinc-200">
+							No results found
+						</h3>
+						<p className="mt-2 text-zinc-400">
+							No games found matching &quot;{searchTerm}&quot;. Try a different
+							search term.
+						</p>
+					</div>
+				) : (
+					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
+						<h3 className="text-lg font-semibold text-zinc-200">
+							Search for games to nominate
+						</h3>
+						<p className="mt-2 text-zinc-400">
+							Type in the search box above to find games. You can nominate one
+							short game and one long game.
+						</p>
+					</div>
+				)}
+			</div>
 
 			{/* Game Length Selection Modal */}
 			<Dialog open={isOpen} onOpenChange={handleNominationDialogOpenChange}>
@@ -914,10 +1169,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
-							{editingNomination && editingNomination.pitches.length > 0
-								? "Edit"
-								: "Add"}{" "}
-							Pitch: {editingNomination?.gameName}
+							{hasExistingEditingPitch ? "Edit" : "Add"} Pitch:{" "}
+							{editingNomination?.gameName}
 						</DialogTitle>
 					</DialogHeader>
 
@@ -935,22 +1188,67 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						/>
 					</div>
 
+					<DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+						{hasExistingEditingPitch && editingNomination && (
+							<button
+								type="button"
+								onClick={() => openDeletePitchDialog(editingNomination)}
+								className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
+							>
+								Delete pitch
+							</button>
+						)}
+						<div className="flex w-full justify-end gap-2 sm:w-auto">
+							<Button
+								type="button"
+								onClick={closeEditModal}
+								variant="outline"
+								className="bg-zinc-800 border-white/10 text-zinc-200 hover:bg-zinc-700"
+							>
+								Cancel
+							</Button>
+							<Button
+								type="button"
+								onClick={handleEditSubmit}
+								className="bg-blue-600 hover:bg-blue-700 text-white"
+								disabled={isSaveDisabled}
+							>
+								{hasExistingEditingPitch ? "Save Changes" : "Add Pitch"}
+							</Button>
+						</div>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={isDeletePitchOpen}
+				onOpenChange={handleDeletePitchDialogOpenChange}
+			>
+				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
+					<DialogHeader>
+						<DialogTitle className="text-zinc-200">Delete Pitch</DialogTitle>
+					</DialogHeader>
+
+					<p className="text-sm text-zinc-400 mb-6">
+						Are you sure you want to remove your pitch for{" "}
+						{pitchToDelete?.gameName}? You can always add a new pitch later.
+					</p>
+
 					<DialogFooter>
-						<Button
+						<button
 							type="button"
-							onClick={closeEditModal}
-							variant="outline"
-							className="bg-zinc-800 border-white/10 text-zinc-200 hover:bg-zinc-700"
+							onClick={() => handleDeletePitchDialogOpenChange(false)}
+							className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-zinc-200 border border-white/10 bg-transparent hover:bg-white/5 hover:border-white/20"
 						>
 							Cancel
-						</Button>
-						<Button
+						</button>
+						<button
 							type="button"
-							onClick={handleEditSubmit}
-							className="bg-blue-600 hover:bg-blue-700 text-white"
+							onClick={handleDeletePitchConfirm}
+							className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
 						>
-							{editingNomination?.pitches ? "Save Changes" : "Add Pitch"}
-						</Button>
+							Delete pitch
+						</button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
