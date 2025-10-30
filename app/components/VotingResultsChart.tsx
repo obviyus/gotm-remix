@@ -157,59 +157,59 @@ export function VotingResultsChart({
 			tooltip: {
 				// Tooltip config remains the same
 				trigger: "item",
-					triggerOn: "mousemove",
-					formatter: (params: CallbackDataParams | CallbackDataParams[]) => {
-						const param = Array.isArray(params) ? params[0] : params;
-						const sankeyParams = param as SankeyEdgeParams;
+				triggerOn: "mousemove",
+				formatter: (params: CallbackDataParams | CallbackDataParams[]) => {
+					const param = Array.isArray(params) ? params[0] : params;
+					const sankeyParams = param as SankeyEdgeParams;
 
-						if (sankeyParams.dataType === "edge") {
-							const sourceBase = getBaseGameName(sankeyParams.data.source);
-							const targetBase = getBaseGameName(sankeyParams.data.target);
-							const value = Math.round(sankeyParams.value as number);
-							return `${targetBase} got ${value} votes from ${sourceBase}`;
-						}
-						if (sankeyParams.dataType === "node") {
-							const baseName = getBaseGameName(sankeyParams.name);
-							const nodeValue = Math.round(sankeyParams.value as number);
-							return `${sankeyParams.name} - ${baseName}<br/>Total Votes: ${nodeValue}`;
-						}
-						return "";
-					},
+					if (sankeyParams.dataType === "edge") {
+						const sourceBase = getBaseGameName(sankeyParams.data.source);
+						const targetBase = getBaseGameName(sankeyParams.data.target);
+						const value = Math.round(sankeyParams.value as number);
+						return `${targetBase} got ${value} votes from ${sourceBase}`;
+					}
+					if (sankeyParams.dataType === "node") {
+						const baseName = getBaseGameName(sankeyParams.name);
+						const nodeValue = Math.round(sankeyParams.value as number);
+						return `${sankeyParams.name} - ${baseName}<br/>Total Votes: ${nodeValue}`;
+					}
+					return "";
 				},
-				series: [
-					{
-						type: "sankey",
-						data: nodes,
-						links: links,
-						emphasis: { focus: "adjacency" },
-						nodeWidth: 30,
-						nodeGap: 30,
-						nodeAlign: "justify",
-						draggable: false,
-						left: 20,
-						right: 60,
-						top: 20,
-						bottom: 20,
+			},
+			series: [
+				{
+					type: "sankey",
+					data: nodes,
+					links: links,
+					emphasis: { focus: "adjacency" },
+					nodeWidth: 30,
+					nodeGap: 30,
+					nodeAlign: "justify",
+					draggable: false,
+					left: 20,
+					right: 60,
+					top: 20,
+					bottom: 20,
 
-						label: {
-							show: true,
-							color: "white",
-							fontSize: 12,
-							fontWeight: "bold",
-							formatter: (params: CallbackDataParams) => {
-								const nodeName = params.name;
-								const nodeValue = Math.round(params.value as number);
+					label: {
+						show: true,
+						color: "white",
+						fontSize: 12,
+						fontWeight: "bold",
+						formatter: (params: CallbackDataParams) => {
+							const nodeName = params.name;
+							const nodeValue = Math.round(params.value as number);
 
-								// Display full name ONLY for initial and final nodes
-								if (initialNodes.has(nodeName) || finalNodes.has(nodeName)) {
-									return nodeName;
-								}
-								return `${nodeValue}`;
-							},
+							// Display full name ONLY for initial and final nodes
+							if (initialNodes.has(nodeName) || finalNodes.has(nodeName)) {
+								return nodeName;
+							}
+							return `${nodeValue}`;
 						},
-						lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.7 },
 					},
-				],
+					lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.7 },
+				},
+			],
 		};
 
 		chartInstanceRef.current.setOption(options, true);
