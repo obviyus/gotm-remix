@@ -34,6 +34,7 @@ interface SankeyProcessedData {
 		name: string;
 		itemStyle: { color: string; borderWidth: number };
 		label: { position: "inside" | "left" | "right" | "top" | "bottom" };
+		depth: number;
 	}>;
 	links: Array<{ source: string; target: string; value: number }>;
 	initialNodes: Set<string>;
@@ -65,6 +66,15 @@ function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null
 	if (!results || results.length === 0) {
 		return null;
 	}
+
+	const getNodeDepth = (nodeName: string): number => {
+		const trimmed = nodeName.trimEnd();
+		const trailingSpaces = nodeName.length - trimmed.length;
+		if (trailingSpaces <= 1) {
+			return 0;
+		}
+		return trailingSpaces - 1;
+	};
 
 	const filteredResults = results.filter(({ weight }) => Number(weight) > 0.01);
 	if (filteredResults.length === 0) {
@@ -99,6 +109,7 @@ function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null
 		const color = gameColors.get(baseGame) || "#94a3b8";
 		const isInitialNode = initialNodes.has(nodeName);
 		const isFinalNode = finalNodes.has(nodeName);
+		const depth = getNodeDepth(nodeName);
 
 		let labelPosition: "inside" | "left" | "right" | "top" | "bottom" =
 			"inside";
@@ -112,6 +123,7 @@ function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null
 			name: nodeName,
 			itemStyle: { color, borderWidth: 0 },
 			label: { position: labelPosition },
+			depth,
 		};
 	});
 
@@ -198,11 +210,12 @@ export function VotingResultsChart({
 						fontWeight: "bold",
 						formatter: (params: CallbackDataParams) => {
 							const nodeName = params.name;
+							const trimmedNodeName = typeof nodeName === "string" ? nodeName.trimEnd() : nodeName;
 							const nodeValue = Math.round(params.value as number);
 
 							// Display full name ONLY for initial and final nodes
 							if (initialNodes.has(nodeName) || finalNodes.has(nodeName)) {
-								return nodeName;
+								return trimmedNodeName;
 							}
 							return `${nodeValue}`;
 						},
