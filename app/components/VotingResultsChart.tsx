@@ -208,17 +208,37 @@ export function VotingResultsChart({
 						color: "white",
 						fontSize: 12,
 						fontWeight: "bold",
+						lineHeight: 16,
+						overflow: "break",
+						distance: 8,
 						formatter: (params: CallbackDataParams) => {
-							const nodeName = params.name;
-							const trimmedNodeName = typeof nodeName === "string" ? nodeName.trimEnd() : nodeName;
-							const nodeValue = Math.round(params.value as number);
-
-							// Display full name ONLY for initial and final nodes
-							if (initialNodes.has(nodeName) || finalNodes.has(nodeName)) {
-								return trimmedNodeName;
+							const rawName = params.name;
+							if (typeof rawName !== "string") {
+								return "";
 							}
-							return `${nodeValue}`;
+							const trimmedNodeName = rawName.trimEnd();
+							const baseName = getBaseGameName(trimmedNodeName);
+							const nodeValue = Math.round(Number(params.value ?? 0));
+							const hasNameLabel =
+								initialNodes.has(rawName) || finalNodes.has(rawName);
+
+							if (hasNameLabel) {
+								return nodeValue > 0
+									? `${baseName}\n${nodeValue}`
+									: baseName;
+							}
+
+							return nodeValue > 0 ? `${nodeValue}` : "";
 						},
+					},
+					labelLayout: (layoutParams) => {
+						if (layoutParams.dataType === "node") {
+							return {
+								hideOverlap: true,
+								moveOverlap: "shiftX",
+							};
+						}
+						return {};
 					},
 					lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.7 },
 				},
@@ -277,7 +297,7 @@ export function VotingResultsChart({
 					) : null}
 				</h2>
 			</div>
-			<div className="relative h-[24rem] w-full sm:h-[28rem] overflow-x-auto">
+			<div className="relative h-96 w-full sm:h-112 overflow-x-auto">
 				<div className="min-w-[600px] h-full">
 					<div ref={chartRef} style={FULL_SIZE_STYLE} />
 					{!processedData && (
