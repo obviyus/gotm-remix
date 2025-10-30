@@ -435,8 +435,16 @@ export const calculateVotingResults = async (
 		}
 
 		const voteRankingsMap = await getRankingsForVotes(votes.map((v) => v.id));
-		const initialCounts = getCurrentVoteCount(nominations, voteRankingsMap);
-		const viable = nominations.filter((n) => initialCounts[n.id] > 0);
+		const nominationsWithRankings = new Set<number>();
+		for (const rankings of voteRankingsMap.values()) {
+			for (const ranking of rankings) {
+				nominationsWithRankings.add(ranking.nominationId);
+			}
+		}
+
+		const viable = nominations.filter((n) =>
+			nominationsWithRankings.has(n.id),
+		);
 
 		if (viable.length === 0) {
 			const emptyResults: Result[] = [];
