@@ -117,6 +117,46 @@ export async function calculateAndStoreWinner(
 	}
 }
 
+async function getLatestVoteActivityTimestamp(
+	monthId: number,
+	short: boolean,
+): Promise<number | null> {
+	const result = await db.execute({
+		sql: `SELECT
+                MAX(v.updated_at) AS vote_updated_at,
+                MAX(r.updated_at) AS ranking_updated_at
+             FROM votes v
+             LEFT JOIN rankings r ON r.vote_id = v.id
+             WHERE v.month_id = ?1
+               AND v.short = ?2;`,
+		args: [monthId, short ? 1 : 0],
+	});
+
+	if (!result.rows.length) {
+		return null;
+	}
+
+	const row = result.rows[0] as {
+		vote_updated_at?: number | string | null;
+		ranking_updated_at?: number | string | null;
+	};
+
+	const voteUpdatedAt =
+		row.vote_updated_at === null || row.vote_updated_at === undefined
+			? null
+			: Number(row.vote_updated_at);
+	const rankingUpdatedAt =
+		row.ranking_updated_at === null || row.ranking_updated_at === undefined
+			? null
+			: Number(row.ranking_updated_at);
+
+	if (voteUpdatedAt === null && rankingUpdatedAt === null) {
+		return null;
+	}
+
+	return Math.max(voteUpdatedAt ?? 0, rankingUpdatedAt ?? 0);
+}
+
 export async function getWinner(
 	monthId: number,
 	short: boolean,
@@ -153,6 +193,34 @@ export async function getWinner(
 		}
 
 		const winner = winners.rows[0];
+
+		// Check if votes have changed since the winner was last calculated
+		const winnerUpdatedAt =
+			winner.updated_at === null || winner.updated_at === undefined
+				? null
+				: Number(winner.updated_at);
+
+		try {
+			const latestVoteActivity = await getLatestVoteActivityTimestamp(
+				monthId,
+				short,
+			);
+			if (
+				latestVoteActivity !== null &&
+				(winnerUpdatedAt === null || latestVoteActivity > winnerUpdatedAt)
+			) {
+				const refreshedWinner = await calculateAndStoreWinner(monthId, short);
+				if (refreshedWinner) {
+					return refreshedWinner;
+				}
+			}
+		} catch (activityError) {
+			console.error(
+				`[Winner] Error checking vote activity for month ${monthId} (short: ${short}):`,
+				activityError,
+			);
+		}
+
 		return {
 			id: Number(winner.nomination_id),
 			gameId: String(winner.game_id),
