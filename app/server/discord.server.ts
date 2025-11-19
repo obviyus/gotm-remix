@@ -77,6 +77,10 @@ export async function sendDiscordWebhook(
 	};
 
 	try {
+		if (!GOTM_JURY_WEBHOOK_URL) {
+			throw new Error("GOTM_JURY_WEBHOOK_URL is not defined");
+		}
+
 		const response = await fetch(GOTM_JURY_WEBHOOK_URL, {
 			method: "POST",
 			headers: {
