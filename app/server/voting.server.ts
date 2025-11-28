@@ -129,16 +129,18 @@ export const calculateVotingResults = async (
 		}
 
 		const voteRankingsMap = await getRankingsForVotes(votes.map((v) => v.id));
-		const votesWithRankings = votes.map(v => ({
-            id: v.id,
-            rankings: voteRankingsMap.get(v.id) || []
-        })).filter(v => v.rankings.length > 0);
 
-        // Filter viable nominations (those that actually received at least one ranking)
+		// Single-pass: build votesWithRankings and collect nomination IDs simultaneously
 		const nominationsWithRankings = new Set<number>();
-		for (const rankings of voteRankingsMap.values()) {
-			for (const ranking of rankings) {
-				nominationsWithRankings.add(ranking.nominationId);
+		const votesWithRankings: Array<{ id: number; rankings: Ranking[] }> = [];
+
+		for (const v of votes) {
+			const rankings = voteRankingsMap.get(v.id);
+			if (rankings && rankings.length > 0) {
+				votesWithRankings.push({ id: v.id, rankings });
+				for (const r of rankings) {
+					nominationsWithRankings.add(r.nominationId);
+				}
 			}
 		}
 
@@ -175,10 +177,11 @@ export const getGameUrls = async (
 		args: [monthId],
 	});
 
-	return nominations.rows.reduce((acc: Record<string, string>, nom) => {
+	const urls: Record<string, string> = {};
+	for (const nom of nominations.rows) {
 		if (nom.game_url) {
-			acc[String(nom.game_name)] = String(nom.game_url);
+			urls[String(nom.game_name)] = String(nom.game_url);
 		}
-		return acc;
-	}, {});
+	}
+	return urls;
 };
