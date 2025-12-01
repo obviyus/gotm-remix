@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { calculateIRV, type VoteWithRankings } from "~/server/voting-logic";
+import { getWinnerNode, getWinnerName } from "~/utils/votingResults";
 import type { Nomination } from "~/types";
 
 // Mock Data
@@ -96,5 +97,49 @@ describe("Voting Logic (IRV)", () => {
 
         const winner = results[results.length - 1];
         expect(winner.target).toContain("Game B");
+    });
+});
+
+describe("getWinnerNode", () => {
+    test("should return the final round winner, not an early-eliminated game", () => {
+        // This is the bug scenario: multiple terminal nodes (eliminated games + actual winner)
+        // The winner should be from the FINAL round (most trailing spaces), not the first terminal node found
+        const results = [
+            { source: 'Hotline Miami 2: Wrong Number (6) ', target: 'Hotline Miami 2: Wrong Number (7)  ', weight: '6' },
+            { source: 'Lisa: The Painful (13) ', target: 'Lisa: The Painful (13)  ', weight: '13' },
+            { source: 'Shovel Knight (15) ', target: 'Shovel Knight (16)  ', weight: '15' },
+            { source: "The Beginner's Guide (8) ", target: "The Beginner's Guide (9)  ", weight: '8' },
+            { source: 'Tormentum: Dark Sorrow (5) ', target: 'Hotline Miami 2: Wrong Number (7)  ', weight: '1' },
+            { source: 'Tormentum: Dark Sorrow (5) ', target: "The Beginner's Guide (9)  ", weight: '1' },
+            { source: 'Tormentum: Dark Sorrow (5) ', target: 'Shovel Knight (16)  ', weight: '1' },
+            { source: "The Beginner's Guide (9)  ", target: "The Beginner's Guide (9)   ", weight: '9' },
+            { source: 'Lisa: The Painful (13)  ', target: 'Lisa: The Painful (13)   ', weight: '13' },
+            { source: 'Shovel Knight (16)  ', target: 'Shovel Knight (16)   ', weight: '16' },
+            { source: "The Beginner's Guide (9)   ", target: 'Lisa: The Painful (17)    ', weight: '4' },
+            { source: "The Beginner's Guide (9)   ", target: 'Shovel Knight (17)    ', weight: '1' },
+            { source: 'Lisa: The Painful (13)   ', target: 'Lisa: The Painful (17)    ', weight: '13' },
+            { source: 'Shovel Knight (16)   ', target: 'Shovel Knight (17)    ', weight: '16' },
+            { source: 'Lisa: The Painful (17)    ', target: 'Shovel Knight (24)     ', weight: '7' },
+            { source: 'Shovel Knight (17)    ', target: 'Shovel Knight (24)     ', weight: '17' },
+        ];
+
+        // The actual winner is "Shovel Knight" with 24 votes in the final round
+        // NOT "Hotline Miami 2" which was eliminated early
+        const winnerNode = getWinnerNode(results);
+        expect(winnerNode).toContain("Shovel Knight");
+        expect(winnerNode).toContain("(24)");
+
+        const winnerName = getWinnerName(results);
+        expect(winnerName).toBe("Shovel Knight");
+    });
+
+    test("should handle single terminal node correctly", () => {
+        const results = [
+            { source: 'Game A (5) ', target: 'Game A (8)  ', weight: '5' },
+            { source: 'Game B (3) ', target: 'Game A (8)  ', weight: '3' },
+        ];
+
+        const winnerNode = getWinnerNode(results);
+        expect(winnerNode).toContain("Game A");
     });
 });
