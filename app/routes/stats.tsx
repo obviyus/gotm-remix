@@ -982,10 +982,10 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 
 		// Single-pass extraction for better cache locality
 		const len = data.length;
-		const formattedLabels = new Array<string>(len);
-		const nominatorData = new Array<number>(len);
-		const voterData = new Array<number>(len);
-		const themeLabels = new Array<string>(len);
+		const formattedLabels = Array.from<string>({ length: len });
+		const nominatorData = Array.from<number>({ length: len });
+		const voterData = Array.from<number>({ length: len });
+		const themeLabels = Array.from<string>({ length: len });
 
 		for (let i = 0; i < len; i++) {
 			const item = data[i];
@@ -1096,9 +1096,9 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 
 		// Single-pass extraction
 		const len = data.length;
-		const labels = new Array<string>(len);
-		const notSelectedData = new Array<number>(len);
-		const selectedData = new Array<number>(len);
+		const labels = Array.from<string>({ length: len });
+		const notSelectedData = Array.from<number>({ length: len });
+		const selectedData = Array.from<number>({ length: len });
 
 		for (let i = 0; i < len; i++) {
 			const item = data[i];
@@ -1200,8 +1200,8 @@ function JurySelectionPercentageChart({
 
 		// Single-pass extraction
 		const len = data.length;
-		const labels = new Array<string>(len);
-		const percentageData = new Array<number>(len);
+		const labels = Array.from<string>({ length: len });
+		const percentageData = Array.from<number>({ length: len });
 
 		for (let i = 0; i < len; i++) {
 			const item = data[i];
@@ -1528,9 +1528,9 @@ function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
 
 		// Single-pass extraction
 		const len = data.length;
-		const gameNames = new Array<string>(len);
-		const finalistData = new Array<number>(len);
-		const nonFinalistData = new Array<number>(len);
+		const gameNames = Array.from<string>({ length: len });
+		const finalistData = Array.from<number>({ length: len });
+		const nonFinalistData = Array.from<number>({ length: len });
 
 		for (let i = 0; i < len; i++) {
 			const item = data[i];
@@ -1872,8 +1872,8 @@ function MonthlyNominationCountsChart({
 
 		// Single-pass extraction
 		const len = data.length;
-		const labels = new Array<string>(len);
-		const countData = new Array<number>(len);
+		const labels = Array.from<string>({ length: len });
+		const countData = Array.from<number>({ length: len });
 
 		for (let i = 0; i < len; i++) {
 			const item = data[i];
