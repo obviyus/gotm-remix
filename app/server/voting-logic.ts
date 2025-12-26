@@ -142,7 +142,7 @@ export function calculateIRV(
 		});
 
         const loser = activeNominations[0];
-        const loserCount = currentVoteCounts.get(loser.id) || 0;
+        const _loserCount = currentVoteCounts.get(loser.id) || 0;
         
         // 4. Eliminate loser
         eliminatedIds.add(loser.id);
