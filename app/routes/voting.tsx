@@ -234,7 +234,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	};
 
 	const deleteVote = async (short: boolean) => {
-		voteFetcher.submit(
+		void voteFetcher.submit(
 			{ monthId, userId, short },
 			{ method: "DELETE", action: "/api/votes" },
 		);
@@ -260,7 +260,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		voteFetcher.submit(
+		void voteFetcher.submit(
 			{ monthId, userId, short, order: validOrder },
 			{
 				method: "POST",

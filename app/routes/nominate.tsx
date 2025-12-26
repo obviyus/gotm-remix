@@ -557,7 +557,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 		if (!searchTerm.trim()) return;
-		search.submit({ intent: "search", query: searchTerm }, { method: "post" });
+		void search.submit({ intent: "search", query: searchTerm }, { method: "post" });
 	};
 
 	const handleGameSelect = (
@@ -610,7 +610,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		nominate.submit(
+		void nominate.submit(
 			{
 				intent: "savePitch",
 				nominationId: editingNomination.id.toString(),
@@ -629,7 +629,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		nominate.submit(
+		void nominate.submit(
 			{
 				nominationId: deletingNomination.id.toString(),
 			},
@@ -645,7 +645,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		nominate.submit(
+		void nominate.submit(
 			{
 				intent: "createNomination",
 				monthId: monthId?.toString() ?? "",
@@ -713,7 +713,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		nominate.submit(
+		void nominate.submit(
 			{
 				intent: "deletePitch",
 				nominationId: pitchToDelete.id.toString(),

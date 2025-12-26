@@ -319,14 +319,14 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		) {
 			setError(null);
 			setShowCreateForm(false);
-			navigate(".", { replace: true });
+			void navigate(".", { replace: true });
 		} else if (createMonthFetcher.data?.error) {
 			setError(createMonthFetcher.data.error);
 		}
 	}, [createMonthFetcher.state, createMonthFetcher.data, navigate]);
 
 	const handleToggleJurySelected = (nomination: Nomination) => {
-		jurySelectionFetcher.submit(
+		void jurySelectionFetcher.submit(
 			{
 				intent: "toggleJurySelected",
 				nominationId: nomination.id.toString(),
@@ -389,7 +389,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			}
 		}
 
-		navigator.clipboard.writeText(csvString).then(() => {
+		void navigator.clipboard.writeText(csvString).then(() => {
 			setCsvCopied(true);
 			setTimeout(() => setCsvCopied(false), 2000);
 		});
