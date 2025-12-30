@@ -32,6 +32,12 @@ export default [
 
 		// Stats routes
 		route("stats", "./routes/stats.tsx"),
+
+		// Patience routes - games that became "patient" (1 year old) on a given date
+		...prefix("patience", [
+			index("./routes/patience.tsx"),
+			route(":date", "./routes/patience.$date.tsx"),
+		]),
 	]),
 
 	// Auth routes
