@@ -185,3 +185,21 @@ export const getGameUrls = async (
 	}
 	return urls;
 };
+
+export const getTotalVotesForMonth = async (
+	monthId: number,
+): Promise<number> => {
+	const result = await db.execute({
+		sql: `SELECT COUNT(*) AS total_votes
+         FROM votes v
+         WHERE v.month_id = ?1
+           AND EXISTS (SELECT 1
+                       FROM rankings r
+                       WHERE r.vote_id = v.id)`,
+		args: [monthId],
+	});
+
+	return Number(
+		(result.rows[0] as { total_votes?: number | string }).total_votes ?? 0,
+	);
+};

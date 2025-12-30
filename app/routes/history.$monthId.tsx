@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
@@ -6,7 +7,12 @@ import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
-import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
+import {
+	calculateVotingResults,
+	getGameUrls,
+	getTotalVotesForMonth,
+	type Result,
+} from "~/server/voting.server";
 import { getWinner } from "~/server/winner.server";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/history.$monthId";
@@ -78,22 +84,34 @@ export async function loader({ params }: Route.LoaderArgs) {
 		throw new Response("Invalid month ID", { status: 400 });
 	}
 
-	// Get theme information along with other data
-	const [month, results, gameUrls, allNominations] = await Promise.all([
-		getMonth(monthId),
-		Promise.all([
-			calculateVotingResults(monthId, false),
-			calculateVotingResults(monthId, true),
-		]).then(([long, short]) => ({ long, short })),
+	const month = await getMonth(monthId);
+	const shouldShowResults =
+		month.status === "over" ||
+		month.status === "complete" ||
+		month.status === "playing";
+
+	const [gameUrls, allNominations] = await Promise.all([
 		getGameUrls(monthId),
 		getNominationsForMonth(monthId),
 	]);
 
-	// Only fetch winners if month status is not "voting"
+	let results: { long: Result[]; short: Result[] } = { long: [], short: [] };
+	let totalVotes: number | null = null;
+
+	if (shouldShowResults) {
+		[results.long, results.short] = await Promise.all([
+			calculateVotingResults(monthId, false),
+			calculateVotingResults(monthId, true),
+		]);
+	} else if (month.status === "voting") {
+		totalVotes = await getTotalVotesForMonth(monthId);
+	}
+
+	// Only fetch winners once results are meant to be visible
 	let shortWinner = null;
 	let longWinner = null;
 
-	if (month.status !== "voting") {
+	if (shouldShowResults) {
 		[shortWinner, longWinner] = await Promise.all([
 			getWinner(monthId, true),
 			getWinner(monthId, false),
@@ -118,6 +136,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		results,
 		gameUrls,
 		nominations,
+		totalVotes,
 		winners: {
 			short: shortWinner,
 			long: longWinner,
@@ -126,7 +145,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
-	const { month, results, gameUrls, nominations, winners } = loaderData;
+	const { month, results, gameUrls, nominations, winners, totalVotes } =
+		loaderData;
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
@@ -153,12 +173,13 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
 
-	// Only show winners if month status is not "voting"
-	const showWinner =
-		month.status !== "voting" &&
-		(month.status === "over" ||
-			month.status === "complete" ||
-			month.status === "playing");
+	const showResults =
+		month.status === "over" ||
+		month.status === "complete" ||
+		month.status === "playing";
+
+	const showWinner = showResults;
+	const totalVotesLabel = (totalVotes ?? 0).toLocaleString();
 
 	// Create arrays of winner game IDs for highlighting
 	const winnerGameIds = [];
@@ -173,20 +194,44 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 				{month.theme && <ThemeCard {...month} />}
 			</div>
 
-			<div className="space-y-6">
-				<VotingResultsChart
-					canvasId={longGamesCanvasId}
-					results={results.long}
-					gameUrls={gameUrls}
-					showWinner={showWinner}
-				/>
-				<VotingResultsChart
-					canvasId={shortGamesCanvasId}
-					results={results.short}
-					gameUrls={gameUrls}
-					showWinner={showWinner}
-				/>
-			</div>
+			{month.status === "voting" ? (
+				<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
+					<div>
+						<h2 className="text-xl font-bold text-amber-300 mb-2">
+							Voting in Progress
+						</h2>
+						<p className="text-zinc-200">
+							Votes are being collected right now. Results will be revealed
+							after the voting phase ends.
+						</p>
+					</div>
+					<p className="text-sm text-zinc-300">
+						{totalVotesLabel} {totalVotes === 1 ? "vote" : "votes"} cast so far.
+					</p>
+					<Link
+						to="/voting"
+						prefetch="viewport"
+						className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+					>
+						Go Vote Now →
+					</Link>
+				</div>
+			) : showResults ? (
+				<div className="space-y-6">
+					<VotingResultsChart
+						canvasId={longGamesCanvasId}
+						results={results.long}
+						gameUrls={gameUrls}
+						showWinner={showWinner}
+					/>
+					<VotingResultsChart
+						canvasId={shortGamesCanvasId}
+						results={results.short}
+						gameUrls={gameUrls}
+						showWinner={showWinner}
+					/>
+				</div>
+			) : null}
 
 			<div className="mt-12">
 				<TwoColumnLayout

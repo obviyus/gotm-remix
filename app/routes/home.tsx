@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
@@ -7,7 +8,11 @@ import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import type { Result } from "~/server/voting.server";
-import { calculateVotingResults, getGameUrls } from "~/server/voting.server";
+import {
+	calculateVotingResults,
+	getGameUrls,
+	getTotalVotesForMonth,
+} from "~/server/voting.server";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/home";
 
@@ -26,6 +31,7 @@ type LoaderData = {
 	gameUrls: Awaited<ReturnType<typeof getGameUrls>>;
 	nominations?: NominationsByType;
 	results?: ResultsByType;
+	totalVotes?: number;
 };
 
 const EMPTY_RESULTS: Result[] = [];
@@ -96,9 +102,21 @@ export async function loader(): Promise<LoaderData> {
 				gameUrls,
 			} satisfies LoaderData;
 		}
-		case "voting":
+		case "voting": {
+			const [gameUrls, totalVotes] = await Promise.all([
+				gameUrlsPromise,
+				getTotalVotesForMonth(month.id),
+			]);
+
+			return {
+				month,
+				gameUrls,
+				totalVotes,
+			} satisfies LoaderData;
+		}
 		case "over":
-		case "playing": {
+		case "playing":
+		case "complete": {
 			const resultsPromise = getResults(month.id);
 			const [gameUrls, results] = await Promise.all([
 				gameUrlsPromise,
@@ -155,6 +173,14 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 		month.status === "over" ||
 		month.status === "complete" ||
 		month.status === "playing";
+
+	const showResults =
+		month.status === "over" ||
+		month.status === "complete" ||
+		month.status === "playing";
+
+	const totalVotes = loaderData.totalVotes ?? 0;
+	const totalVotesLabel = totalVotes.toLocaleString();
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -229,7 +255,30 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 							</Column>
 						</TwoColumnLayout>
 					</>
-				) : (
+				) : month.status === "voting" ? (
+					<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
+						<div>
+							<h2 className="text-xl font-bold text-amber-300 mb-2">
+								Voting in Progress
+							</h2>
+							<p className="text-zinc-200">
+								Votes are being collected right now. Results will be revealed
+								after the voting phase ends.
+							</p>
+						</div>
+						<p className="text-sm text-zinc-300">
+							{totalVotesLabel} {totalVotes === 1 ? "vote" : "votes"} cast so
+							far.
+						</p>
+						<Link
+							to="/voting"
+							prefetch="viewport"
+							className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+						>
+							Go Vote Now →
+						</Link>
+					</div>
+				) : showResults ? (
 					<div className="space-y-6">
 						<VotingResultsChart
 							canvasId={longGamesCanvasId}
@@ -244,7 +293,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 							showWinner={showWinner}
 						/>
 					</div>
-				)}
+				) : null}
 			</div>
 
 			<PitchesModal
