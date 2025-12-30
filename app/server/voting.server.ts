@@ -12,7 +12,7 @@ export type Result = {
 // Cache TTL - 1 hour
 const CACHE_TTL = 1000 * 60 * 60;
 
-export const getNominationsAndVotes = async (
+const getNominationsAndVotes = async (
 	monthId: number,
 	short: boolean,
 ): Promise<{ nominations: Nomination[]; votes: Vote[] }> => {
@@ -73,7 +73,7 @@ export const getNominationsAndVotes = async (
 	};
 };
 
-export const getRankingsForVotes = async (
+const getRankingsForVotes = async (
 	voteIds: number[],
 ): Promise<Map<number, Ranking[]>> => {
 	if (voteIds.length === 0) return new Map();

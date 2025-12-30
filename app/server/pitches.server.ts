@@ -2,24 +2,6 @@ import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
 import type { Pitch } from "~/types";
 
-export async function getPitchesForNomination(
-	nominationId: number,
-): Promise<Pitch[]> {
-	const result = await db.execute({
-		sql: `SELECT id, discord_id, pitch
-         FROM pitches
-         WHERE nomination_id = ?`,
-		args: [nominationId],
-	});
-
-	return result.rows.map((row) => ({
-		id: Number(row.id),
-		nominationId: nominationId,
-		discordId: String(row.discord_id),
-		pitch: String(row.pitch),
-		generatedName: uniqueNameGenerator(String(row.discord_id)),
-	}));
-}
 
 export async function getPitchesForNominations(
 	nominationIds: number[],

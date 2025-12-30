@@ -51,27 +51,12 @@ export interface Month {
 	year: number;
 	theme: Theme;
 	status:
-		| "nominating"
-		| "jury"
-		| "voting"
-		| "complete"
-		| "playing"
-		| "over"
-		| "ready";
+	| "nominating"
+	| "jury"
+	| "voting"
+	| "complete"
+	| "playing"
+	| "over"
+	| "ready";
 	winners: Nomination[];
-}
-
-export interface NominationFormData {
-	game: {
-		id: number;
-		name: string;
-		cover?: string;
-		firstReleaseDate?: number;
-		gameYear?: string;
-		summary?: string;
-		url?: string;
-	};
-	monthId: string;
-	short: boolean;
-	pitch?: string | null;
 }

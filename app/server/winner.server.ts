@@ -10,7 +10,7 @@ const normalizeGameName = (value: string): string =>
 		.trim()
 		.toLowerCase();
 
-export async function calculateAndStoreWinner(
+async function calculateAndStoreWinner(
 	monthId: number,
 	short: boolean,
 ): Promise<Nomination | null> {

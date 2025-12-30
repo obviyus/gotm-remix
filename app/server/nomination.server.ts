@@ -47,19 +47,6 @@ export async function getNominationsForMonth(
 	});
 }
 
-export async function getNominationById(
-	nominationId: number,
-): Promise<Nomination> {
-	// For a single nomination, we can just use the batch function
-	const nominations = await getNominationsByIds([nominationId]);
-
-	if (nominations.length === 0) {
-		throw new Error(`Nomination with ID ${nominationId} not found`);
-	}
-
-	return nominations[0];
-}
-
 export async function getNominationsByIds(
 	nominationIds: number[],
 ): Promise<Nomination[]> {
