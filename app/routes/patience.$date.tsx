@@ -25,7 +25,6 @@ export function loader({ params }: Route.LoaderArgs) {
 
 	const releaseDate = getReleaseDateFromPatienceDate(patienceDate);
 	const patienceDateObj = new Date(`${patienceDate}T00:00:00Z`);
-	const releaseDateObj = new Date(`${releaseDate}T00:00:00Z`);
 
 	// Calculate prev/next patience dates
 	const prevPatienceDate = new Date(patienceDateObj);
@@ -44,12 +43,6 @@ export function loader({ params }: Route.LoaderArgs) {
 			year: "numeric",
 			month: "long",
 			day: "numeric",
-		}),
-		// Show the release date for context
-		displayReleaseDate: releaseDateObj.toLocaleDateString("en-US", {
-			month: "long",
-			day: "numeric",
-			year: "numeric",
 		}),
 		releases: getReleasesForDate(releaseDate),
 		prevDate: prevPatienceDate.toISOString().split("T")[0],
@@ -78,9 +71,6 @@ function GamesList({ releases }: { releases: Release[] }) {
 
 	return (
 		<>
-			<p className="text-sm text-zinc-400 mb-4">
-				{releases.length} game{releases.length !== 1 ? "s" : ""} became patient
-			</p>
 			{releases.map((release) => (
 				<GameCard key={release.gameId} game={release} />
 			))}
@@ -89,7 +79,7 @@ function GamesList({ releases }: { releases: Release[] }) {
 }
 
 export default function PatienceDate({ loaderData }: Route.ComponentProps) {
-	const { displayPatienceDate, displayReleaseDate, releases, prevDate, nextDate, isToday } = loaderData;
+	const { displayPatienceDate, releases, prevDate, nextDate, isToday } = loaderData;
 	const navigation = useNavigation();
 	const isNavigating = navigation.state === "loading";
 
@@ -111,9 +101,15 @@ export default function PatienceDate({ loaderData }: Route.ComponentProps) {
 						{isToday && <span className="text-blue-400">(Today)</span>}
 					</div>
 					<h1 className="text-xl font-bold text-white">{displayPatienceDate}</h1>
-					<p className="text-sm text-zinc-400 mt-1">
-						Games released on {displayReleaseDate}
-					</p>
+					<Suspense fallback={<p className="text-sm text-zinc-400 mt-1">Loading...</p>}>
+						<Await resolve={releases}>
+							{(resolvedReleases) => (
+								<p className="text-sm text-zinc-400 mt-1">
+									{resolvedReleases.length} game{resolvedReleases.length !== 1 ? "s" : ""} became patient
+								</p>
+							)}
+						</Await>
+					</Suspense>
 				</div>
 
 				<Link
