@@ -65,8 +65,8 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 		{ path: "/", label: "GOTM" },
 		{ path: "/history", label: "History" },
 		...(centerItem ? [centerItem] : []),
-		{ path: "/jury", label: "Jury Members" },
-		{ path: "/privacy", label: "Privacy" },
+		{ path: "/stats", label: "Stats" },
+		{ path: "/patience", label: "Patience" },
 		// Only show admin link for jury members
 		...(isAdmin ? [{ path: "/admin", label: "Admin" }] : []),
 	];
@@ -200,7 +200,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 				<Outlet />
 			</main>
 			<footer className="py-4 border-t border-zinc-800">
-				<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-1">
 					<p className="text-center text-sm text-zinc-400">
 						Created by{" "}
 						<a
@@ -220,6 +220,16 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 						>
 							GitHub
 						</a>
+						.
+					</p>
+					<p className="text-center text-sm text-zinc-400">
+						<Link to="/jury" className="text-blue-400 hover:text-blue-300 hover:underline">
+							Jury
+						</Link>
+						{" · "}
+						<Link to="/privacy" className="text-blue-400 hover:text-blue-300 hover:underline">
+							Privacy
+						</Link>
 					</p>
 				</div>
 			</footer>
