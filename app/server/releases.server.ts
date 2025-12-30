@@ -84,7 +84,8 @@ async function fetchReleasesFromIGDB(date: string): Promise<IGDBGameWithPopulari
 				fields name, summary, url, cover.url, first_release_date, total_rating_count, hypes, follows;
 				where first_release_date >= ${startTimestamp}
 					& first_release_date < ${endTimestamp}
-					& cover != null;
+					& cover != null
+					& themes != (42);
 				sort total_rating_count desc;
 				limit ${limit};
 				offset ${offset};
