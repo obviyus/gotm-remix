@@ -125,6 +125,9 @@ export default function GameCard({
 							</p>
 						)}
 					</div>
+					{game.summary && (
+						<p className="text-base text-zinc-400 line-clamp-3">{game.summary}</p>
+					)}
 				</div>
 
 				<GameCardActions
