@@ -42,9 +42,15 @@ interface NominationsListProps {
 }
 
 function NominationsList({ games, onViewPitches }: NominationsListProps) {
+	const sortedGames = [...games].sort((a, b) => {
+		if (a.jurySelected && !b.jurySelected) return -1;
+		if (!a.jurySelected && b.jurySelected) return 1;
+		return 0;
+	});
+
 	return (
 		<div className="space-y-4">
-			{games.map((game) => {
+			{sortedGames.map((game) => {
 				return (
 					<GameCard
 						key={game.id}
@@ -52,6 +58,7 @@ function NominationsList({ games, onViewPitches }: NominationsListProps) {
 						onViewPitches={() => onViewPitches(game)}
 						pitchCount={game.pitches.length}
 						showPitchesButton
+						isJurySelected={game.jurySelected}
 					/>
 				);
 			})}
@@ -103,15 +110,20 @@ export async function loader(): Promise<LoaderData> {
 			} satisfies LoaderData;
 		}
 		case "voting": {
-			const [gameUrls, totalVotes] = await Promise.all([
+			const nominationsPromise = getNominationsForMonth(month.id).then(
+				groupNominationsByType,
+			);
+			const [gameUrls, totalVotes, nominations] = await Promise.all([
 				gameUrlsPromise,
 				getTotalVotesForMonth(month.id),
+				nominationsPromise,
 			]);
 
 			return {
 				month,
 				gameUrls,
 				totalVotes,
+				nominations,
 			} satisfies LoaderData;
 		}
 		case "over":
@@ -255,29 +267,57 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 							</Column>
 						</TwoColumnLayout>
 					</>
-				) : month.status === "voting" ? (
-					<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
-						<div>
-							<h2 className="text-xl font-bold text-amber-300 mb-2">
-								Voting in Progress
-							</h2>
-							<p className="text-zinc-200">
-								Votes are being collected right now. Results will be revealed
-								after the voting phase ends.
+				) : month.status === "voting" && nominations ? (
+					<>
+						<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
+							<div>
+								<h2 className="text-xl font-bold text-amber-300 mb-2">
+									Voting in Progress
+								</h2>
+								<p className="text-zinc-200">
+									Votes are being collected right now. Results will be revealed
+									after the voting phase ends.
+								</p>
+							</div>
+							<p className="text-sm text-zinc-300">
+								{totalVotesLabel} {totalVotes === 1 ? "vote" : "votes"} cast so
+								far.
 							</p>
+							<Link
+								to="/voting"
+								prefetch="viewport"
+								className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+							>
+								Go Vote Now →
+							</Link>
 						</div>
-						<p className="text-sm text-zinc-300">
-							{totalVotesLabel} {totalVotes === 1 ? "vote" : "votes"} cast so
-							far.
-						</p>
-						<Link
-							to="/voting"
-							prefetch="viewport"
-							className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-						>
-							Go Vote Now →
-						</Link>
-					</div>
+						<div className="mt-8">
+							<TwoColumnLayout
+								title="Games Up for Vote"
+								description="These games have been selected by the jury for this month's vote."
+							>
+								<Column
+									title="Long Games"
+									statusBadge={columnStatus?.long}
+								>
+									<NominationsList
+										games={nominations.long}
+										onViewPitches={handleViewPitches}
+									/>
+								</Column>
+
+								<Column
+									title="Short Games"
+									statusBadge={columnStatus?.short}
+								>
+									<NominationsList
+										games={nominations.short}
+										onViewPitches={handleViewPitches}
+									/>
+								</Column>
+							</TwoColumnLayout>
+						</div>
+					</>
 				) : showResults ? (
 					<div className="space-y-6">
 						<VotingResultsChart
