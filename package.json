@@ -36,6 +36,7 @@
 		"tailwind-merge": "^3.4.0"
 	},
 	"devDependencies": {
+		"@babel/preset-typescript": "^7.28.5",
 		"@react-router/dev": "^7.11.0",
 		"@tailwindcss/postcss": "^4.1.18",
 		"@tailwindcss/typography": "^0.5.19",
@@ -44,6 +45,7 @@
 		"@types/react": "^19.2.7",
 		"@types/react-dom": "^19.2.3",
 		"@types/string-similarity": "^4.0.2",
+		"babel-plugin-react-compiler": "^1.0.0",
 		"eslint": "^9.39.2",
 		"eslint-plugin-oxlint": "^1.36.0",
 		"eslint-plugin-react-hooks": "^7.0.1",
