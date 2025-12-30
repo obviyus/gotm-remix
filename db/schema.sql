@@ -157,3 +157,19 @@ CREATE INDEX IF NOT EXISTS idx_rankings_nomination_id ON rankings(nomination_id)
 CREATE INDEX IF NOT EXISTS idx_winners_month_id ON winners(month_id);
 
 CREATE INDEX IF NOT EXISTS idx_winners_nomination_id ON winners(nomination_id);
+
+CREATE TABLE IF NOT EXISTS igdb_releases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  release_date TEXT NOT NULL,
+  game_id INTEGER NOT NULL,
+  game_name TEXT NOT NULL,
+  game_cover TEXT,
+  game_summary TEXT,
+  game_year TEXT,
+  game_url TEXT,
+  popularity_score INTEGER DEFAULT 0,
+  created_at INTEGER DEFAULT (unixepoch()),
+  UNIQUE (release_date, game_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_igdb_releases_date ON igdb_releases(release_date);
