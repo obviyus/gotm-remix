@@ -19,15 +19,15 @@ COPY --from=deps /app/node_modules /app/node_modules
 COPY . .
 
 RUN bun run build
+RUN bun build --target=bun --production --minify server.ts --outfile /app/server.js
 
 # Finally, build the production image with minimal footprint
-FROM base
+FROM base AS runtime
 
 WORKDIR /app
 
-COPY --from=deps /app/node_modules /app/node_modules
+COPY --from=build /app/server.js /app/server.js
 COPY --from=build /app/build /app/build
 COPY --from=build /app/public /app/public
-COPY . .
 
-CMD ["bun", "run", "start"]
+CMD ["bun", "server.js"]
