@@ -16,8 +16,8 @@ const { getSession, commitSession, destroySession } =
 			httpOnly: true,
 			path: "/",
 			sameSite: "lax",
-			secrets: [process.env.COOKIE_SECRET ?? "secret"],
-			secure: process.env.NODE_ENV === "production",
+			secrets: [Bun.env.COOKIE_SECRET ?? "secret"],
+			secure: Bun.env.NODE_ENV === "production",
 		},
 	});
 

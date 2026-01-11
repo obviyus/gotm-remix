@@ -31,8 +31,8 @@ async function getIGDBToken(): Promise<string> {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
-			client_id: process.env.TWITCH_CLIENT_ID,
-			client_secret: process.env.TWITCH_CLIENT_SECRET,
+			client_id: Bun.env.TWITCH_CLIENT_ID,
+			client_secret: Bun.env.TWITCH_CLIENT_SECRET,
 			grant_type: "client_credentials",
 		}),
 	});
@@ -56,7 +56,7 @@ type IGDBGameWithPopularity = IGDBGame & {
 
 async function fetchReleasesFromIGDB(date: string): Promise<IGDBGameWithPopularity[]> {
 	const token = await getIGDBToken();
-	const clientId = process.env.TWITCH_CLIENT_ID;
+	const clientId = Bun.env.TWITCH_CLIENT_ID;
 
 	if (!clientId) {
 		throw new Error("TWITCH_CLIENT_ID must be defined");

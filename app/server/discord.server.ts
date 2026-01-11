@@ -1,8 +1,4 @@
-import { config } from "dotenv";
-
-config();
-
-const GOTM_JURY_WEBHOOK_URL = process.env.GOTM_JURY_WEBHOOK_URL;
+const GOTM_JURY_WEBHOOK_URL = Bun.env.GOTM_JURY_WEBHOOK_URL;
 
 interface DiscordEmbed {
 	title?: string;

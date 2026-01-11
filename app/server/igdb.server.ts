@@ -21,8 +21,8 @@ async function getIGDBToken() {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				client_id: process.env.TWITCH_CLIENT_ID,
-				client_secret: process.env.TWITCH_CLIENT_SECRET,
+				client_id: Bun.env.TWITCH_CLIENT_ID,
+				client_secret: Bun.env.TWITCH_CLIENT_SECRET,
 				grant_type: "client_credentials",
 			}),
 		});
@@ -55,7 +55,7 @@ async function getIGDBToken() {
 }
 
 export async function searchGames(query: string): Promise<Nomination[]> {
-	if (!process.env.TWITCH_CLIENT_ID) {
+	if (!Bun.env.TWITCH_CLIENT_ID) {
 		throw new Error("TWITCH_CLIENT_ID must be defined");
 	}
 
@@ -64,7 +64,7 @@ export async function searchGames(query: string): Promise<Nomination[]> {
 	const response = await fetch("https://api.igdb.com/v4/games", {
 		method: "POST",
 		headers: {
-			"Client-ID": process.env.TWITCH_CLIENT_ID,
+			"Client-ID": Bun.env.TWITCH_CLIENT_ID,
 			Authorization: `Bearer ${token}`,
 			"Content-Type": "application/json",
 		},

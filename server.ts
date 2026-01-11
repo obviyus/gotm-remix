@@ -6,8 +6,8 @@ import { recalculateAllWinners } from "~/server/winner.server";
 import { sendDiscordWebhook } from "~/server/discord.server";
 
 const remix_build = build as unknown as ServerBuild;
-const handler = createRequestHandler(remix_build, process.env.NODE_ENV);
-const port = process.env.PORT || 3000;
+const handler = createRequestHandler(remix_build, Bun.env.NODE_ENV);
+const port = Bun.env.PORT || 3000;
 
 console.log(`🚀 Server starting on port ${port}`);
 

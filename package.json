@@ -25,7 +25,6 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"croner": "^9.1.0",
-		"dotenv": "^17.2.3",
 		"echarts": "^6.0.0",
 		"isbot": "^5.1.32",
 		"lucide-react": "^0.562.0",

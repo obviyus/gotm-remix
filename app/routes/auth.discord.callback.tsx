@@ -26,9 +26,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	if (
-		!process.env.DISCORD_CLIENT_ID ||
-		!process.env.DISCORD_CLIENT_SECRET ||
-		!process.env.DISCORD_REDIRECT_URI
+		!Bun.env.DISCORD_CLIENT_ID ||
+		!Bun.env.DISCORD_CLIENT_SECRET ||
+		!Bun.env.DISCORD_REDIRECT_URI
 	) {
 		throw new Error("Discord environment variables must be defined");
 	}
@@ -38,11 +38,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: new URLSearchParams({
-				client_id: process.env.DISCORD_CLIENT_ID,
-				client_secret: process.env.DISCORD_CLIENT_SECRET,
+				client_id: Bun.env.DISCORD_CLIENT_ID,
+				client_secret: Bun.env.DISCORD_CLIENT_SECRET,
 				grant_type: "authorization_code",
 				code,
-				redirect_uri: process.env.DISCORD_REDIRECT_URI,
+				redirect_uri: Bun.env.DISCORD_REDIRECT_URI,
 			}),
 		});
 
