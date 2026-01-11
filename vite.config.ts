@@ -6,6 +6,8 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { builtinModules } from "module";
 
 const ReactCompilerConfig = { /* ... */ };
+const babelFilter = (id: string) =>
+	!id.includes("node_modules") && /\.[jt]sx?$/.test(id);
 
 
 export default defineConfig((config) => ({
@@ -13,7 +15,7 @@ export default defineConfig((config) => ({
 		exclude: [...builtinModules],
 	},
 	plugins: [reactRouter(), tsconfigPaths(), babel({
-		filter: /\.[jt]sx?$/,
+		filter: babelFilter,
 		babelConfig: {
 			presets: ["@babel/preset-typescript"],
 			plugins: [
