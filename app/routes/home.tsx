@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
 import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
-import { VotingResultsChart } from "~/components/VotingResultsChart";
+import { VotingResultsChart, prefetchEcharts } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import type { Result } from "~/server/voting.server";
@@ -42,11 +42,13 @@ interface NominationsListProps {
 }
 
 function NominationsList({ games, onViewPitches }: NominationsListProps) {
-	const sortedGames = [...games].sort((a, b) => {
-		if (a.jurySelected && !b.jurySelected) return -1;
-		if (!a.jurySelected && b.jurySelected) return 1;
-		return 0;
-	});
+	const sortedGames = useMemo(() => {
+		return [...games].sort((a, b) => {
+			if (a.jurySelected && !b.jurySelected) return -1;
+			if (!a.jurySelected && b.jurySelected) return 1;
+			return 0;
+		});
+	}, [games]);
 
 	return (
 		<div className="space-y-4">
@@ -190,6 +192,12 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 		month.status === "over" ||
 		month.status === "complete" ||
 		month.status === "playing";
+
+	useEffect(() => {
+		if (showResults) {
+			prefetchEcharts();
+		}
+	}, [showResults]);
 
 	const totalVotes = loaderData.totalVotes ?? 0;
 	const totalVotesLabel = totalVotes.toLocaleString();

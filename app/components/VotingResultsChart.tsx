@@ -1,16 +1,10 @@
-import { SankeyChart, type SankeySeriesOption } from "echarts/charts";
-import {
-	TooltipComponent,
-	type TooltipComponentOption,
-} from "echarts/components";
+import type { SankeySeriesOption } from "echarts/charts";
+import type { TooltipComponentOption } from "echarts/components";
 import type { ComposeOption, ECharts } from "echarts/core";
-import * as echarts from "echarts/core";
-import { CanvasRenderer } from "echarts/renderers";
 import type { CallbackDataParams } from "echarts/types/dist/shared";
 import { useEffect, useRef, useState } from "react";
 import { getBaseGameName, getWinnerName } from "~/utils/votingResults";
 
-echarts.use([SankeyChart, TooltipComponent, CanvasRenderer]);
 type ECOption = ComposeOption<SankeySeriesOption | TooltipComponentOption>;
 
 type SankeyDataType = "edge" | "node";
@@ -61,6 +55,32 @@ const COLOR_PALETTE = [
 ];
 
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
+
+// AIDEV-NOTE: Lazy-load ECharts to keep base bundle smaller; cache promise to avoid re-import churn.
+let echartsPromise: Promise<typeof import("echarts/core")> | null = null;
+const loadEcharts = () => {
+	if (!echartsPromise) {
+		echartsPromise = Promise.all([
+			import("echarts/core"),
+			import("echarts/charts"),
+			import("echarts/components"),
+			import("echarts/renderers"),
+		]).then(([echartsCore, charts, components, renderers]) => {
+			echartsCore.use([
+				charts.SankeyChart,
+				components.TooltipComponent,
+				renderers.CanvasRenderer,
+			]);
+			return echartsCore;
+		});
+	}
+	return echartsPromise;
+};
+
+export const prefetchEcharts = () => {
+	if (typeof window === "undefined") return;
+	void loadEcharts();
+};
 
 function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null {
 	if (!results || results.length === 0) {
@@ -157,104 +177,116 @@ export function VotingResultsChart({
 		useState<SankeyProcessedData | null>(null);
 
 	useEffect(() => {
-		if (!chartRef.current) {
-			return;
-		}
+		let isActive = true;
 
-		if (!chartInstanceRef.current) {
-			chartInstanceRef.current = echarts.init(chartRef.current);
-		}
+		const setupChart = async () => {
+			if (!chartRef.current) return;
 
-		const sankeyData = buildSankeyData(results);
-		setProcessedData(sankeyData);
+			const echartsCore = await loadEcharts();
+			if (!isActive || !chartRef.current) return;
 
-		if (!sankeyData) {
-			chartInstanceRef.current?.clear();
-			return;
-		}
+			if (!chartInstanceRef.current) {
+				chartInstanceRef.current = echartsCore.init(chartRef.current);
+			}
 
-		const { nodes, links, initialNodes, finalNodes } = sankeyData;
-		const options: ECOption = {
-			tooltip: {
-				// Tooltip config remains the same
-				trigger: "item",
-				triggerOn: "mousemove",
-				formatter: (params: CallbackDataParams | CallbackDataParams[]) => {
-					const param = Array.isArray(params) ? params[0] : params;
-					const sankeyParams = param as SankeyEdgeParams;
+			const sankeyData = buildSankeyData(results);
+			if (!isActive) return;
+			setProcessedData(sankeyData);
 
-					if (sankeyParams.dataType === "edge") {
-						const sourceBase = getBaseGameName(sankeyParams.data.source);
-						const targetBase = getBaseGameName(sankeyParams.data.target);
-						const value = Math.round(sankeyParams.value as number);
-						return `${targetBase} got ${value} votes from ${sourceBase}`;
-					}
-					if (sankeyParams.dataType === "node") {
-						const baseName = getBaseGameName(sankeyParams.name);
-						const nodeValue = Math.round(sankeyParams.value as number);
-						return `${sankeyParams.name} - ${baseName}<br/>Total Votes: ${nodeValue}`;
-					}
-					return "";
-				},
-			},
-			series: [
-				{
-					type: "sankey",
-					data: nodes,
-					links: links,
-					emphasis: { focus: "adjacency" },
-					nodeWidth: 30,
-					nodeGap: 30,
-					nodeAlign: "justify",
-					draggable: false,
-					left: 20,
-					right: 60,
-					top: 20,
-					bottom: 20,
+			if (!sankeyData) {
+				chartInstanceRef.current?.clear();
+				return;
+			}
 
-					label: {
-						show: true,
-						color: "white",
-						fontSize: 12,
-						fontWeight: "bold",
-						lineHeight: 16,
-						overflow: "break",
-						distance: 8,
-						formatter: (params: CallbackDataParams) => {
-							const rawName = params.name;
-							if (typeof rawName !== "string") {
-								return "";
-							}
-							const trimmedNodeName = rawName.trimEnd();
-							const baseName = getBaseGameName(trimmedNodeName);
-							const nodeValue = Math.round(Number(params.value ?? 0));
-							const hasNameLabel =
-								initialNodes.has(rawName) || finalNodes.has(rawName);
+			const { nodes, links, initialNodes, finalNodes } = sankeyData;
+			const options: ECOption = {
+				tooltip: {
+					// Tooltip config remains the same
+					trigger: "item",
+					triggerOn: "mousemove",
+					formatter: (params: CallbackDataParams | CallbackDataParams[]) => {
+						const param = Array.isArray(params) ? params[0] : params;
+						const sankeyParams = param as SankeyEdgeParams;
 
-							if (hasNameLabel) {
-								return nodeValue > 0
-									? `${baseName}\n${nodeValue}`
-									: baseName;
-							}
-
-							return nodeValue > 0 ? `${nodeValue}` : "";
-						},
-					},
-					labelLayout: (layoutParams) => {
-						if (layoutParams.dataType === "node") {
-							return {
-								hideOverlap: true,
-								moveOverlap: "shiftX",
-							};
+						if (sankeyParams.dataType === "edge") {
+							const sourceBase = getBaseGameName(sankeyParams.data.source);
+							const targetBase = getBaseGameName(sankeyParams.data.target);
+							const value = Math.round(sankeyParams.value as number);
+							return `${targetBase} got ${value} votes from ${sourceBase}`;
 						}
-						return {};
+						if (sankeyParams.dataType === "node") {
+							const baseName = getBaseGameName(sankeyParams.name);
+							const nodeValue = Math.round(sankeyParams.value as number);
+							return `${sankeyParams.name} - ${baseName}<br/>Total Votes: ${nodeValue}`;
+						}
+						return "";
 					},
-					lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.7 },
 				},
-			],
+				series: [
+					{
+						type: "sankey",
+						data: nodes,
+						links: links,
+						emphasis: { focus: "adjacency" },
+						nodeWidth: 30,
+						nodeGap: 30,
+						nodeAlign: "justify",
+						draggable: false,
+						left: 20,
+						right: 60,
+						top: 20,
+						bottom: 20,
+
+						label: {
+							show: true,
+							color: "white",
+							fontSize: 12,
+							fontWeight: "bold",
+							lineHeight: 16,
+							overflow: "break",
+							distance: 8,
+							formatter: (params: CallbackDataParams) => {
+								const rawName = params.name;
+								if (typeof rawName !== "string") {
+									return "";
+								}
+								const trimmedNodeName = rawName.trimEnd();
+								const baseName = getBaseGameName(trimmedNodeName);
+								const nodeValue = Math.round(Number(params.value ?? 0));
+								const hasNameLabel =
+									initialNodes.has(rawName) || finalNodes.has(rawName);
+
+								if (hasNameLabel) {
+									return nodeValue > 0
+										? `${baseName}\n${nodeValue}`
+										: baseName;
+								}
+
+								return nodeValue > 0 ? `${nodeValue}` : "";
+							},
+						},
+						labelLayout: (layoutParams) => {
+							if (layoutParams.dataType === "node") {
+								return {
+									hideOverlap: true,
+									moveOverlap: "shiftX",
+								};
+							}
+							return {};
+						},
+						lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.7 },
+					},
+				],
+			};
+
+			chartInstanceRef.current.setOption(options, true);
 		};
 
-		chartInstanceRef.current.setOption(options, true);
+		void setupChart();
+
+		return () => {
+			isActive = false;
+		};
 	}, [results]);
 
 	useEffect(() => {
