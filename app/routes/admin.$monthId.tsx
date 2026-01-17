@@ -56,24 +56,29 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response("Unauthorized", { status: 403 });
 	}
 
-	// Get all months
-	const monthsResult = await db.execute({
-		sql: "SELECT id FROM months ORDER BY year DESC, month DESC",
-		args: [],
-	});
-
 	const selectedMonthId = Number(params.monthId);
 	if (!Number.isFinite(selectedMonthId)) {
 		throw new Response("Invalid month ID", { status: 400 });
 	}
-	const selectedMonth = await getMonth(selectedMonthId);
+	const monthsResultPromise = db.execute({
+		sql: "SELECT id FROM months ORDER BY year DESC, month DESC",
+		args: [],
+	});
+	const selectedMonthPromise = getMonth(selectedMonthId);
+	const nominationsPromise = getNominationsForMonth(selectedMonthId);
+	const themeCategoriesPromise = getThemeCategories();
+
+	const [monthsResult, selectedMonth, nominations, themeCategories] =
+		await Promise.all([
+			monthsResultPromise,
+			selectedMonthPromise,
+			nominationsPromise,
+			themeCategoriesPromise,
+		]);
 
 	if (!selectedMonth) {
 		throw new Response("Month not found", { status: 404 });
 	}
-
-	// Get nominations for selected month
-	const nominations = await getNominationsForMonth(selectedMonthId);
 
 	return {
 		months: await Promise.all(
@@ -83,7 +88,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		),
 		selectedMonth,
 		nominations,
-		themeCategories: await getThemeCategories(),
+		themeCategories,
 	};
 }
 

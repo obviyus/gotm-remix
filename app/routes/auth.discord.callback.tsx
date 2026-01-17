@@ -34,6 +34,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	try {
+		const sessionPromise = getSession(request.headers.get("Cookie"));
+		const currentMonthPromise = getCurrentMonth();
+
 		const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -61,12 +64,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		}
 
 		const user = await userResponse.json();
-		const session = await getSession(request.headers.get("Cookie"));
+		const session = await sessionPromise;
 		session.set("discordId", user.id);
 		session.set("accessToken", access_token);
 
 		// Get current month status and determine redirect path
-		const currentMonth = await getCurrentMonth();
+		const currentMonth = await currentMonthPromise;
 		const status = currentMonth.status as MonthStatus;
 
 		// Only redirect to specific pages for nominating and voting phases

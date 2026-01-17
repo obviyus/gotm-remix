@@ -27,8 +27,10 @@ export async function loader() {
 				}
 
 				try {
-					const longWinner = await getWinner(month.id, false);
-					const shortWinner = await getWinner(month.id, true);
+					const [longWinner, shortWinner] = await Promise.all([
+						getWinner(month.id, false),
+						getWinner(month.id, true),
+					]);
 
 					if (!longWinner && !shortWinner) {
 						return month;

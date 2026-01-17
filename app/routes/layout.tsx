@@ -7,11 +7,11 @@ import { getSession } from "~/sessions";
 import type { Route } from "./+types/layout";
 
 export async function loader({ request }: Route.LoaderArgs) {
-	// Get latest month's status using getCurrentMonth utility
-	const currentMonth = await getCurrentMonth();
+	const [currentMonth, session] = await Promise.all([
+		getCurrentMonth(),
+		getSession(request.headers.get("Cookie")),
+	]);
 
-	// Check if user is a jury member
-	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
 	let isAdmin = false;
