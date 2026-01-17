@@ -460,7 +460,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								))}
 							</select>
 							{statusUpdateFetcher.state !== "idle" && (
-								<span className="text-xs text-zinc-400">Updating...</span>
+								<span className="text-xs text-zinc-400">Updating…</span>
 							)}
 						</statusUpdateFetcher.Form>
 					</div>
@@ -577,6 +577,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										type="number"
 										id={yearInputId}
 										name="year"
+										autoComplete="off"
 										min="2000"
 										max="2100"
 										required
@@ -594,6 +595,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										type="number"
 										id={monthInputId}
 										name="month"
+										autoComplete="off"
 										min="1"
 										max="12"
 										required
@@ -652,6 +654,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										type="text"
 										id={themeNameInputId}
 										name="themeName"
+										autoComplete="off"
 										required
 										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
 										placeholder="Enter theme name"
@@ -667,6 +670,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									<Textarea
 										id={themeDescriptionTextareaId}
 										name="themeDescription"
+										autoComplete="off"
 										rows={2}
 										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
 										placeholder="Enter theme description (optional)"
@@ -681,7 +685,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									className="text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
 								>
 									{createMonthFetcher.state !== "idle"
-										? "Creating..."
+										? "Creating…"
 										: "Create Month"}
 								</Button>
 							</div>
@@ -748,10 +752,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 														<img
 															src={nomination.gameCover}
 															alt=""
+															width={40}
+															height={40}
+															loading="lazy"
 															className="h-10 w-10 object-cover rounded-sm mr-3 border border-white/10"
 														/>
 													)}
-													<div className="text-sm font-medium text-zinc-200 truncate max-w-[200px]">
+													<div className="text-sm font-medium text-zinc-200 truncate max-w-50">
 														{nomination.gameName}
 													</div>
 												</div>
@@ -811,7 +818,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 													>
 														{isProcessingNomination(nomination.id) && (
 															<span className="absolute inset-0 flex items-center justify-center">
-																<span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />
+																<span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse motion-reduce:animate-none" />
 															</span>
 														)}
 													</span>

@@ -32,13 +32,15 @@ export function GameCardImage({
 	status,
 }: GameCardImageProps) {
 	return (
-		<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
+		<div className="w-39 shrink-0 overflow-hidden rounded-l-xl relative">
 			{coverUrl ? (
 				<>
-					<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/40 to-transparent z-10" />
+					<div className="absolute inset-0 bg-linear-to-t from-zinc-900/40 to-transparent z-10" />
 					<img
 						src={coverUrl}
 						alt={gameName}
+						width={156}
+						height={208}
 						className={cn(
 							"h-full w-full object-cover transition-all duration-500 group-hover:scale-105",
 							status === "winner"

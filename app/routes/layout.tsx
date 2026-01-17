@@ -38,7 +38,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 		const isActive = location.pathname === path;
 		return `${
 			isMobile ? "block w-full" : "w-[6.5rem] md:w-[7rem] lg:w-[8rem] min-w-max"
-		} items-center justify-center gap-2 px-2 sm:px-3 md:px-4 py-2 text-[0.8rem] md:text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden whitespace-nowrap ${
+		} items-center justify-center gap-2 px-2 sm:px-3 md:px-4 py-2 text-[0.8rem] md:text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 ${
 			isActive
 				? "text-white shadow-sm shadow-blue-600/50 border border-blue-500/50 bg-blue-600/20 border-blue-500/60 shadow-blue-600/60 after:absolute after:inset-0 after:bg-blue-500/20"
 				: "text-white shadow-sm shadow-zinc-500/30 border border-zinc-400/30 hover:bg-zinc-500/20 hover:border-zinc-300/50 hover:shadow-zinc-400/60 after:absolute after:inset-0 after:bg-zinc-400/0 hover:after:bg-zinc-300/20 after:transition-colors"
@@ -85,6 +85,12 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="min-h-screen flex flex-col bg-zinc-900">
+			<a
+				href="#main-content"
+				className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+			>
+				Skip to content
+			</a>
 			<nav className="border-b border-zinc-800 bg-zinc-900">
 				<div className="w-full px-2 sm:px-4 lg:px-8">
 					<div className="flex h-16 justify-between md:justify-center">
@@ -92,7 +98,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 						<div className="flex items-center gap-4 md:hidden">
 							<button
 								type="button"
-								className="text-zinc-400 hover:text-zinc-100 focus:outline-none"
+								className="text-zinc-400 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 rounded-md"
 								onClick={toggleMobileMenu}
 							>
 								<span className="sr-only">Open main menu</span>
@@ -120,6 +126,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 												key={link.path}
 												to={link.path}
 												prefetch="viewport"
+												aria-current={
+													location.pathname === link.path ? "page" : undefined
+												}
 												className={getLinkClassName(link.path)}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
@@ -134,6 +143,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 										<Link
 											to={centerItem.path}
 											prefetch="viewport"
+											aria-current={
+												location.pathname === centerItem.path ? "page" : undefined
+											}
 											className={getLinkClassName(centerItem.path)}
 										>
 											<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-[0.8rem] md:text-sm">
@@ -156,6 +168,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 												key={link.path}
 												to={link.path}
 												prefetch="viewport"
+												aria-current={
+													location.pathname === link.path ? "page" : undefined
+												}
 												className={getLinkClassName(link.path)}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
@@ -187,6 +202,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 								key={link.path}
 								to={link.path}
 								prefetch="viewport"
+								aria-current={
+									location.pathname === link.path ? "page" : undefined
+								}
 								className={getLinkClassName(link.path, true)}
 								onClick={closeMobileMenu}
 							>
@@ -196,7 +214,10 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 					</div>
 				</div>
 			</nav>
-			<main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex-1">
+			<main
+				id="main-content"
+				className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex-1"
+			>
 				<Outlet />
 			</main>
 			<footer className="py-4 border-t border-zinc-800">

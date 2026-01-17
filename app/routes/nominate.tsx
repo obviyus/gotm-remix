@@ -101,9 +101,9 @@ function PitchCard({
 	const year = nomination.gameYear;
 
 	return (
-		<div className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl border border-zinc-800/50 transition-colors duration-200 flex">
+		<div className="group relative bg-zinc-900/50 backdrop-blur supports-backdrop-filter:bg-zinc-900/20 rounded-xl border border-zinc-800/50 transition-colors duration-200 flex">
 			{coverUrl ? (
-				<div className="w-[6.5rem] sm:w-[7.5rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
+				<div className="w-26 sm:w-30 shrink-0 overflow-hidden rounded-l-xl relative">
 					<img
 						src={coverUrl}
 						alt={nomination.gameName}
@@ -112,7 +112,7 @@ function PitchCard({
 					/>
 				</div>
 			) : (
-				<div className="w-[6.5rem] sm:w-[7.5rem] flex-shrink-0 overflow-hidden rounded-l-xl bg-zinc-800/60" />
+				<div className="w-26 sm:w-30 shrink-0 overflow-hidden rounded-l-xl bg-zinc-800/60" />
 			)}
 
 			<div className="flex-1 p-4 sm:p-5 flex flex-col gap-3 overflow-hidden min-w-0">
@@ -436,19 +436,19 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 const GameSkeleton = () => (
-	<div className="group relative bg-zinc-900/50 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 flex h-52 min-w-0">
-		<div className="w-[9.75rem] flex-shrink-0 overflow-hidden rounded-l-xl relative">
-			<div className="absolute inset-0 bg-zinc-800 animate-pulse" />
+	<div className="group relative bg-zinc-900/50 backdrop-blur supports-backdrop-filter:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 flex h-52 min-w-0">
+		<div className="w-39 shrink-0 overflow-hidden rounded-l-xl relative">
+			<div className="absolute inset-0 bg-zinc-800 animate-pulse motion-reduce:animate-none" />
 		</div>
 		<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
 			<div className="min-w-0 space-y-2">
 				<div className="flex justify-between items-start gap-2">
-					<div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse" />
-					<div className="h-4 bg-zinc-800 rounded w-12 shrink-0 animate-pulse" />
+					<div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse motion-reduce:animate-none" />
+					<div className="h-4 bg-zinc-800 rounded w-12 shrink-0 animate-pulse motion-reduce:animate-none" />
 				</div>
 			</div>
 			<div className="flex flex-col gap-2 mt-auto min-w-0">
-				<div className="h-9 bg-zinc-800 rounded w-full animate-pulse" />
+				<div className="h-9 bg-zinc-800 rounded w-full animate-pulse motion-reduce:animate-none" />
 			</div>
 		</div>
 	</div>
@@ -472,6 +472,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	// Generate unique IDs for form elements
 	const pitchId = useId();
 	const editPitchId = useId();
+	const searchInputId = useId();
 
 	// New state for modal
 	const [isOpen, setIsOpen] = useState(false);
@@ -534,12 +535,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		? normalizedSearchTerm.length > 0
 		: search.data !== undefined;
 	const searchPlaceholder = shouldUseLocalSearch
-		? "Search existing nominations..."
-		: "Search for games...";
+		? "Search existing nominations…"
+		: "Search for games…";
 	const searchButtonLabel = shouldUseLocalSearch
 		? "Filter"
 		: isSearching
-			? "Searching..."
+			? "Searching…"
 			: "Search";
 
 	const [selectedNomination, setSelectedNomination] =
@@ -953,9 +954,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 				<search.Form method="post" onSubmit={handleSearch} className="mb-8">
 					<div className="flex gap-4">
+						<Label htmlFor={searchInputId} className="sr-only">
+							Search games
+						</Label>
 						<Input
 							type="search"
+							id={searchInputId}
 							name="query"
+							autoComplete="off"
 							value={searchTerm}
 							onChange={handleSearchTermChange}
 							placeholder={searchPlaceholder}
@@ -1080,7 +1086,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Game Length Selection Modal */}
 			<Dialog open={isOpen} onOpenChange={handleNominationDialogOpenChange}>
-				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
+				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
 							Nominate {selectedGame?.gameName} ({selectedGame?.gameYear})
@@ -1090,7 +1096,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					{/* Game Cover and Summary */}
 					<div className="mb-6 flex gap-4">
 						{selectedGame?.gameCover && (
-							<div className="flex-shrink-0">
+							<div className="shrink-0">
 								<img
 									src={selectedGame.gameCover.replace(
 										"/t_thumb/",
@@ -1103,7 +1109,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						)}
 						{selectedGame?.summary && (
 							<div className="flex-1">
-								<p className="text-sm text-zinc-400 line-clamp-[12]">
+								<p className="text-sm text-zinc-400 line-clamp-12">
 									{selectedGame.summary}
 								</p>
 							</div>
@@ -1118,6 +1124,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						<Textarea
 							id={pitchId}
 							name="pitch"
+							autoComplete="off"
 							rows={3}
 							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
 							value={pitch}
@@ -1166,7 +1173,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Edit Modal */}
 			<Dialog open={isEditOpen} onOpenChange={handleEditDialogOpenChange}>
-				<DialogContent className="w-full sm:w-[32rem] bg-zinc-900 border-white/10">
+				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
 							{hasExistingEditingPitch ? "Edit" : "Add"} Pitch:{" "}
@@ -1180,11 +1187,13 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						</Label>
 						<Textarea
 							id={editPitchId}
+							name="pitch"
+							autoComplete="off"
 							rows={3}
 							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
 							value={editPitch}
 							onChange={handleEditPitchChange}
-							placeholder="Write your pitch here..."
+							placeholder="Write your pitch here…"
 						/>
 					</div>
 

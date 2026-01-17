@@ -32,7 +32,11 @@ export const meta: MetaFunction = () => {
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" className="bg-zinc-900 text-zinc-100">
+		<html
+			lang="en"
+			className="bg-zinc-900 text-zinc-100"
+			style={{ colorScheme: "dark" }}
+		>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />

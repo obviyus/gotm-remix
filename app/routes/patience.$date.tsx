@@ -54,7 +54,7 @@ export function loader({ params }: Route.LoaderArgs) {
 function PatienceLoading() {
 	return (
 		<div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-			<Loader2 className="h-8 w-8 animate-spin mb-4" />
+			<Loader2 className="h-8 w-8 animate-spin mb-4 motion-reduce:animate-none" />
 			<p>Fetching games from IGDB...</p>
 		</div>
 	);

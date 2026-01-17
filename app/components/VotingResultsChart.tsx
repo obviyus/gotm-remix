@@ -339,14 +339,14 @@ export function VotingResultsChart({
 				</h2>
 			</div>
 			<div className="relative h-96 w-full sm:h-112 overflow-x-auto">
-				<div className="min-w-[600px] h-full">
+				<div className="min-w-150 h-full">
 					<div ref={chartRef} style={FULL_SIZE_STYLE} />
 					{!processedData && (
 						<div className="absolute inset-0 flex h-full items-center justify-center pointer-events-none">
 							<p className="text-base font-medium text-zinc-400 sm:text-lg">
 								{results.length === 0
 									? "No voting results available yet"
-									: "Processing results..."}
+									: "Processing results…"}
 							</p>
 						</div>
 					)}

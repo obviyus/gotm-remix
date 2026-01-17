@@ -108,7 +108,7 @@ export default function History({ loaderData }: Route.ComponentProps) {
 									key={month.id}
 									to={`/history/${month.id}`}
 									prefetch="viewport"
-									className="group block transition-all duration-200 ease-in-out hover:scale-[1.02] focus:outline-none"
+									className="group block transition-all duration-200 ease-in-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 rounded-lg"
 								>
 									<Card className="h-full border-zinc-800 bg-zinc-900/60 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/15 hover:border-blue-500/60 backdrop-blur-sm">
 										<CardHeader className="pb-3">
@@ -148,6 +148,9 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																				"/t_cover_big/",
 																			)}
 																			alt={winner.gameName}
+																			width={48}
+																			height={64}
+																			loading="lazy"
 																			className="w-12 h-16 object-cover rounded shadow-sm group-hover:shadow-md transition-all duration-200 transform group-hover:scale-105"
 																		/>
 																	)}
@@ -173,6 +176,9 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																		<img
 																			src={winner.gameCover}
 																			alt={winner.gameName}
+																			width={48}
+																			height={64}
+																			loading="lazy"
 																			className="w-12 h-16 object-cover rounded shadow-sm group-hover:shadow-md transition-all duration-200 transform group-hover:scale-105"
 																		/>
 																	)}
