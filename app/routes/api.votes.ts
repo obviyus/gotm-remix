@@ -1,5 +1,8 @@
 import { db } from "~/server/database.server";
-import { invalidateVotingCache } from "~/server/voting.server";
+import {
+	invalidateVotingCache,
+	invalidateVotingTimelapseCache,
+} from "~/server/voting.server";
 import type { Route } from "./+types/api.votes";
 
 export async function action({ request }: Route.ActionArgs) {
@@ -50,6 +53,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 		// Invalidate cache after deleting vote
 		invalidateVotingCache(Number(monthId), short);
+		invalidateVotingTimelapseCache(Number(monthId), short);
 		return Response.json({ success: true });
 	}
 
@@ -97,6 +101,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 		// Invalidate cache after successful vote
 		invalidateVotingCache(Number(monthId), short);
+		invalidateVotingTimelapseCache(Number(monthId), short);
 
 		return Response.json({ success: true, voteId });
 	} catch (error) {

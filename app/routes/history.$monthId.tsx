@@ -11,6 +11,7 @@ import {
 	calculateVotingResults,
 	getGameUrls,
 	getTotalVotesForMonth,
+	getVotingTimelapse,
 	type Result,
 } from "~/server/voting.server";
 import { getWinner } from "~/server/winner.server";
@@ -96,13 +97,20 @@ export async function loader({ params }: Route.LoaderArgs) {
 	]);
 
 	let results: { long: Result[]; short: Result[] } = { long: [], short: [] };
+	let timelapse: {
+		long: Awaited<ReturnType<typeof getVotingTimelapse>> | null;
+		short: Awaited<ReturnType<typeof getVotingTimelapse>> | null;
+	} = { long: null, short: null };
 	let totalVotes: number | null = null;
 
 	if (shouldShowResults) {
-		[results.long, results.short] = await Promise.all([
-			calculateVotingResults(monthId, false),
-			calculateVotingResults(monthId, true),
-		]);
+		[results.long, results.short, timelapse.long, timelapse.short] =
+			await Promise.all([
+				calculateVotingResults(monthId, false),
+				calculateVotingResults(monthId, true),
+				getVotingTimelapse(monthId, false),
+				getVotingTimelapse(monthId, true),
+			]);
 	} else if (month.status === "voting") {
 		totalVotes = await getTotalVotesForMonth(monthId);
 	}
@@ -134,6 +142,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	return {
 		month,
 		results,
+		timelapse,
 		gameUrls,
 		nominations,
 		totalVotes,
@@ -147,6 +156,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const { month, results, gameUrls, nominations, winners, totalVotes } =
 		loaderData;
+	const timelapse = loaderData.timelapse;
 	const [selectedNomination, setSelectedNomination] =
 		useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
@@ -180,6 +190,20 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 
 	const showWinner = showResults;
 	const totalVotesLabel = (totalVotes ?? 0).toLocaleString();
+	const longTimelapse =
+		timelapse.long?.frames?.length && timelapse.long.totalVotes
+			? {
+					frames: timelapse.long.frames,
+					totalVotes: timelapse.long.totalVotes,
+				}
+			: undefined;
+	const shortTimelapse =
+		timelapse.short?.frames?.length && timelapse.short.totalVotes
+			? {
+					frames: timelapse.short.frames,
+					totalVotes: timelapse.short.totalVotes,
+				}
+			: undefined;
 
 	// Create arrays of winner game IDs for highlighting
 	const winnerGameIds = [];
@@ -223,12 +247,14 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 						results={results.long}
 						gameUrls={gameUrls}
 						showWinner={showWinner}
+						timelapse={longTimelapse}
 					/>
 					<VotingResultsChart
 						canvasId={shortGamesCanvasId}
 						results={results.short}
 						gameUrls={gameUrls}
 						showWinner={showWinner}
+						timelapse={shortTimelapse}
 					/>
 				</div>
 			) : null}

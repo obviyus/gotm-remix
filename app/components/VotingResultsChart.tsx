@@ -2,7 +2,9 @@ import type { SankeySeriesOption } from "echarts/charts";
 import type { TooltipComponentOption } from "echarts/components";
 import type { ComposeOption, ECharts } from "echarts/core";
 import type { CallbackDataParams } from "echarts/types/dist/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "~/components/ui/button";
+import type { VotingTimelapseFrame } from "~/server/voting.server";
 import { getBaseGameName, getWinnerName } from "~/utils/votingResults";
 
 type ECOption = ComposeOption<SankeySeriesOption | TooltipComponentOption>;
@@ -17,13 +19,13 @@ interface SankeyEdgeParams extends Omit<CallbackDataParams, "data"> {
 	};
 }
 
-interface SankeyDataPoint {
+export interface SankeyDataPoint {
 	source: string;
 	target: string;
 	weight: string | number;
 }
 
-interface SankeyProcessedData {
+export interface SankeyProcessedData {
 	nodes: Array<{
 		name: string;
 		itemStyle: { color: string; borderWidth: number };
@@ -40,6 +42,10 @@ interface VotingResultsChartProps {
 	results: SankeyDataPoint[];
 	gameUrls?: Record<string, string>;
 	showWinner?: boolean;
+	timelapse?: {
+		frames: VotingTimelapseFrame[];
+		totalVotes: number;
+	};
 }
 
 const COLOR_PALETTE = [
@@ -55,10 +61,11 @@ const COLOR_PALETTE = [
 ];
 
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
+const FRAME_DURATION_MS = 700;
 
 // AIDEV-NOTE: Lazy-load ECharts to keep base bundle smaller; cache promise to avoid re-import churn.
 let echartsPromise: Promise<typeof import("echarts/core")> | null = null;
-const loadEcharts = () => {
+export const loadEcharts = () => {
 	if (!echartsPromise) {
 		echartsPromise = Promise.all([
 			import("echarts/core"),
@@ -82,7 +89,10 @@ export const prefetchEcharts = () => {
 	void loadEcharts();
 };
 
-function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null {
+export function buildSankeyData(
+	results: SankeyDataPoint[],
+	gameColorsOverride?: Map<string, string>,
+): SankeyProcessedData | null {
 	if (!results || results.length === 0) {
 		return null;
 	}
@@ -117,10 +127,12 @@ function buildSankeyData(results: SankeyDataPoint[]): SankeyProcessedData | null
 	}
 
 	// Assign colors without intermediate array allocation
-	const gameColors = new Map<string, string>();
-	let colorIndex = 0;
-	for (const game of uniqueBaseGames) {
-		gameColors.set(game, COLOR_PALETTE[colorIndex++ % COLOR_PALETTE.length]);
+	const gameColors = gameColorsOverride ?? new Map<string, string>();
+	if (!gameColorsOverride) {
+		let colorIndex = 0;
+		for (const game of uniqueBaseGames) {
+			gameColors.set(game, COLOR_PALETTE[colorIndex++ % COLOR_PALETTE.length]);
+		}
 	}
 
 	// Compute initial/final nodes without spread operator allocation
@@ -170,11 +182,40 @@ export function VotingResultsChart({
 	results,
 	gameUrls = {},
 	showWinner = false,
+	timelapse,
 }: VotingResultsChartProps) {
 	const chartRef = useRef<HTMLDivElement | null>(null);
 	const chartInstanceRef = useRef<ECharts | null>(null);
 	const [processedData, setProcessedData] =
 		useState<SankeyProcessedData | null>(null);
+	const [isPlaying, setIsPlaying] = useState(false);
+	const [playIndex, setPlayIndex] = useState(0);
+
+	const timelapseFrames = timelapse?.frames ?? [];
+	const hasTimelapse = timelapseFrames.length > 1;
+	const activeFrame = isPlaying ? timelapseFrames[playIndex] : null;
+	const activeResults = activeFrame?.results ?? results;
+	const stableGameColors = useMemo(() => {
+		const baseGames = new Set<string>();
+		const collectBaseGames = (items: SankeyDataPoint[]) => {
+			for (const item of items) {
+				baseGames.add(getBaseGameName(item.source));
+				baseGames.add(getBaseGameName(item.target));
+			}
+		};
+		collectBaseGames(results);
+		for (const frame of timelapseFrames) {
+			collectBaseGames(frame.results);
+		}
+		const orderedGames = Array.from(baseGames).sort((a, b) =>
+			a.localeCompare(b),
+		);
+		const colorMap = new Map<string, string>();
+		orderedGames.forEach((game, index) => {
+			colorMap.set(game, COLOR_PALETTE[index % COLOR_PALETTE.length]);
+		});
+		return colorMap;
+	}, [results, timelapseFrames]);
 
 	useEffect(() => {
 		let isActive = true;
@@ -189,7 +230,7 @@ export function VotingResultsChart({
 				chartInstanceRef.current = echartsCore.init(chartRef.current);
 			}
 
-			const sankeyData = buildSankeyData(results);
+			const sankeyData = buildSankeyData(activeResults, stableGameColors);
 			if (!isActive) return;
 			setProcessedData(sankeyData);
 
@@ -287,7 +328,29 @@ export function VotingResultsChart({
 		return () => {
 			isActive = false;
 		};
-	}, [results]);
+	}, [activeResults]);
+
+	useEffect(() => {
+		if (!isPlaying) return;
+		if (timelapseFrames.length <= 1) return;
+		if (playIndex >= timelapseFrames.length - 1) {
+			setIsPlaying(false);
+			return;
+		}
+		const timer = window.setTimeout(() => {
+			setPlayIndex((prev) => Math.min(prev + 1, timelapseFrames.length - 1));
+		}, FRAME_DURATION_MS);
+
+		return () => {
+			window.clearTimeout(timer);
+		};
+	}, [isPlaying, playIndex, timelapseFrames.length]);
+
+	useEffect(() => {
+		if (!isPlaying) {
+			setPlayIndex(0);
+		}
+	}, [isPlaying, results]);
 
 	useEffect(() => {
 		const chartInstance = chartInstanceRef.current;
@@ -313,30 +376,60 @@ export function VotingResultsChart({
 	const chartTitle = canvasId.startsWith("long") ? "Long" : "Short";
 	const winner = getWinnerName(results);
 	const winnerUrl = winner ? gameUrls[winner] : null;
+	const timelapseProgress =
+		activeFrame && timelapse
+			? `${activeFrame.voteCount.toLocaleString()} / ${timelapse.totalVotes.toLocaleString()} votes`
+			: null;
+
+	const handlePlay = () => {
+		if (!hasTimelapse) return;
+		setPlayIndex(0);
+		setIsPlaying(true);
+	};
+
+	const handleStop = () => {
+		setIsPlaying(false);
+	};
 
 	return (
 		<div className="rounded-xl bg-zinc-800 p-4 shadow-lg transition-shadow hover:shadow-xl sm:p-6 ring-1 ring-zinc-700">
-			<div className="flex items-center justify-between mb-4 sm:mb-6">
-				<h2 className="text-xl font-bold tracking-tight text-zinc-100 sm:text-2xl">
-					{chartTitle}
-					{showWinner && winner ? (
-						<>
-							{" 🏆 "}
-							{winnerUrl ? (
-								<a
-									href={winnerUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-blue-400 hover:text-purple-300 transition-colors"
-								>
-									{winner}
-								</a>
-							) : (
-								winner
-							)}
-						</>
+			<div className="flex flex-col gap-3 mb-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h2 className="text-xl font-bold tracking-tight text-zinc-100 sm:text-2xl">
+						{chartTitle}
+						{showWinner && winner ? (
+							<>
+								{" 🏆 "}
+								{winnerUrl ? (
+									<a
+										href={winnerUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-blue-400 hover:text-purple-300 transition-colors"
+									>
+										{winner}
+									</a>
+								) : (
+									winner
+								)}
+							</>
+						) : null}
+					</h2>
+					{timelapseProgress ? (
+						<p className="text-xs text-zinc-400 mt-1">
+							Timelapse {timelapseProgress}
+						</p>
 					) : null}
-				</h2>
+				</div>
+				{hasTimelapse ? (
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={isPlaying ? handleStop : handlePlay}
+					>
+						{isPlaying ? "Stop playback" : "Play timelapse"}
+					</Button>
+				) : null}
 			</div>
 			<div className="relative h-96 w-full sm:h-112 overflow-x-auto">
 				<div className="min-w-150 h-full">

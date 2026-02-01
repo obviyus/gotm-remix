@@ -9,8 +9,22 @@ export type Result = {
 	weight: string;
 };
 
+export type VotingTimelapseFrame = {
+	timestamp: number;
+	results: Result[];
+	voteCount: number;
+};
+
+export type VotingTimelapse = {
+	frames: VotingTimelapseFrame[];
+	startTime: number;
+	endTime: number;
+	totalVotes: number;
+};
+
 // Cache TTL - 1 hour
 const CACHE_TTL = 1000 * 60 * 60;
+const TIMELAPSE_MAX_FRAMES = 60;
 
 const getNominationsAndVotes = async (
 	monthId: number,
@@ -105,6 +119,82 @@ const getRankingsForVotes = async (
 	return rankingsMap;
 };
 
+const getNominationsForMonth = async (
+	monthId: number,
+	short: boolean,
+): Promise<Nomination[]> => {
+	const nominationsResult = await db.execute({
+		sql: `SELECT id,
+                    game_id,
+                    discord_id,
+                    short,
+                    game_name,
+                    game_year,
+                    game_cover,
+                    game_url,
+                    jury_selected
+             FROM nominations
+             WHERE month_id = ?1
+               AND jury_selected = 1
+               AND short = ?2
+             ORDER BY game_name;`,
+		args: [monthId, short ? 1 : 0],
+	});
+
+	return nominationsResult.rows.map(
+		(row): Nomination => ({
+			id: Number(row.id),
+			gameId: String(row.game_id),
+			short: Boolean(row.short),
+			jurySelected: Boolean(row.jury_selected),
+			monthId: monthId,
+			gameName: String(row.game_name),
+			gameYear: String(row.game_year),
+			gameCover: String(row.game_cover),
+			gameUrl: String(row.game_url),
+			discordId: String(row.discord_id),
+			pitches: [],
+		}),
+	);
+};
+
+const getVotesWithRankingsAndTimes = async (
+	monthId: number,
+	short: boolean,
+): Promise<Array<{ id: number; voteTime: number; rankings: Ranking[] }>> => {
+	const voteTimesResult = await db.execute({
+		sql: `SELECT v.id AS vote_id,
+                    MAX(r.created_at) AS vote_time
+             FROM votes v
+             JOIN rankings r ON r.vote_id = v.id
+             WHERE v.month_id = ?1
+               AND v.short = ?2
+             GROUP BY v.id`,
+		args: [monthId, short ? 1 : 0],
+	});
+
+	const voteIds = voteTimesResult.rows.map((row) => Number(row.vote_id));
+	if (voteIds.length === 0) {
+		return [];
+	}
+
+	const rankingsMap = await getRankingsForVotes(voteIds);
+
+	// AIDEV-NOTE: Vote time is derived from the latest inserted rankings; vote edits
+	// overwrite prior rows, so earlier intermediate states are not replayable here.
+	return voteTimesResult.rows
+		.map((row) => {
+			const voteId = Number(row.vote_id);
+			const voteTime = Number(row.vote_time);
+			return {
+				id: voteId,
+				voteTime,
+				rankings: rankingsMap.get(voteId) ?? [],
+			};
+		})
+		.filter((vote) => vote.rankings.length > 0 && Number.isFinite(vote.voteTime));
+};
+
 export const calculateVotingResults = async (
 	monthId: number,
 	short: boolean,
@@ -167,6 +257,108 @@ export const calculateVotingResults = async (
 export const invalidateVotingCache = (monthId: number, short: boolean) => {
 	const cacheKey = `voting-results-${monthId}-${short}`;
 	globalCache.delete(cacheKey);
+};
+
+export const invalidateVotingTimelapseCache = (
+	monthId: number,
+	short: boolean,
+) => {
+	const cacheKey = `voting-timelapse-${monthId}-${short}`;
+	globalCache.delete(cacheKey);
+};
+
+const getTimelapseFrameTimes = (times: number[]): number[] => {
+	if (times.length <= TIMELAPSE_MAX_FRAMES) {
+		return times;
+	}
+
+	const stride = (times.length - 1) / (TIMELAPSE_MAX_FRAMES - 1);
+	const frameSet = new Set<number>();
+	for (let i = 0; i < TIMELAPSE_MAX_FRAMES; i++) {
+		const index = Math.round(i * stride);
+		frameSet.add(times[index] ?? times[times.length - 1]);
+	}
+
+	return Array.from(frameSet).sort((a, b) => a - b);
+};
+
+export const getVotingTimelapse = async (
+	monthId: number,
+	short: boolean,
+): Promise<VotingTimelapse | null> => {
+	try {
+		const cacheKey = `voting-timelapse-${monthId}-${short}`;
+		const cached = globalCache.get<VotingTimelapse>(cacheKey);
+		if (cached) {
+			return cached;
+		}
+
+		const [nominations, votesWithRankings] = await Promise.all([
+			getNominationsForMonth(monthId, short),
+			getVotesWithRankingsAndTimes(monthId, short),
+		]);
+
+		if (nominations.length === 0 || votesWithRankings.length === 0) {
+			const empty: VotingTimelapse = {
+				frames: [],
+				startTime: 0,
+				endTime: 0,
+				totalVotes: 0,
+			};
+			globalCache.set(cacheKey, empty, CACHE_TTL);
+			return empty;
+		}
+
+		const sortedVotes = [...votesWithRankings].sort(
+			(a, b) => a.voteTime - b.voteTime,
+		);
+		const times = Array.from(
+			new Set(sortedVotes.map((vote) => vote.voteTime)),
+		).sort((a, b) => a - b);
+
+		const frameTimes = getTimelapseFrameTimes(times);
+		const frames: VotingTimelapseFrame[] = frameTimes.map((timestamp) => {
+			const activeVotes = sortedVotes.filter(
+				(vote) => vote.voteTime <= timestamp,
+			);
+			const activeVoteRankings = activeVotes.map((vote) => ({
+				id: vote.id,
+				rankings: vote.rankings,
+			}));
+			const nominationIds = new Set<number>();
+			for (const vote of activeVoteRankings) {
+				for (const ranking of vote.rankings) {
+					nominationIds.add(ranking.nominationId);
+				}
+			}
+			const viable = nominations.filter((nomination) =>
+				nominationIds.has(nomination.id),
+			);
+			const results =
+				viable.length > 0 && activeVoteRankings.length > 0
+					? calculateIRV(viable, activeVoteRankings)
+					: [];
+
+			return {
+				timestamp,
+				results,
+				voteCount: activeVoteRankings.length,
+			};
+		});
+
+		const timelapse: VotingTimelapse = {
+			frames,
+			startTime: frameTimes[0] ?? 0,
+			endTime: frameTimes[frameTimes.length - 1] ?? 0,
+			totalVotes: votesWithRankings.length,
+		};
+
+		globalCache.set(cacheKey, timelapse, CACHE_TTL);
+		return timelapse;
+	} catch (error) {
+		console.error("[Voting] Error building timelapse:", error);
+		return null;
+	}
 };
 
 export const getGameUrls = async (
