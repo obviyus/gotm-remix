@@ -1,7 +1,6 @@
 import React from "react";
 import type { MetaFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
-// eslint-disable-next-line import/no-unassigned-import
 import "./tailwind.css";
 
 export const meta: MetaFunction = () => {
@@ -9,15 +8,13 @@ export const meta: MetaFunction = () => {
 		{ title: "PG GOTM" },
 		{
 			name: "description",
-			content:
-				"Vote for the PG Discord Game of the Month!",
+			content: "Vote for the PG Discord Game of the Month!",
 		},
 		{ name: "theme-color", content: "#18181B" }, // zinc-900 color
 		{ property: "og:title", content: "PG Game of the Month" },
 		{
 			property: "og:description",
-			content:
-				"Vote for the PG Discord Game of the Month!",
+			content: "Vote for the PG Discord Game of the Month!",
 		},
 		{ property: "og:type", content: "website" },
 		{ property: "og:url", content: "https://pg-gotm.com" },
@@ -32,11 +29,7 @@ export const meta: MetaFunction = () => {
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html
-			lang="en"
-			className="bg-zinc-900 text-zinc-100"
-			style={{ colorScheme: "dark" }}
-		>
+		<html lang="en" className="bg-zinc-900 text-zinc-100" style={{ colorScheme: "dark" }}>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
