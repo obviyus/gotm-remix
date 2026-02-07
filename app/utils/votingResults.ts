@@ -8,9 +8,7 @@ export interface VotingResultEdge {
 export const getBaseGameName = (nodeName: string): string =>
 	nodeName.replace(VOTE_COUNT_SUFFIX, "").trim();
 
-const getWinnerNode = <T extends VotingResultEdge>(
-	results: T[],
-): string | null => {
+export const getWinnerNode = <T extends VotingResultEdge>(results: T[]): string | null => {
 	if (results.length === 0) {
 		return null;
 	}
@@ -54,10 +52,7 @@ const getWinnerNode = <T extends VotingResultEdge>(
 	);
 };
 
-export const getWinnerName = <T extends VotingResultEdge>(
-	results: T[],
-): string | null => {
+export const getWinnerName = <T extends VotingResultEdge>(results: T[]): string | null => {
 	const winnerNode = getWinnerNode(results);
 	return winnerNode ? getBaseGameName(winnerNode) : null;
 };
-
