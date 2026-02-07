@@ -1,9 +1,4 @@
-import {
-	DragDropContext,
-	Draggable,
-	Droppable,
-	type DropResult,
-} from "@hello-pangea/dnd";
+import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { redirect, useFetcher } from "react-router";
@@ -160,61 +155,54 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const voteFetcher = useFetcher();
 
 	// Initialize order based on existing rankings if available
-	const [currentOrder, setCurrentOrder] = useState<Record<number, string[]>>(
-		() => {
-			const initialOrder: Record<number, string[]> = {
-				0: ["divider"], // long games
-				1: ["divider"], // short games
-			};
+	const [currentOrder, setCurrentOrder] = useState<Record<number, string[]>>(() => {
+		const initialOrder: Record<number, string[]> = {
+			0: ["divider"], // long games
+			1: ["divider"], // short games
+		};
 
-			// For long games
-			if (longRankings?.length > 0) {
-				// Add ranked games in order
-				const rankedLongIds = longRankings
-					.sort((a, b) => a.rank - b.rank)
-					.map((r) => String(r.nomination_id));
-				initialOrder[0].unshift(...rankedLongIds);
+		// For long games
+		if (longRankings?.length > 0) {
+			// Add ranked games in order
+			const rankedLongIds = longRankings
+				.sort((a, b) => a.rank - b.rank)
+				.map((r) => String(r.nomination_id));
+			initialOrder[0].unshift(...rankedLongIds);
 
-				// Add remaining unranked games below divider
-				const unrankedLongIds = longNominations
-					.filter((n) => !longRankings.find((r) => r.nomination_id === n.id))
-					.map((n) => String(n.id));
-				initialOrder[0].push(...unrankedLongIds);
-			} else {
-				// If no rankings, all games go below divider
-				initialOrder[0].push(
-					...(longNominations || []).map((n) => String(n.id)),
-				);
-			}
+			// Add remaining unranked games below divider
+			const unrankedLongIds = longNominations
+				.filter((n) => !longRankings.find((r) => r.nomination_id === n.id))
+				.map((n) => String(n.id));
+			initialOrder[0].push(...unrankedLongIds);
+		} else {
+			// If no rankings, all games go below divider
+			initialOrder[0].push(...(longNominations || []).map((n) => String(n.id)));
+		}
 
-			// For short games
-			if (shortRankings?.length > 0) {
-				// Add ranked games in order
-				const rankedShortIds = shortRankings
-					.sort((a, b) => a.rank - b.rank)
-					.map((r) => String(r.nomination_id));
-				initialOrder[1].unshift(...rankedShortIds);
+		// For short games
+		if (shortRankings?.length > 0) {
+			// Add ranked games in order
+			const rankedShortIds = shortRankings
+				.sort((a, b) => a.rank - b.rank)
+				.map((r) => String(r.nomination_id));
+			initialOrder[1].unshift(...rankedShortIds);
 
-				// Add remaining unranked games below divider
-				const unrankedShortIds = shortNominations
-					.filter((n) => !shortRankings.find((r) => r.nomination_id === n.id))
-					.map((n) => String(n.id));
-				initialOrder[1].push(...unrankedShortIds);
-			} else {
-				// If no rankings, all games go below divider
-				initialOrder[1].push(
-					...(shortNominations || []).map((n) => String(n.id)),
-				);
-			}
+			// Add remaining unranked games below divider
+			const unrankedShortIds = shortNominations
+				.filter((n) => !shortRankings.find((r) => r.nomination_id === n.id))
+				.map((n) => String(n.id));
+			initialOrder[1].push(...unrankedShortIds);
+		} else {
+			// If no rankings, all games go below divider
+			initialOrder[1].push(...(shortNominations || []).map((n) => String(n.id)));
+		}
 
-			return initialOrder;
-		},
-	);
+		return initialOrder;
+	});
 
 	const [votedLong, setVotedLong] = useState(initialVotedLong);
 	const [votedShort, setVotedShort] = useState(initialVotedShort);
-	const [selectedNomination, setSelectedNomination] =
-		useState<Nomination | null>(null);
+	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
 	const handleOpenPitches = (nomination: Nomination) => {
 		setSelectedNomination(nomination);
@@ -234,10 +222,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	};
 
 	const deleteVote = async (short: boolean) => {
-		void voteFetcher.submit(
-			{ monthId, userId, short },
-			{ method: "DELETE", action: "/api/votes" },
-		);
+		void voteFetcher.submit({ monthId, userId, short }, { method: "DELETE", action: "/api/votes" });
 
 		const shortKey = short ? 1 : 0;
 		const games = short ? shortNominations : longNominations;
@@ -339,11 +324,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 
 		// Initialize ranked and unranked games based on the current order
 		const rankedGames = games
-			.filter(
-				(g) =>
-					dividerIndex > -1 &&
-					order.slice(0, dividerIndex).includes(String(g.id)),
-			)
+			.filter((g) => dividerIndex > -1 && order.slice(0, dividerIndex).includes(String(g.id)))
 			.sort((a, b) => {
 				const aIndex = order.indexOf(String(a.id));
 				const bIndex = order.indexOf(String(b.id));
@@ -367,16 +348,14 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 			games.map((game) => [String(game.id), () => handleOpenPitches(game)] as const),
 		);
 		const unrankHandlers = new Map<string, () => void>(
-			rankedGames.map((game) => [
-				String(game.id),
-				() => moveItemBelowDivider(isShort, String(game.id)),
-			] as const),
+			rankedGames.map(
+				(game) => [String(game.id), () => moveItemBelowDivider(isShort, String(game.id))] as const,
+			),
 		);
 		const rankHandlers = new Map<string, () => void>(
-			unrankedGames.map((game) => [
-				String(game.id),
-				() => moveItemAboveDivider(isShort, String(game.id)),
-			] as const),
+			unrankedGames.map(
+				(game) => [String(game.id), () => moveItemAboveDivider(isShort, String(game.id))] as const,
+			),
 		);
 
 		return (
@@ -393,11 +372,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 								</div>
 							) : (
 								rankedGames.map((game, index) => (
-									<Draggable
-										key={game.id}
-										draggableId={String(game.id)}
-										index={index}
-									>
+									<Draggable key={game.id} draggableId={String(game.id)} index={index}>
 										{(provided) => (
 											<GameCard
 												game={game}
@@ -417,11 +392,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 						</div>
 
 						{/* Divider */}
-						<Draggable
-							draggableId="divider"
-							index={rankedGames.length}
-							isDragDisabled
-						>
+						<Draggable draggableId="divider" index={rankedGames.length} isDragDisabled>
 							{(provided) => (
 								<div
 									ref={provided.innerRef}
@@ -492,35 +463,31 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		void deleteVote(true);
 	};
 
-	const longAction = votedLong
-		? (
-			<button
-				type="button"
-				className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-				onClick={handleClearLongVote}
-			>
-				<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-					<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
-					Clear Vote
-				</span>
-			</button>
-		)
-		: null;
+	const longAction = votedLong ? (
+		<button
+			type="button"
+			className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+			onClick={handleClearLongVote}
+		>
+			<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+				<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+				Clear Vote
+			</span>
+		</button>
+	) : null;
 
-	const shortAction = votedShort
-		? (
-			<button
-				type="button"
-				className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-				onClick={handleClearShortVote}
-			>
-				<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-					<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
-					Clear Vote
-				</span>
-			</button>
-		)
-		: null;
+	const shortAction = votedShort ? (
+		<button
+			type="button"
+			className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
+			onClick={handleClearShortVote}
+		>
+			<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+				<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+				Clear Vote
+			</span>
+		</button>
+	) : null;
 
 	return (
 		<TwoColumnLayout
@@ -528,21 +495,13 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 			subtitle="to sort them in the priority you want them to win"
 			description="Please only vote for games you actually want to play next month :)"
 		>
-			<Column
-				title="Long Games"
-				statusBadge={statusBadges.long}
-				action={longAction}
-			>
+			<Column title="Long Games" statusBadge={statusBadges.long} action={longAction}>
 				<DragDropContext onDragEnd={onDragEnd}>
 					{renderGames(longNominations, false)}
 				</DragDropContext>
 			</Column>
 
-			<Column
-				title="Short Games"
-				statusBadge={statusBadges.short}
-				action={shortAction}
-			>
+			<Column title="Short Games" statusBadge={statusBadges.short} action={shortAction}>
 				<DragDropContext onDragEnd={onDragEnd}>
 					{renderGames(shortNominations, true)}
 				</DragDropContext>

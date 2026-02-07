@@ -87,9 +87,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	const month = await getMonth(monthId);
 	const shouldShowResults =
-		month.status === "over" ||
-		month.status === "complete" ||
-		month.status === "playing";
+		month.status === "over" || month.status === "complete" || month.status === "playing";
 
 	const [gameUrls, allNominations] = await Promise.all([
 		getGameUrls(monthId),
@@ -104,13 +102,12 @@ export async function loader({ params }: Route.LoaderArgs) {
 	let totalVotes: number | null = null;
 
 	if (shouldShowResults) {
-		[results.long, results.short, timelapse.long, timelapse.short] =
-			await Promise.all([
-				calculateVotingResults(monthId, false),
-				calculateVotingResults(monthId, true),
-				getVotingTimelapse(monthId, false),
-				getVotingTimelapse(monthId, true),
-			]);
+		[results.long, results.short, timelapse.long, timelapse.short] = await Promise.all([
+			calculateVotingResults(monthId, false),
+			calculateVotingResults(monthId, true),
+			getVotingTimelapse(monthId, false),
+			getVotingTimelapse(monthId, true),
+		]);
 	} else if (month.status === "voting") {
 		totalVotes = await getTotalVotesForMonth(monthId);
 	}
@@ -154,11 +151,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
-	const { month, results, gameUrls, nominations, winners, totalVotes } =
-		loaderData;
+	const { month, results, gameUrls, nominations, winners, totalVotes } = loaderData;
 	const timelapse = loaderData.timelapse;
-	const [selectedNomination, setSelectedNomination] =
-		useState<Nomination | null>(null);
+	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
 	const handleViewPitches = (nomination: Nomination) => {
 		setSelectedNomination(nomination);
@@ -184,9 +179,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
 
 	const showResults =
-		month.status === "over" ||
-		month.status === "complete" ||
-		month.status === "playing";
+		month.status === "over" || month.status === "complete" || month.status === "playing";
 
 	const showWinner = showResults;
 	const totalVotesLabel = (totalVotes ?? 0).toLocaleString();
@@ -214,19 +207,15 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center space-y-2 mb-8">
-				{month.theme && <ThemeCard {...month} />}
-			</div>
+			<div className="text-center space-y-2 mb-8">{month.theme && <ThemeCard {...month} />}</div>
 
 			{month.status === "voting" ? (
 				<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
 					<div>
-						<h2 className="text-xl font-bold text-amber-300 mb-2">
-							Voting in Progress
-						</h2>
+						<h2 className="text-xl font-bold text-amber-300 mb-2">Voting in Progress</h2>
 						<p className="text-zinc-200">
-							Votes are being collected right now. Results will be revealed
-							after the voting phase ends.
+							Votes are being collected right now. Results will be revealed after the voting phase
+							ends.
 						</p>
 					</div>
 					<p className="text-sm text-zinc-300">
@@ -264,10 +253,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 					title="All Nominations"
 					description="These games were nominated for this month's Game of the Month."
 				>
-					<Column
-						title="Long Games"
-						statusBadge={columnStatus.long}
-					>
+					<Column title="Long Games" statusBadge={columnStatus.long}>
 						<SortedNominationsList
 							games={nominations.long}
 							isShort={false}
@@ -277,10 +263,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 						/>
 					</Column>
 
-					<Column
-						title="Short Games"
-						statusBadge={columnStatus.short}
-					>
+					<Column title="Short Games" statusBadge={columnStatus.short}>
 						<SortedNominationsList
 							games={nominations.short}
 							isShort

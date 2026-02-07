@@ -4,11 +4,7 @@ import type { Nomination } from "~/types";
 import { getWinnerName } from "~/utils/votingResults";
 
 const normalizeGameName = (value: string): string =>
-	value
-		.normalize("NFKC")
-		.replace(/\s+/g, " ")
-		.trim()
-		.toLowerCase();
+	value.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
 
 async function calculateAndStoreWinner(
 	monthId: number,
@@ -157,10 +153,7 @@ async function getLatestVoteActivityTimestamp(
 	return Math.max(voteUpdatedAt ?? 0, rankingUpdatedAt ?? 0);
 }
 
-export async function getWinner(
-	monthId: number,
-	short: boolean,
-): Promise<Nomination | null> {
+export async function getWinner(monthId: number, short: boolean): Promise<Nomination | null> {
 	try {
 		const winners = await db.execute({
 			sql: `SELECT game_id,
@@ -201,10 +194,7 @@ export async function getWinner(
 				: Number(winner.updated_at);
 
 		try {
-			const latestVoteActivity = await getLatestVoteActivityTimestamp(
-				monthId,
-				short,
-			);
+			const latestVoteActivity = await getLatestVoteActivityTimestamp(monthId, short);
 			if (
 				latestVoteActivity !== null &&
 				(winnerUpdatedAt === null || latestVoteActivity > winnerUpdatedAt)

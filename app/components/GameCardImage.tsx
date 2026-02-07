@@ -26,11 +26,7 @@ function StatusBadge({ status }: { status: "winner" | "jury" | "regular" }) {
 	}
 }
 
-export function GameCardImage({
-	coverUrl,
-	gameName,
-	status,
-}: GameCardImageProps) {
+export function GameCardImage({ coverUrl, gameName, status }: GameCardImageProps) {
 	return (
 		<div className="w-39 shrink-0 overflow-hidden rounded-l-xl relative">
 			{coverUrl ? (

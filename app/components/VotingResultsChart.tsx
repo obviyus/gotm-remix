@@ -73,11 +73,7 @@ export const loadEcharts = () => {
 			import("echarts/components"),
 			import("echarts/renderers"),
 		]).then(([echartsCore, charts, components, renderers]) => {
-			echartsCore.use([
-				charts.SankeyChart,
-				components.TooltipComponent,
-				renderers.CanvasRenderer,
-			]);
+			echartsCore.use([charts.SankeyChart, components.TooltipComponent, renderers.CanvasRenderer]);
 			return echartsCore;
 		});
 	}
@@ -152,8 +148,7 @@ export function buildSankeyData(
 		const isFinalNode = finalNodes.has(nodeName);
 		const depth = getNodeDepth(nodeName);
 
-		let labelPosition: "inside" | "left" | "right" | "top" | "bottom" =
-			"inside";
+		let labelPosition: "inside" | "left" | "right" | "top" | "bottom" = "inside";
 		if (isInitialNode) {
 			labelPosition = "right";
 		} else if (isFinalNode) {
@@ -186,8 +181,7 @@ export function VotingResultsChart({
 }: VotingResultsChartProps) {
 	const chartRef = useRef<HTMLDivElement | null>(null);
 	const chartInstanceRef = useRef<ECharts | null>(null);
-	const [processedData, setProcessedData] =
-		useState<SankeyProcessedData | null>(null);
+	const [processedData, setProcessedData] = useState<SankeyProcessedData | null>(null);
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [playIndex, setPlayIndex] = useState(0);
 
@@ -207,9 +201,7 @@ export function VotingResultsChart({
 		for (const frame of timelapseFrames) {
 			collectBaseGames(frame.results);
 		}
-		const orderedGames = Array.from(baseGames).sort((a, b) =>
-			a.localeCompare(b),
-		);
+		const orderedGames = Array.from(baseGames).sort((a, b) => a.localeCompare(b));
 		const colorMap = new Map<string, string>();
 		orderedGames.forEach((game, index) => {
 			colorMap.set(game, COLOR_PALETTE[index % COLOR_PALETTE.length]);
@@ -294,13 +286,10 @@ export function VotingResultsChart({
 								const trimmedNodeName = rawName.trimEnd();
 								const baseName = getBaseGameName(trimmedNodeName);
 								const nodeValue = Math.round(Number(params.value ?? 0));
-								const hasNameLabel =
-									initialNodes.has(rawName) || finalNodes.has(rawName);
+								const hasNameLabel = initialNodes.has(rawName) || finalNodes.has(rawName);
 
 								if (hasNameLabel) {
-									return nodeValue > 0
-										? `${baseName}\n${nodeValue}`
-										: baseName;
+									return nodeValue > 0 ? `${baseName}\n${nodeValue}` : baseName;
 								}
 
 								return nodeValue > 0 ? `${nodeValue}` : "";
@@ -416,17 +405,11 @@ export function VotingResultsChart({
 						) : null}
 					</h2>
 					{timelapseProgress ? (
-						<p className="text-xs text-zinc-400 mt-1">
-							Timelapse {timelapseProgress}
-						</p>
+						<p className="text-xs text-zinc-400 mt-1">Timelapse {timelapseProgress}</p>
 					) : null}
 				</div>
 				{hasTimelapse ? (
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={isPlaying ? handleStop : handlePlay}
-					>
+					<Button variant="secondary" size="sm" onClick={isPlaying ? handleStop : handlePlay}>
 						{isPlaying ? "Stop playback" : "Play timelapse"}
 					</Button>
 				) : null}
@@ -437,9 +420,7 @@ export function VotingResultsChart({
 					{!processedData && (
 						<div className="absolute inset-0 flex h-full items-center justify-center pointer-events-none">
 							<p className="text-base font-medium text-zinc-400 sm:text-lg">
-								{results.length === 0
-									? "No voting results available yet"
-									: "Processing results…"}
+								{results.length === 0 ? "No voting results available yet" : "Processing results…"}
 							</p>
 						</div>
 					)}

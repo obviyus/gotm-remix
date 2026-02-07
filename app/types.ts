@@ -50,13 +50,6 @@ export interface Month {
 	month: number;
 	year: number;
 	theme: Theme;
-	status:
-	| "nominating"
-	| "jury"
-	| "voting"
-	| "complete"
-	| "playing"
-	| "over"
-	| "ready";
+	status: "nominating" | "jury" | "voting" | "complete" | "playing" | "over" | "ready";
 	winners: Nomination[];
 }

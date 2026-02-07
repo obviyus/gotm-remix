@@ -8,14 +8,7 @@ interface MonthRow {
 	theme_id: number;
 	name: string;
 	description: string | null;
-	status:
-		| "nominating"
-		| "jury"
-		| "voting"
-		| "complete"
-		| "playing"
-		| "over"
-		| "ready";
+	status: "nominating" | "jury" | "voting" | "complete" | "playing" | "over" | "ready";
 }
 
 export async function getMonth(monthId: number): Promise<Month> {

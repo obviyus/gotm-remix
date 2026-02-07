@@ -51,8 +51,7 @@ function SearchResultCard({
 	onNominateGame,
 	onOpenNominationModal,
 }: SearchResultCardProps) {
-	const disableNominationAction =
-		buttonDisabled || (!existingNomination && !canNominateMore);
+	const disableNominationAction = buttonDisabled || (!existingNomination && !canNominateMore);
 
 	const handleNominateClick = () => {
 		if (isPreviousWinner || disableNominationAction) {
@@ -121,9 +120,7 @@ function PitchCard({
 						<h3 className="text-base font-semibold text-zinc-100 truncate">
 							{nomination.gameName}
 						</h3>
-						{year && (
-							<p className="text-xs text-zinc-500 font-medium mt-1">{year}</p>
-						)}
+						{year && <p className="text-xs text-zinc-500 font-medium mt-1">{year}</p>}
 					</div>
 					<button
 						type="button"
@@ -175,9 +172,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		`SELECT DISTINCT game_id 
         FROM winners;`,
 	);
-	const previousWinners = result.rows.map((w) =>
-		(w.game_id as number).toString(),
-	);
+	const previousWinners = result.rows.map((w) => (w.game_id as number).toString());
 
 	// Fetch user's nominations for the current month if in nominating phase
 	let userNominations: Nomination[] = [];
@@ -225,9 +220,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	// Reuse previous winners check
 	const winners = await db.execute("SELECT DISTINCT game_id FROM winners");
-	const previousWinners = new Set(
-		winners.rows.map((w) => (w.game_id ?? "").toString()),
-	);
+	const previousWinners = new Set(winners.rows.map((w) => (w.game_id ?? "").toString()));
 
 	if (method === "POST" && intent === "createNomination") {
 		try {
@@ -242,10 +235,7 @@ export async function action({ request }: Route.ActionArgs) {
 			const gameUrl = formData.get("gameUrl")?.toString() || null;
 
 			if (!monthId || !gameIdStr || !gameName) {
-				return Response.json(
-					{ error: "Missing required fields" },
-					{ status: 400 },
-				);
+				return Response.json({ error: "Missing required fields" }, { status: 400 });
 			}
 
 			// Reject previous winners
@@ -265,16 +255,14 @@ export async function action({ request }: Route.ActionArgs) {
 			if (existing.rows.length > 0) {
 				return Response.json(
 					{
-						error:
-							"You have already nominated or pitched this game for this month",
+						error: "You have already nominated or pitched this game for this month",
 					},
 					{ status: 400 },
 				);
 			}
 
 			// Normalize cover size like before
-			const normalizedCover =
-				gameCover?.replace("t_thumb", "t_cover_big") || null;
+			const normalizedCover = gameCover?.replace("t_thumb", "t_cover_big") || null;
 
 			// Insert nomination
 			const nomination = await db.execute({
@@ -301,16 +289,13 @@ export async function action({ request }: Route.ActionArgs) {
 
 			return Response.json({
 				success: true,
-				nominationId: nomination.lastInsertRowid
-					? Number(nomination.lastInsertRowid)
-					: null,
+				nominationId: nomination.lastInsertRowid ? Number(nomination.lastInsertRowid) : null,
 			});
 		} catch (error) {
 			console.error("Error processing nomination:", error);
 			return Response.json(
 				{
-					error:
-						"Failed to process nomination. Please make sure all required fields are provided.",
+					error: "Failed to process nomination. Please make sure all required fields are provided.",
 				},
 				{ status: 500 },
 			);
@@ -320,14 +305,9 @@ export async function action({ request }: Route.ActionArgs) {
 	if (method === "PATCH") {
 		try {
 			const nominationIdStr = formData.get("nominationId")?.toString();
-			const nominationId = nominationIdStr
-				? Number.parseInt(nominationIdStr, 10)
-				: null;
+			const nominationId = nominationIdStr ? Number.parseInt(nominationIdStr, 10) : null;
 			if (!nominationId || Number.isNaN(nominationId)) {
-				return Response.json(
-					{ error: "Invalid nomination ID" },
-					{ status: 400 },
-				);
+				return Response.json({ error: "Invalid nomination ID" }, { status: 400 });
 			}
 
 			// Fetch nomination and any existing pitch by this user
@@ -340,10 +320,7 @@ export async function action({ request }: Route.ActionArgs) {
 			});
 
 			if (nomination.rows.length === 0) {
-				return Response.json(
-					{ error: "Nomination not found" },
-					{ status: 404 },
-				);
+				return Response.json({ error: "Nomination not found" }, { status: 404 });
 			}
 
 			const gameId = nomination.rows[0].game_id?.toString() ?? "";
@@ -354,16 +331,12 @@ export async function action({ request }: Route.ActionArgs) {
 				);
 			}
 
-			const hasExistingPitch =
-				nomination.rows[0].pitch_discord_id === discordId;
+			const hasExistingPitch = nomination.rows[0].pitch_discord_id === discordId;
 			const patchIntent = intent || "savePitch";
 
 			if (patchIntent === "deletePitch") {
 				if (!hasExistingPitch) {
-					return Response.json(
-						{ error: "No existing pitch to delete" },
-						{ status: 400 },
-					);
+					return Response.json({ error: "No existing pitch to delete" }, { status: 400 });
 				}
 
 				await db.execute({
@@ -377,10 +350,7 @@ export async function action({ request }: Route.ActionArgs) {
 			const pitchInput = formData.get("pitch");
 			const pitch = typeof pitchInput === "string" ? pitchInput.trim() : "";
 			if (!pitch) {
-				return Response.json(
-					{ error: "Pitch cannot be empty" },
-					{ status: 400 },
-				);
+				return Response.json({ error: "Pitch cannot be empty" }, { status: 400 });
 			}
 
 			if (hasExistingPitch) {
@@ -398,10 +368,7 @@ export async function action({ request }: Route.ActionArgs) {
 			return Response.json({ success: true });
 		} catch (error) {
 			console.error("Error processing edit:", error);
-			return Response.json(
-				{ error: "Failed to process edit. Please try again." },
-				{ status: 500 },
-			);
+			return Response.json({ error: "Failed to process edit. Please try again." }, { status: 500 });
 		}
 	}
 
@@ -418,10 +385,7 @@ export async function action({ request }: Route.ActionArgs) {
 		});
 
 		if (nomination.rows.length === 0) {
-			return Response.json(
-				{ error: "Nomination not found or unauthorized" },
-				{ status: 404 },
-			);
+			return Response.json({ error: "Nomination not found or unauthorized" }, { status: 404 });
 		}
 
 		await db.execute({
@@ -481,15 +445,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 	// State for edit modal
 	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [editingNomination, setEditingNomination] = useState<Nomination | null>(
-		null,
-	);
+	const [editingNomination, setEditingNomination] = useState<Nomination | null>(null);
 	const [editPitch, setEditPitch] = useState("");
 
 	// Delete confirmation modal state
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-	const [deletingNomination, setDeletingNomination] =
-		useState<Nomination | null>(null);
+	const [deletingNomination, setDeletingNomination] = useState<Nomination | null>(null);
 	const [isDeletePitchOpen, setIsDeletePitchOpen] = useState(false);
 	const [pitchToDelete, setPitchToDelete] = useState<Nomination | null>(null);
 
@@ -537,14 +498,9 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const searchPlaceholder = shouldUseLocalSearch
 		? "Search existing nominations…"
 		: "Search for games…";
-	const searchButtonLabel = shouldUseLocalSearch
-		? "Filter"
-		: isSearching
-			? "Searching…"
-			: "Search";
+	const searchButtonLabel = shouldUseLocalSearch ? "Filter" : isSearching ? "Searching…" : "Search";
 
-	const [selectedNomination, setSelectedNomination] =
-		useState<Nomination | null>(null);
+	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
 	const editingPitchEntry = editingNomination?.pitches.find(
 		(pitchEntry) => pitchEntry.discordId === userDiscordId,
@@ -561,10 +517,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		void search.submit({ intent: "search", query: searchTerm }, { method: "post" });
 	};
 
-	const handleGameSelect = (
-		game: Nomination,
-		existingNomination?: Nomination,
-	) => {
+	const handleGameSelect = (game: Nomination, existingNomination?: Nomination) => {
 		if (hasReachedNominationLimit && !existingNomination) {
 			return;
 		}
@@ -741,10 +694,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 	const openNominationModal = (nomination: Nomination) => {
 		setEditingNomination(nomination);
-		setEditPitch(
-			nomination.pitches.find((p) => p.discordId === userDiscordId)?.pitch ||
-				"",
-		);
+		setEditPitch(nomination.pitches.find((p) => p.discordId === userDiscordId)?.pitch || "");
 		setIsEditOpen(true);
 	};
 
@@ -768,8 +718,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		return (
 			<div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 text-center">
 				<h1 className="text-3xl font-bold tracking-tight text-zinc-200 mb-4">
-					Nominations{" "}
-					{monthStatus === "over" ? "haven't started" : "are closed"}
+					Nominations {monthStatus === "over" ? "haven't started" : "are closed"}
 				</h1>
 
 				<div className="bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 p-8 shadow-lg">
@@ -790,8 +739,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					{monthStatus === "voting" && (
 						<>
 							<p className="text-lg mb-6 text-zinc-200">
-								The nomination phase is over, but you can now vote for your
-								favorite games!
+								The nomination phase is over, but you can now vote for your favorite games!
 							</p>
 							<Link
 								to="/voting"
@@ -806,8 +754,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					{monthStatus === "playing" && (
 						<>
 							<p className="text-lg mb-6 text-zinc-200">
-								Games have been selected! Check out what we&#39;re playing this
-								month.
+								Games have been selected! Check out what we&#39;re playing this month.
 							</p>
 							<Link
 								to="/"
@@ -822,12 +769,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					{monthStatus === "jury" && (
 						<>
 							<p className="text-lg mb-6 text-zinc-200">
-								The jury is currently selecting games from the nominations.
-								Check back soon!
+								The jury is currently selecting games from the nominations. Check back soon!
 							</p>
 							<p className="text-zinc-400">
-								Once they&#39;re done, you&#39;ll be able to vote on the
-								selected games.
+								Once they&#39;re done, you&#39;ll be able to vote on the selected games.
 							</p>
 						</>
 					)}
@@ -835,8 +780,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					{monthStatus === "over" && (
 						<>
 							<p className="text-lg mb-6 text-zinc-200">
-								The next month&#39;s nominations haven&#39;t started yet. Check
-								back soon!
+								The next month&#39;s nominations haven&#39;t started yet. Check back soon!
 							</p>
 							<Link
 								to="/history"
@@ -905,9 +849,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{nominate.data?.error && (
-				<div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-					{nominate.data.error}
-				</div>
+				<div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">{nominate.data.error}</div>
 			)}
 
 			{nominate.data?.success && (
@@ -918,28 +860,18 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			<div>
 				<div className="mb-4">
-					<h3 className="text-lg font-medium text-zinc-200">
-						Nomination Status:
-					</h3>
+					<h3 className="text-lg font-medium text-zinc-200">Nomination Status:</h3>
 					<ul className="mt-2 space-y-1 text-sm text-zinc-400">
 						<li className="flex items-center">
-							<span
-								className={
-									shortNomination ? "text-emerald-400" : "text-zinc-400"
-								}
-							>
+							<span className={shortNomination ? "text-emerald-400" : "text-zinc-400"}>
 								{shortNomination ? "✓" : "○"} Short Game (
 								{shortNomination ? "Nominated" : "Available"})
 							</span>
 						</li>
 						<li className="flex items-center">
-							<span
-								className={
-									longNomination ? "text-emerald-400" : "text-zinc-400"
-								}
-							>
-								{longNomination ? "✓" : "○"} Long Game (
-								{longNomination ? "Nominated" : "Available"})
+							<span className={longNomination ? "text-emerald-400" : "text-zinc-400"}>
+								{longNomination ? "✓" : "○"} Long Game ({longNomination ? "Nominated" : "Available"}
+								)
 							</span>
 						</li>
 					</ul>
@@ -947,8 +879,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 				{hasReachedNominationLimit && (
 					<div className="mb-6 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-						You have nominated a short and a long game. You can still add
-						pitches to existing nominations using the search below.
+						You have nominated a short and a long game. You can still add pitches to existing
+						nominations using the search below.
 					</div>
 				)}
 
@@ -970,9 +902,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						<input type="hidden" name="intent" value="search" />
 						<button
 							type="submit"
-							disabled={
-								!shouldUseLocalSearch && (isSearching || !searchTerm.trim())
-							}
+							disabled={!shouldUseLocalSearch && (isSearching || !searchTerm.trim())}
 							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
 						>
 							{searchButtonLabel}
@@ -985,21 +915,18 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							<GameSkeleton key={`skeleton-${Date.now()}-${i}`} />
 						))}
 					</div>
-					) : filteredDisplayedGames.length > 0 ? (
-						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-							{filteredDisplayedGames.map((game: Nomination) => {
-								const rawGameId = game.gameId ?? game.id;
-								const igdbId = rawGameId ? String(rawGameId) : "";
-								const existingNomination = shouldUseLocalSearch
-									? game
-									: allNominations.find((n) => n.gameId === igdbId);
-							const isCurrentUserNomination =
-								existingNomination?.discordId === userDiscordId;
-							const isPreviousWinner =
-								igdbId !== "" && previousWinners.includes(igdbId);
+				) : filteredDisplayedGames.length > 0 ? (
+					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+						{filteredDisplayedGames.map((game: Nomination) => {
+							const rawGameId = game.gameId ?? game.id;
+							const igdbId = rawGameId ? String(rawGameId) : "";
+							const existingNomination = shouldUseLocalSearch
+								? game
+								: allNominations.find((n) => n.gameId === igdbId);
+							const isCurrentUserNomination = existingNomination?.discordId === userDiscordId;
+							const isPreviousWinner = igdbId !== "" && previousWinners.includes(igdbId);
 							const canNominateMore = !hasReachedNominationLimit;
-							const blockNewNomination =
-								!existingNomination && !canNominateMore;
+							const blockNewNomination = !existingNomination && !canNominateMore;
 
 							let buttonText = "Nominate";
 							if (isPreviousWinner) {
@@ -1032,12 +959,9 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				) : shouldUseLocalSearch ? (
 					allNominations.length === 0 ? (
 						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-							<h3 className="text-lg font-semibold text-zinc-200">
-								No nominations yet
-							</h3>
+							<h3 className="text-lg font-semibold text-zinc-200">No nominations yet</h3>
 							<p className="mt-2 text-zinc-400">
-								Once nominations start rolling in, you can add pitches to them
-								here.
+								Once nominations start rolling in, you can add pitches to them here.
 							</p>
 						</div>
 					) : (
@@ -1046,9 +970,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 								{normalizedSearchTerm.length > 0 ? (
 									<>
 										No nominations match{" "}
-										<span className="text-emerald-200">
-											&quot;{searchTerm}&quot;
-										</span>
+										<span className="text-emerald-200">&quot;{searchTerm}&quot;</span>
 									</>
 								) : (
 									"You're all caught up"
@@ -1063,22 +985,17 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					)
 				) : hasSearched ? (
 					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-						<h3 className="text-lg font-semibold text-zinc-200">
-							No results found
-						</h3>
+						<h3 className="text-lg font-semibold text-zinc-200">No results found</h3>
 						<p className="mt-2 text-zinc-400">
-							No games found matching &quot;{searchTerm}&quot;. Try a different
-							search term.
+							No games found matching &quot;{searchTerm}&quot;. Try a different search term.
 						</p>
 					</div>
 				) : (
 					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-						<h3 className="text-lg font-semibold text-zinc-200">
-							Search for games to nominate
-						</h3>
+						<h3 className="text-lg font-semibold text-zinc-200">Search for games to nominate</h3>
 						<p className="mt-2 text-zinc-400">
-							Type in the search box above to find games. You can nominate one
-							short game and one long game.
+							Type in the search box above to find games. You can nominate one short game and one
+							long game.
 						</p>
 					</div>
 				)}
@@ -1098,10 +1015,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						{selectedGame?.gameCover && (
 							<div className="shrink-0">
 								<img
-									src={selectedGame.gameCover.replace(
-										"/t_thumb/",
-										"/t_cover_big/",
-									)}
+									src={selectedGame.gameCover.replace("/t_thumb/", "/t_cover_big/")}
 									alt={selectedGame.gameName}
 									className="w-32 rounded-lg shadow-lg border border-white/10"
 								/>
@@ -1109,9 +1023,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						)}
 						{selectedGame?.summary && (
 							<div className="flex-1">
-								<p className="text-sm text-zinc-400 line-clamp-12">
-									{selectedGame.summary}
-								</p>
+								<p className="text-sm text-zinc-400 line-clamp-12">{selectedGame.summary}</p>
 							</div>
 						)}
 					</div>
@@ -1146,9 +1058,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							>
 								<span>Short Game</span>
 								<span className="text-xs opacity-80">(&lt; 12 hours)</span>
-								{shortNomination && (
-									<span className="text-xs">Already nominated</span>
-								)}
+								{shortNomination && <span className="text-xs">Already nominated</span>}
 							</button>
 							<button
 								type="button"
@@ -1162,9 +1072,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							>
 								<span>Long Game</span>
 								<span className="text-xs opacity-80">(&gt; 12 hours)</span>
-								{longNomination && (
-									<span className="text-xs">Already nominated</span>
-								)}
+								{longNomination && <span className="text-xs">Already nominated</span>}
 							</button>
 						</div>
 					</DialogFooter>
@@ -1176,8 +1084,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
-							{hasExistingEditingPitch ? "Edit" : "Add"} Pitch:{" "}
-							{editingNomination?.gameName}
+							{hasExistingEditingPitch ? "Edit" : "Add"} Pitch: {editingNomination?.gameName}
 						</DialogTitle>
 					</DialogHeader>
 
@@ -1229,18 +1136,15 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				</DialogContent>
 			</Dialog>
 
-			<Dialog
-				open={isDeletePitchOpen}
-				onOpenChange={handleDeletePitchDialogOpenChange}
-			>
+			<Dialog open={isDeletePitchOpen} onOpenChange={handleDeletePitchDialogOpenChange}>
 				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">Delete Pitch</DialogTitle>
 					</DialogHeader>
 
 					<p className="text-sm text-zinc-400 mb-6">
-						Are you sure you want to remove your pitch for{" "}
-						{pitchToDelete?.gameName}? You can always add a new pitch later.
+						Are you sure you want to remove your pitch for {pitchToDelete?.gameName}? You can always
+						add a new pitch later.
 					</p>
 
 					<DialogFooter>
@@ -1266,14 +1170,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			<Dialog open={isDeleteOpen} onOpenChange={handleDeleteDialogOpenChange}>
 				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
 					<DialogHeader>
-						<DialogTitle className="text-zinc-200">
-							Delete Nomination
-						</DialogTitle>
+						<DialogTitle className="text-zinc-200">Delete Nomination</DialogTitle>
 					</DialogHeader>
 
 					<p className="text-sm text-zinc-400 mb-6">
-						Are you sure you want to delete your nomination for{" "}
-						{deletingNomination?.gameName}? This action cannot be undone.
+						Are you sure you want to delete your nomination for {deletingNomination?.gameName}? This
+						action cannot be undone.
 					</p>
 
 					<DialogFooter>

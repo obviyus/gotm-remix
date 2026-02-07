@@ -17,6 +17,7 @@ Every month, the users and jury select one short (< 12 hours on HLTB) and one lo
 This repository uses Bun for package management and the runtime. To start the development server:
 
 1. Start the server (uses local file database):
+
 ```sh
 $ bun run dev
 ```
@@ -24,6 +25,7 @@ $ bun run dev
 ## Production
 
 For production deployment, set up environment variables:
+
 ```sh
 TURSO_DATABASE_URL=your_turso_url
 TURSO_AUTH_TOKEN=your_turso_token

@@ -20,4 +20,6 @@ CREATE TABLE IF NOT EXISTS igdb_releases (
   UNIQUE (release_date, game_id)
 )`);
 
-await db.execute(`CREATE INDEX IF NOT EXISTS idx_igdb_releases_date ON igdb_releases(release_date)`);
+await db.execute(
+	`CREATE INDEX IF NOT EXISTS idx_igdb_releases_date ON igdb_releases(release_date)`,
+);

@@ -16,11 +16,7 @@ interface PitchesModalProps {
 	nomination: Nomination | null;
 }
 
-export default function PitchesModal({
-	isOpen,
-	onClose,
-	nomination,
-}: PitchesModalProps) {
+export default function PitchesModal({ isOpen, onClose, nomination }: PitchesModalProps) {
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
 			onClose();
@@ -62,9 +58,7 @@ export default function PitchesModal({
 							))
 						) : (
 							<div className="rounded-xl border border-dashed border-gray-700/50 p-8 text-center bg-gray-800/20">
-								<p className="text-sm text-gray-400">
-									No pitches available for this game
-								</p>
+								<p className="text-sm text-gray-400">No pitches available for this game</p>
 							</div>
 						)}
 					</div>

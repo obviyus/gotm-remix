@@ -71,8 +71,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 		...(isAdmin ? [{ path: "/admin", label: "Admin" }] : []),
 	];
 
-	const activeTab =
-		navLinks.find((link) => link.path === location.pathname)?.label || "GOTM";
+	const activeTab = navLinks.find((link) => link.path === location.pathname)?.label || "GOTM";
 	const toggleMobileMenu = () => {
 		setIsMobileMenuOpen((prev) => !prev);
 	};
@@ -108,9 +107,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 									<X className="h-6 w-6" aria-hidden="true" />
 								)}
 							</button>
-							<span className="text-lg font-bold text-zinc-100">
-								{activeTab}
-							</span>
+							<span className="text-lg font-bold text-zinc-100">{activeTab}</span>
 						</div>
 
 						{/* Desktop navigation */}
@@ -118,17 +115,13 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 							<div className="flex items-center justify-center flex-nowrap gap-2 sm:gap-3 md:gap-4 lg:gap-8 px-2">
 								<div className="flex items-center gap-2 sm:gap-3 md:gap-4">
 									{navLinks
-										.filter(
-											(link) => link.path === "/" || link.path === "/history",
-										)
+										.filter((link) => link.path === "/" || link.path === "/history")
 										.map((link) => (
 											<Link
 												key={link.path}
 												to={link.path}
 												prefetch="viewport"
-												aria-current={
-													location.pathname === link.path ? "page" : undefined
-												}
+												aria-current={location.pathname === link.path ? "page" : undefined}
 												className={getLinkClassName(link.path)}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
@@ -143,9 +136,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 										<Link
 											to={centerItem.path}
 											prefetch="viewport"
-											aria-current={
-												location.pathname === centerItem.path ? "page" : undefined
-											}
+											aria-current={location.pathname === centerItem.path ? "page" : undefined}
 											className={getLinkClassName(centerItem.path)}
 										>
 											<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-[0.8rem] md:text-sm">
@@ -168,9 +159,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 												key={link.path}
 												to={link.path}
 												prefetch="viewport"
-												aria-current={
-													location.pathname === link.path ? "page" : undefined
-												}
+												aria-current={location.pathname === link.path ? "page" : undefined}
 												className={getLinkClassName(link.path)}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
@@ -190,9 +179,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 				{/* Mobile menu, show/hide based on menu state */}
 				<div
 					className={`md:hidden fixed top-16 left-0 right-0 bg-zinc-900 border-b border-zinc-800 shadow-lg z-50 transition-all duration-200 ease-in-out ${
-						isMobileMenuOpen
-							? "opacity-100 translate-y-0"
-							: "opacity-0 -translate-y-2"
+						isMobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
 					}`}
 					style={mobileMenuPointerStyle}
 				>
@@ -202,9 +189,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 								key={link.path}
 								to={link.path}
 								prefetch="viewport"
-								aria-current={
-									location.pathname === link.path ? "page" : undefined
-								}
+								aria-current={location.pathname === link.path ? "page" : undefined}
 								className={getLinkClassName(link.path, true)}
 								onClick={closeMobileMenu}
 							>
@@ -214,10 +199,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 					</div>
 				</div>
 			</nav>
-			<main
-				id="main-content"
-				className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex-1"
-			>
+			<main id="main-content" className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex-1">
 				<Outlet />
 			</main>
 			<footer className="py-4 border-t border-zinc-800">

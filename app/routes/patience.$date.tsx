@@ -2,11 +2,7 @@ import { Suspense } from "react";
 import { ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-react";
 import { Await, Link, useNavigation } from "react-router";
 import GameCard from "~/components/GameCard";
-import {
-	getReleasesForDate,
-	isValidDate,
-	type Release,
-} from "~/server/releases.server";
+import { getReleasesForDate, isValidDate, type Release } from "~/server/releases.server";
 import type { Route } from "./+types/patience.$date.ts";
 
 // Convert a "patience date" (today) to the release date (1 year ago)
@@ -63,9 +59,7 @@ function PatienceLoading() {
 function GamesList({ releases }: { releases: Release[] }) {
 	if (releases.length === 0) {
 		return (
-			<div className="text-center py-12 text-zinc-400">
-				No games became patient on this date.
-			</div>
+			<div className="text-center py-12 text-zinc-400">No games became patient on this date.</div>
 		);
 	}
 
@@ -105,7 +99,8 @@ export default function PatienceDate({ loaderData }: Route.ComponentProps) {
 						<Await resolve={releases}>
 							{(resolvedReleases) => (
 								<p className="text-sm text-zinc-400 mt-1">
-									{resolvedReleases.length} game{resolvedReleases.length !== 1 ? "s" : ""} became patient
+									{resolvedReleases.length} game{resolvedReleases.length !== 1 ? "s" : ""} became
+									patient
 								</p>
 							)}
 						</Await>
@@ -124,10 +119,7 @@ export default function PatienceDate({ loaderData }: Route.ComponentProps) {
 
 			{!isToday && (
 				<div className="mb-6 text-center">
-					<Link
-						to="/patience"
-						className="text-sm text-blue-400 hover:text-blue-300"
-					>
+					<Link to="/patience" className="text-sm text-blue-400 hover:text-blue-300">
 						Jump to today
 					</Link>
 				</div>

@@ -109,25 +109,15 @@ export default function GameCard({
 			{...dragHandleProps}
 			className={cn(cardVariants({ status }))}
 		>
-			<GameCardImage
-				coverUrl={coverUrl ?? null}
-				gameName={game.gameName}
-				status={status}
-			/>
+			<GameCardImage coverUrl={coverUrl ?? null} gameName={game.gameName} status={status} />
 
 			<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
 				<div className="min-w-0 space-y-2">
 					<div className="flex justify-between items-start gap-2">
 						<h3 className={cn(titleVariants({ status }))}>{game.gameName}</h3>
-						{year && (
-							<p className="text-xs text-zinc-500 flex-shrink-0 font-medium">
-								{year}
-							</p>
-						)}
+						{year && <p className="text-xs text-zinc-500 flex-shrink-0 font-medium">{year}</p>}
 					</div>
-					{game.summary && (
-						<p className="text-base text-zinc-400 line-clamp-3">{game.summary}</p>
-					)}
+					{game.summary && <p className="text-base text-zinc-400 line-clamp-3">{game.summary}</p>}
 				</div>
 
 				<GameCardActions

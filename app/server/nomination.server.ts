@@ -2,9 +2,7 @@ import { db } from "~/server/database.server";
 import { getPitchesForNominations } from "~/server/pitches.server";
 import type { Nomination } from "~/types";
 
-export async function getNominationsForMonth(
-	monthId: number,
-): Promise<Nomination[]> {
+export async function getNominationsForMonth(monthId: number): Promise<Nomination[]> {
 	const result = await db.execute({
 		sql: `SELECT id,
                 game_id,
@@ -47,9 +45,7 @@ export async function getNominationsForMonth(
 	});
 }
 
-export async function getNominationsByIds(
-	nominationIds: number[],
-): Promise<Nomination[]> {
+export async function getNominationsByIds(nominationIds: number[]): Promise<Nomination[]> {
 	if (nominationIds.length === 0) {
 		return [];
 	}

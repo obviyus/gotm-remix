@@ -4,13 +4,7 @@ import { getCurrentMonth } from "~/server/month.server";
 import { commitSession, getSession } from "~/sessions";
 import type { Route } from "./+types/auth.discord.callback";
 
-type MonthStatus =
-	| "ready"
-	| "nominating"
-	| "jury"
-	| "voting"
-	| "playing"
-	| "over";
+type MonthStatus = "ready" | "nominating" | "jury" | "voting" | "playing" | "over";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url);
@@ -74,11 +68,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 		// Only redirect to specific pages for nominating and voting phases
 		const redirectPath =
-			status === "nominating"
-				? "/nominate"
-				: status === "voting"
-					? "/voting"
-					: "/"; // Default to home page for all other statuses
+			status === "nominating" ? "/nominate" : status === "voting" ? "/voting" : "/"; // Default to home page for all other statuses
 
 		return redirect(redirectPath, {
 			headers: {

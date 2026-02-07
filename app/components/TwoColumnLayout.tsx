@@ -25,9 +25,7 @@ export function Column({ title, statusBadge, action, children }: ColumnProps) {
 	return (
 		<Card className="bg-zinc-900 border-zinc-800">
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle className="text-2xl font-bold text-zinc-100">
-					{title}
-				</CardTitle>
+				<CardTitle className="text-2xl font-bold text-zinc-100">{title}</CardTitle>
 				{statusBadge && (
 					<Badge
 						variant="secondary"
@@ -60,9 +58,7 @@ export default function TwoColumnLayout({
 		<div className="mx-auto">
 			<div className="text-center space-y-2 mb-8">
 				<h1 className="text-3xl font-bold">{title}</h1>
-				{subtitle && (
-					<h2 className="text-xl text-muted-foreground">{subtitle}</h2>
-				)}
+				{subtitle && <h2 className="text-xl text-muted-foreground">{subtitle}</h2>}
 				{description && <p className="text-muted-foreground">{description}</p>}
 			</div>
 

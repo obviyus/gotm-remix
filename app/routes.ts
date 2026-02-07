@@ -1,10 +1,4 @@
-import {
-	index,
-	layout,
-	prefix,
-	type RouteConfig,
-	route,
-} from "@react-router/dev/routes";
+import { index, layout, prefix, type RouteConfig, route } from "@react-router/dev/routes";
 
 export default [
 	// Main layout with all child routes

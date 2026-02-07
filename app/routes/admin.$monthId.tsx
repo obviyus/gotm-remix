@@ -68,13 +68,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const nominationsPromise = getNominationsForMonth(selectedMonthId);
 	const themeCategoriesPromise = getThemeCategories();
 
-	const [monthsResult, selectedMonth, nominations, themeCategories] =
-		await Promise.all([
-			monthsResultPromise,
-			selectedMonthPromise,
-			nominationsPromise,
-			themeCategoriesPromise,
-		]);
+	const [monthsResult, selectedMonth, nominations, themeCategories] = await Promise.all([
+		monthsResultPromise,
+		selectedMonthPromise,
+		nominationsPromise,
+		themeCategoriesPromise,
+	]);
 
 	if (!selectedMonth) {
 		throw new Response("Month not found", { status: 404 });
@@ -82,9 +81,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	return {
 		months: await Promise.all(
-			(monthsResult.rows as unknown as MonthRow[]).map(async (row) =>
-				getMonth(row.id),
-			),
+			(monthsResult.rows as unknown as MonthRow[]).map(async (row) => getMonth(row.id)),
 		),
 		selectedMonth,
 		nominations,
@@ -114,10 +111,7 @@ export async function action({ request }: Route.ActionArgs) {
 				typeof status !== "string" ||
 				typeof themeName !== "string"
 			) {
-				return Response.json(
-					{ error: "Missing required fields" },
-					{ status: 400 },
-				);
+				return Response.json({ error: "Missing required fields" }, { status: 400 });
 			}
 
 			try {
@@ -149,10 +143,7 @@ export async function action({ request }: Route.ActionArgs) {
 				});
 
 				if (statusResult.rows.length === 0) {
-					return Response.json(
-						{ error: `Invalid status: ${status}` },
-						{ status: 400 },
-					);
+					return Response.json({ error: `Invalid status: ${status}` }, { status: 400 });
 				}
 
 				const statusId = statusResult.rows[0].id;
@@ -160,11 +151,7 @@ export async function action({ request }: Route.ActionArgs) {
 				// Create theme first
 				const themeResult = await db.execute({
 					sql: "INSERT INTO themes (theme_category_id, name, description) VALUES (?, ?, ?) RETURNING id",
-					args: [
-						themeCategoryId,
-						themeName,
-						themeDescription?.toString() || null,
-					],
+					args: [themeCategoryId, themeName, themeDescription?.toString() || null],
 				});
 
 				const themeId = (themeResult.rows[0] as unknown as MonthRow).id;
@@ -178,14 +165,8 @@ export async function action({ request }: Route.ActionArgs) {
 				return Response.json({ success: true });
 			} catch (error) {
 				// Check for unique constraint violation
-				if (
-					error instanceof Error &&
-					error.message.includes("UNIQUE constraint failed")
-				) {
-					return Response.json(
-						{ error: "This month already exists" },
-						{ status: 400 },
-					);
+				if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+					return Response.json({ error: "This month already exists" }, { status: 400 });
 				}
 				throw error;
 			}
@@ -196,10 +177,7 @@ export async function action({ request }: Route.ActionArgs) {
 			const newStatus = formData.get("status");
 
 			if (!monthId || !newStatus || typeof newStatus !== "string") {
-				return Response.json(
-					{ error: "Missing required fields" },
-					{ status: 400 },
-				);
+				return Response.json({ error: "Missing required fields" }, { status: 400 });
 			}
 
 			try {
@@ -231,10 +209,7 @@ export async function action({ request }: Route.ActionArgs) {
 				});
 
 				if (statusResult.rows.length === 0) {
-					return Response.json(
-						{ error: `Invalid status: ${newStatus}` },
-						{ status: 400 },
-					);
+					return Response.json({ error: `Invalid status: ${newStatus}` }, { status: 400 });
 				}
 
 				const statusId = statusResult.rows[0].id;
@@ -248,10 +223,7 @@ export async function action({ request }: Route.ActionArgs) {
 				return Response.json({ success: true });
 			} catch (error) {
 				console.error("Error updating month status:", error);
-				return Response.json(
-					{ error: "Failed to update month status" },
-					{ status: 500 },
-				);
+				return Response.json({ error: "Failed to update month status" }, { status: 500 });
 			}
 		}
 
@@ -260,10 +232,7 @@ export async function action({ request }: Route.ActionArgs) {
 			const selected = formData.get("selected") === "true";
 
 			if (!nominationId) {
-				return Response.json(
-					{ error: "Missing nomination ID" },
-					{ status: 400 },
-				);
+				return Response.json({ error: "Missing nomination ID" }, { status: 400 });
 			}
 
 			await db.execute({
@@ -281,8 +250,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Admin({ loaderData }: Route.ComponentProps) {
 	const { months, selectedMonth, nominations, themeCategories } = loaderData;
-	const [selectedNomination, setSelectedNomination] =
-		useState<Nomination | null>(null);
+	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
 	const [isPitchesModalOpen, setIsPitchesModalOpen] = useState(false);
 	const navigate = useNavigate();
 	const createMonthFetcher = useFetcher<ActionResponse>();
@@ -318,10 +286,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 
 	// Clear error when submission is successful
 	useEffect(() => {
-		if (
-			createMonthFetcher.state === "idle" &&
-			createMonthFetcher.data?.success
-		) {
+		if (createMonthFetcher.state === "idle" && createMonthFetcher.data?.success) {
 			setError(null);
 			setShowCreateForm(false);
 			void navigate(".", { replace: true });
@@ -400,14 +365,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		});
 	};
 
-	const monthStatuses = [
-		"ready",
-		"nominating",
-		"jury",
-		"voting",
-		"playing",
-		"over",
-	] as const;
+	const monthStatuses = ["ready", "nominating", "jury", "voting", "playing", "over"] as const;
 
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -418,15 +376,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 						{/* Month title and status */}
 						<div className="flex flex-col sm:flex-row sm:items-center gap-3">
 							<h1 className="text-2xl font-bold text-zinc-200">
-								{new Date(
-									selectedMonth.year,
-									selectedMonth.month - 1,
-								).toLocaleString("default", { month: "long", year: "numeric" })}
+								{new Date(selectedMonth.year, selectedMonth.month - 1).toLocaleString("default", {
+									month: "long",
+									year: "numeric",
+								})}
 							</h1>
 
-							{["nominating", "jury", "voting"].includes(
-								selectedMonth.status,
-							) && (
+							{["nominating", "jury", "voting"].includes(selectedMonth.status) && (
 								<span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
 									Active Month
 								</span>
@@ -468,9 +424,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 					{/* Month Navigation */}
 					<div className="flex items-center justify-between mt-4">
 						{(() => {
-							const currentIndex = months.findIndex(
-								(m) => m.id === selectedMonth.id,
-							);
+							const currentIndex = months.findIndex((m) => m.id === selectedMonth.id);
 							const prev = months[currentIndex + 1];
 							return prev ? (
 								<Button
@@ -520,9 +474,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 						</div>
 
 						{(() => {
-							const currentIndex = months.findIndex(
-								(m) => m.id === selectedMonth.id,
-							);
+							const currentIndex = months.findIndex((m) => m.id === selectedMonth.id);
 							const next = months[currentIndex - 1];
 							return next ? (
 								<Button
@@ -549,9 +501,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					{statusUpdateFetcher.data?.error && (
-						<p className="mt-2 text-sm text-red-400">
-							{statusUpdateFetcher.data.error}
-						</p>
+						<p className="mt-2 text-sm text-red-400">{statusUpdateFetcher.data.error}</p>
 					)}
 				</div>
 			)}
@@ -567,10 +517,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							<input type="hidden" name="intent" value="createMonth" />
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 								<div>
-									<Label
-										htmlFor={yearInputId}
-										className="text-sm font-medium text-zinc-400 mb-1"
-									>
+									<Label htmlFor={yearInputId} className="text-sm font-medium text-zinc-400 mb-1">
 										Year
 									</Label>
 									<Input
@@ -585,10 +532,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									/>
 								</div>
 								<div>
-									<Label
-										htmlFor={monthInputId}
-										className="text-sm font-medium text-zinc-400 mb-1"
-									>
+									<Label htmlFor={monthInputId} className="text-sm font-medium text-zinc-400 mb-1">
 										Month (1-12)
 									</Label>
 									<Input
@@ -684,9 +628,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									variant="outline"
 									className="text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
 								>
-									{createMonthFetcher.state !== "idle"
-										? "Creating…"
-										: "Create Month"}
+									{createMonthFetcher.state !== "idle" ? "Creating…" : "Create Month"}
 								</Button>
 							</div>
 							{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
@@ -699,8 +641,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			{selectedMonth && nominations.length > 0 && (
 				<section>
 					<h2 className="text-xl font-semibold mb-4 text-zinc-200">
-						{nominations.length} Game{nominations.length !== 1 ? "s" : ""}{" "}
-						Nominated
+						{nominations.length} Game{nominations.length !== 1 ? "s" : ""} Nominated
 					</h2>
 
 					<div className="bg-black/10 backdrop-blur-sm rounded-lg shadow overflow-hidden border border-white/10">
@@ -742,10 +683,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								</thead>
 								<tbody className="divide-y divide-white/10">
 									{nominations.map((nomination) => (
-										<tr
-											key={nomination.id}
-											className="hover:bg-white/5 transition-colors"
-										>
+										<tr key={nomination.id} className="hover:bg-white/5 transition-colors">
 											<td className="px-4 py-3 whitespace-nowrap">
 												<div className="flex items-center">
 													{nomination.gameCover && (
@@ -794,20 +732,14 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 													onClick={() => handleToggleJurySelected(nomination)}
 													disabled={isProcessingNomination(nomination.id)}
 													className={`relative inline-flex h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-														isProcessingNomination(nomination.id)
-															? "opacity-70"
-															: ""
+														isProcessingNomination(nomination.id) ? "opacity-70" : ""
 													} ${
-														getNominationSelectedState(nomination)
-															? "bg-blue-500"
-															: "bg-zinc-700"
+														getNominationSelectedState(nomination) ? "bg-blue-500" : "bg-zinc-700"
 													}`}
 													aria-pressed={getNominationSelectedState(nomination)}
 												>
 													<span className="sr-only">
-														{getNominationSelectedState(nomination)
-															? "Selected"
-															: "Not selected"}
+														{getNominationSelectedState(nomination) ? "Selected" : "Not selected"}
 													</span>
 													<span
 														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ${

@@ -11,10 +11,8 @@ export function uniqueNameGenerator(discordId: string): string {
 	const character = characterList[characterIndex].name;
 
 	// Capitalize first letter of both words
-	const capitalizedAdjective =
-		adjective.charAt(0).toUpperCase() + adjective.slice(1);
-	const capitalizedCharacter =
-		character.charAt(0).toUpperCase() + character.slice(1);
+	const capitalizedAdjective = adjective.charAt(0).toUpperCase() + adjective.slice(1);
+	const capitalizedCharacter = character.charAt(0).toUpperCase() + character.slice(1);
 
 	return `${capitalizedAdjective} ${capitalizedCharacter}`;
 }

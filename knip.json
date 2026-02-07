@@ -1,12 +1,10 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignore": ["app/components/ui/**"],
-  "ignoreExportsUsedInFile": {
-    "interface": true,
-    "type": true
-  },
-  "entry": ["tests/**/*.test.ts"],
-  "tags": [
-    "-lintignore"
-  ]
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"ignore": ["app/components/ui/**"],
+	"ignoreExportsUsedInFile": {
+		"interface": true,
+		"type": true
+	},
+	"entry": ["tests/**/*.test.ts"],
+	"tags": ["-lintignore"]
 }

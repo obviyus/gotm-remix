@@ -2,7 +2,6 @@ import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
 import type { Pitch } from "~/types";
 
-
 export async function getPitchesForNominations(
 	nominationIds: number[],
 ): Promise<Record<number, Pitch[]>> {

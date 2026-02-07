@@ -87,9 +87,7 @@ const getNominationsAndVotes = async (
 	};
 };
 
-const getRankingsForVotes = async (
-	voteIds: number[],
-): Promise<Map<number, Ranking[]>> => {
+const getRankingsForVotes = async (voteIds: number[]): Promise<Map<number, Ranking[]>> => {
 	if (voteIds.length === 0) return new Map();
 
 	// Create a properly formatted args array for Turso
@@ -119,10 +117,7 @@ const getRankingsForVotes = async (
 	return rankingsMap;
 };
 
-const getNominationsForMonth = async (
-	monthId: number,
-	short: boolean,
-): Promise<Nomination[]> => {
+const getNominationsForMonth = async (monthId: number, short: boolean): Promise<Nomination[]> => {
 	const nominationsResult = await db.execute({
 		sql: `SELECT id,
                     game_id,
@@ -208,9 +203,7 @@ export const calculateVotingResults = async (
 		}
 
 		const { nominations, votes } = await getNominationsAndVotes(monthId, short);
-		console.log(
-			`[Voting] Found ${votes.length} votes for ${short ? "short" : "long"} games`,
-		);
+		console.log(`[Voting] Found ${votes.length} votes for ${short ? "short" : "long"} games`);
 
 		if (votes.length === 0) {
 			const emptyResults: Result[] = [];
@@ -234,9 +227,7 @@ export const calculateVotingResults = async (
 			}
 		}
 
-		const viable = nominations.filter((n) =>
-			nominationsWithRankings.has(n.id),
-		);
+		const viable = nominations.filter((n) => nominationsWithRankings.has(n.id));
 
 		if (viable.length === 0) {
 			const emptyResults: Result[] = [];
@@ -259,10 +250,7 @@ export const invalidateVotingCache = (monthId: number, short: boolean) => {
 	globalCache.delete(cacheKey);
 };
 
-export const invalidateVotingTimelapseCache = (
-	monthId: number,
-	short: boolean,
-) => {
+export const invalidateVotingTimelapseCache = (monthId: number, short: boolean) => {
 	const cacheKey = `voting-timelapse-${monthId}-${short}`;
 	globalCache.delete(cacheKey);
 };
@@ -309,18 +297,14 @@ export const getVotingTimelapse = async (
 			return empty;
 		}
 
-		const sortedVotes = [...votesWithRankings].sort(
-			(a, b) => a.voteTime - b.voteTime,
+		const sortedVotes = [...votesWithRankings].sort((a, b) => a.voteTime - b.voteTime);
+		const times = Array.from(new Set(sortedVotes.map((vote) => vote.voteTime))).sort(
+			(a, b) => a - b,
 		);
-		const times = Array.from(
-			new Set(sortedVotes.map((vote) => vote.voteTime)),
-		).sort((a, b) => a - b);
 
 		const frameTimes = getTimelapseFrameTimes(times);
 		const frames: VotingTimelapseFrame[] = frameTimes.map((timestamp) => {
-			const activeVotes = sortedVotes.filter(
-				(vote) => vote.voteTime <= timestamp,
-			);
+			const activeVotes = sortedVotes.filter((vote) => vote.voteTime <= timestamp);
 			const activeVoteRankings = activeVotes.map((vote) => ({
 				id: vote.id,
 				rankings: vote.rankings,
@@ -331,9 +315,7 @@ export const getVotingTimelapse = async (
 					nominationIds.add(ranking.nominationId);
 				}
 			}
-			const viable = nominations.filter((nomination) =>
-				nominationIds.has(nomination.id),
-			);
+			const viable = nominations.filter((nomination) => nominationIds.has(nomination.id));
 			const results =
 				viable.length > 0 && activeVoteRankings.length > 0
 					? calculateIRV(viable, activeVoteRankings)
@@ -361,9 +343,7 @@ export const getVotingTimelapse = async (
 	}
 };
 
-export const getGameUrls = async (
-	monthId: number,
-): Promise<Record<string, string>> => {
+export const getGameUrls = async (monthId: number): Promise<Record<string, string>> => {
 	const nominations = await db.execute({
 		sql: "SELECT game_name, game_url FROM nominations WHERE month_id = ?1 AND jury_selected = 1",
 		args: [monthId],
@@ -378,9 +358,7 @@ export const getGameUrls = async (
 	return urls;
 };
 
-export const getTotalVotesForMonth = async (
-	monthId: number,
-): Promise<number> => {
+export const getTotalVotesForMonth = async (monthId: number): Promise<number> => {
 	const result = await db.execute({
 		sql: `SELECT COUNT(*) AS total_votes
          FROM votes v
@@ -391,7 +369,5 @@ export const getTotalVotesForMonth = async (
 		args: [monthId],
 	});
 
-	return Number(
-		(result.rows[0] as { total_votes?: number | string }).total_votes ?? 0,
-	);
+	return Number((result.rows[0] as { total_votes?: number | string }).total_votes ?? 0);
 };

@@ -404,72 +404,59 @@ export async function loader(): Promise<StatsLoaderData> {
 		count: Number(r.count),
 	}));
 
-	const monthlyStats: MonthlyParticipationStats[] = monthlyStatsResult.rows.map(
+	const monthlyStats: MonthlyParticipationStats[] = monthlyStatsResult.rows.map((r) => ({
+		monthYear: String(r.monthYear),
+		themeShort: r.themeShort != null ? String(r.themeShort) : null,
+		nominators: Number(r.nominators),
+		voters: Number(r.voters),
+		total: Number(r.total),
+	}));
+
+	const jurySelectionStats: JurySelectionStatsType[] = monthlyStatsResult.rows.map((r) => ({
+		monthYear: String(r.monthYear),
+		themeShort: r.themeShort != null ? String(r.themeShort) : null,
+		selected: Number(r.selected),
+		total: Number(r.total),
+		selectPercentage:
+			Number(r.total) > 0 ? Math.round((Number(r.selected) / Number(r.total)) * 100) : 0,
+	}));
+
+	const monthlyNominationCounts: MonthlyNominationCountStats[] = monthlyStatsResult.rows.map(
 		(r) => ({
-			monthYear: String(r.monthYear),
-			themeShort: r.themeShort != null ? String(r.themeShort) : null,
-			nominators: Number(r.nominators),
-			voters: Number(r.voters),
-			total: Number(r.total),
-		}),
-	);
-
-	const jurySelectionStats: JurySelectionStatsType[] =
-		monthlyStatsResult.rows.map((r) => ({
-			monthYear: String(r.monthYear),
-			themeShort: r.themeShort != null ? String(r.themeShort) : null,
-			selected: Number(r.selected),
-			total: Number(r.total),
-			selectPercentage:
-				Number(r.total) > 0
-					? Math.round((Number(r.selected) / Number(r.total)) * 100)
-					: 0,
-		}));
-
-	const monthlyNominationCounts: MonthlyNominationCountStats[] =
-		monthlyStatsResult.rows.map((r) => ({
 			monthYear: String(r.monthYear),
 			themeShort: r.themeShort != null ? String(r.themeShort) : null,
 			count: Number(r.total),
-		}));
-
-	const topGamesFinalist: TopGamesFinalistStats[] = topGamesResult.rows.map(
-		(r) => ({
-			id: String(r.id),
-			name: String(r.name),
-			finalistNominations: Number(r.finalistNominations),
-			nonFinalistNominations: Number(r.nonFinalistNominations),
-			totalNominations: Number(r.totalNominations),
 		}),
 	);
 
-	const topScoringNominations: TopScoringNominationStats[] =
-		topScoringResult.rows.map((r) => ({
-			game_name: String(r.game_name),
-			count: Number(r.count),
-		}));
+	const topGamesFinalist: TopGamesFinalistStats[] = topGamesResult.rows.map((r) => ({
+		id: String(r.id),
+		name: String(r.name),
+		finalistNominations: Number(r.finalistNominations),
+		nonFinalistNominations: Number(r.nonFinalistNominations),
+		totalNominations: Number(r.totalNominations),
+	}));
 
-	const winnersByYear: WinnerByYearStats[] = winnersByYearResult.rows.map(
-		(r) => ({
-			year: String(r.year),
-			count: Number(r.count),
-		}),
-	);
+	const topScoringNominations: TopScoringNominationStats[] = topScoringResult.rows.map((r) => ({
+		game_name: String(r.game_name),
+		count: Number(r.count),
+	}));
 
-	const pitchSuccessRate: PitchSuccessRateStats[] = pitchSuccessResult.rows.map(
-		(r) => ({
-			category: String(r.category),
-			win_rate: Number(r.win_rate),
-			total_games: Number(r.total_games),
-		}),
-	);
+	const winnersByYear: WinnerByYearStats[] = winnersByYearResult.rows.map((r) => ({
+		year: String(r.year),
+		count: Number(r.count),
+	}));
 
-	const votingMargins: VotingMarginStats[] = votingMarginsResult.rows.map(
-		(r) => ({
-			margin_category: String(r.margin_category),
-			count: Number(r.count),
-		}),
-	);
+	const pitchSuccessRate: PitchSuccessRateStats[] = pitchSuccessResult.rows.map((r) => ({
+		category: String(r.category),
+		win_rate: Number(r.win_rate),
+		total_games: Number(r.total_games),
+	}));
+
+	const votingMargins: VotingMarginStats[] = votingMarginsResult.rows.map((r) => ({
+		margin_category: String(r.margin_category),
+		count: Number(r.count),
+	}));
 
 	const speedRuns: SpeedRunStats[] = speedRunsResult.rows.map((r) => ({
 		game_name: String(r.game_name),
@@ -478,40 +465,29 @@ export async function loader(): Promise<StatsLoaderData> {
 		days_to_win: Number(r.days_to_win),
 	}));
 
-	const powerNominators: PowerNominatorStats[] = powerNominatorsResult.rows.map(
-		(r) => ({
-			discord_id: String(r.discord_id),
-			winner_count: Number(r.winner_count),
-			display_name: uniqueNameGenerator(String(r.discord_id)),
-		}),
-	);
+	const powerNominators: PowerNominatorStats[] = powerNominatorsResult.rows.map((r) => ({
+		discord_id: String(r.discord_id),
+		winner_count: Number(r.winner_count),
+		display_name: uniqueNameGenerator(String(r.discord_id)),
+	}));
 
-	const discordDynasties: DiscordDynastyStats[] =
-		discordDynastiesResult.rows.map((r) => ({
-			discord_id: String(r.discord_id),
-			consecutive_months: Number(r.consecutive_months),
-			streak_type: String(r.streak_type),
-			display_name: uniqueNameGenerator(String(r.discord_id)),
-		}));
+	const discordDynasties: DiscordDynastyStats[] = discordDynastiesResult.rows.map((r) => ({
+		discord_id: String(r.discord_id),
+		consecutive_months: Number(r.consecutive_months),
+		streak_type: String(r.streak_type),
+		display_name: uniqueNameGenerator(String(r.discord_id)),
+	}));
 
 	// AIDEV-NOTE: Pre-filter monthly data to remove leading zero-activity months
-	const firstActiveMonthlyIdx = monthlyStats.findIndex(
-		(m) => m.nominators > 0 || m.voters > 0,
-	);
+	const firstActiveMonthlyIdx = monthlyStats.findIndex((m) => m.nominators > 0 || m.voters > 0);
 	const activeMonthlyStats =
-		firstActiveMonthlyIdx >= 0
-			? monthlyStats.slice(firstActiveMonthlyIdx)
-			: monthlyStats;
+		firstActiveMonthlyIdx >= 0 ? monthlyStats.slice(firstActiveMonthlyIdx) : monthlyStats;
 
 	const firstActiveJuryIdx = jurySelectionStats.findIndex((j) => j.total > 0);
 	const activeJurySelectionStats =
-		firstActiveJuryIdx >= 0
-			? jurySelectionStats.slice(firstActiveJuryIdx)
-			: jurySelectionStats;
+		firstActiveJuryIdx >= 0 ? jurySelectionStats.slice(firstActiveJuryIdx) : jurySelectionStats;
 
-	const firstActiveNomIdx = monthlyNominationCounts.findIndex(
-		(m) => m.count > 0,
-	);
+	const firstActiveNomIdx = monthlyNominationCounts.findIndex((m) => m.count > 0);
 	const activeMonthlyNominationCounts =
 		firstActiveNomIdx >= 0
 			? monthlyNominationCounts.slice(firstActiveNomIdx)
@@ -572,44 +548,24 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 				</h2>
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Total Nominations
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_nominations}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Nominations</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_nominations}</p>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Unique Nominations
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.unique_games}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Unique Nominations</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.unique_games}</p>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Total Votes Cast
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_votes}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Votes Cast</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_votes}</p>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Total Pitches Submitted
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_pitches}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Pitches Submitted</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_pitches}</p>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Total Winners Selected
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_winners}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Winners Selected</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_winners}</p>
 					</Card>
 				</div>
 			</section>
@@ -651,36 +607,21 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* Participation Section */}
 			<section aria-labelledby={participationId}>
-				<h2
-					id={participationId}
-					className="text-2xl font-semibold text-white mb-6"
-				>
+				<h2 id={participationId} className="text-2xl font-semibold text-white mb-6">
 					Community Participation
 				</h2>
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Unique Nominators
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_nominators}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Unique Nominators</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_nominators}</p>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Unique Voters
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_voters}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Unique Voters</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_voters}</p>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">
-							Active Jury Members
-						</h3>
-						<p className="text-3xl font-bold text-white">
-							{totalStats.total_jury_members}
-						</p>
+						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Active Jury Members</h3>
+						<p className="text-3xl font-bold text-white">{totalStats.total_jury_members}</p>
 					</Card>
 				</div>
 				<div className="w-full">
@@ -737,17 +678,13 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 				</div>
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Winners by Release Year
-						</h3>
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Winners by Release Year</h3>
 						<div className="h-full">
 							<WinnersByYearChart data={winnersByYear} />
 						</div>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Victory Margins
-						</h3>
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Victory Margins</h3>
 						<div className="h-full">
 							<VotingMarginsChart data={votingMargins} />
 						</div>
@@ -779,17 +716,13 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 									>
 										<div className="flex-1">
 											<p className="text-white font-medium">{game.game_name}</p>
-											<p className="text-zinc-400 text-sm">
-												Released: {game.game_year}
-											</p>
+											<p className="text-zinc-400 text-sm">Released: {game.game_year}</p>
 										</div>
 										<div className="text-right">
 											<p className="text-sky-400 font-medium">
 												{Math.round(game.days_to_win / 365)} years
 											</p>
-											<p className="text-zinc-400 text-sm">
-												({game.days_to_win} days)
-											</p>
+											<p className="text-zinc-400 text-sm">({game.days_to_win} days)</p>
 										</div>
 									</div>
 								))}
@@ -800,17 +733,13 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Nominators with Most Wins
-						</h3>
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Nominators with Most Wins</h3>
 						<div className="h-full">
 							<PowerNominatorsChart data={powerNominators} />
 						</div>
 					</Card>
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Pitch Success Rate
-						</h3>
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Pitch Success Rate</h3>
 						<div className="h-full">
 							<PitchSuccessRateChart data={pitchSuccessRate} />
 						</div>
@@ -833,9 +762,7 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 									className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg"
 								>
 									<p className="text-white font-medium">{user.display_name}</p>
-									<p className="text-sky-400 font-medium">
-										{user.consecutive_months} months
-									</p>
+									<p className="text-sky-400 font-medium">{user.consecutive_months} months</p>
 								</div>
 							))}
 						</div>
@@ -844,9 +771,7 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 				<div className="w-full">
 					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Monthly Nominations Trend
-						</h3>
+						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Monthly Nominations Trend</h3>
 						<div className="h-full">
 							<MonthlyNominationCountsChart data={monthlyNominationCounts} />
 						</div>
@@ -866,10 +791,7 @@ function formatMonthYear(monthYear: string): string {
 	}
 
 	const [year, month] = monthYear.split("-");
-	const date = new Date(
-		Number.parseInt(year, 10),
-		Number.parseInt(month, 10) - 1,
-	);
+	const date = new Date(Number.parseInt(year, 10), Number.parseInt(month, 10) - 1);
 	const formatted = date.toLocaleDateString("en-US", {
 		month: "long",
 		year: "numeric",
@@ -949,7 +871,6 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 				},
 			],
 		});
-
 	}, [data]);
 
 	return <div ref={chartRef} className="w-full h-full" />;
@@ -1173,11 +1094,7 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 	return <div ref={chartRef} className="w-full h-full" />;
 }
 
-function JurySelectionPercentageChart({
-	data,
-}: {
-	data: JurySelectionStatsType[];
-}) {
+function JurySelectionPercentageChart({ data }: { data: JurySelectionStatsType[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -1412,11 +1329,7 @@ function WinnersByYearChart({ data }: { data: WinnerByYearStats[] }) {
 	return <div ref={chartRef} className="w-full h-full" />;
 }
 
-function TopScoringNominationsChart({
-	data,
-}: {
-	data: TopScoringNominationStats[];
-}) {
+function TopScoringNominationsChart({ data }: { data: TopScoringNominationStats[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -1611,11 +1524,7 @@ function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
 	}, [data]);
 
 	if (data.length === 0) {
-		return (
-			<p className="text-center text-gray-400">
-				No data available for this chart.
-			</p>
-		);
+		return <p className="text-center text-gray-400">No data available for this chart.</p>;
 	}
 
 	return <div ref={chartRef} style={FULL_SIZE_STYLE} />;
@@ -1795,8 +1704,7 @@ function VotingMarginsChart({ data }: { data: VotingMarginStats[] }) {
 		// Sort data using Map lookup - O(n) instead of O(n*m)
 		const sortedData = [...data].sort((a, b) => {
 			return (
-				(MARGIN_ORDER.get(a.margin_category) ?? 99) -
-				(MARGIN_ORDER.get(b.margin_category) ?? 99)
+				(MARGIN_ORDER.get(a.margin_category) ?? 99) - (MARGIN_ORDER.get(b.margin_category) ?? 99)
 			);
 		});
 
@@ -1845,11 +1753,7 @@ function VotingMarginsChart({ data }: { data: VotingMarginStats[] }) {
 }
 
 // Monthly Nomination Counts Chart
-function MonthlyNominationCountsChart({
-	data,
-}: {
-	data: MonthlyNominationCountStats[];
-}) {
+function MonthlyNominationCountsChart({ data }: { data: MonthlyNominationCountStats[] }) {
 	const chartRef = useRef<HTMLDivElement>(null);
 	const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 

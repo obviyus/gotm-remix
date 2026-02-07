@@ -129,7 +129,8 @@ function igdbGameToNomination(game: IGDBGameWithPopularity): Nomination {
 		gameCover: game.cover?.url?.replace("t_thumb", "t_cover_big"),
 		summary: game.summary,
 		gameYear: year,
-		gameUrl: game.url || `https://www.igdb.com/games/${game.name.toLowerCase().replace(/\s+/g, "-")}`,
+		gameUrl:
+			game.url || `https://www.igdb.com/games/${game.name.toLowerCase().replace(/\s+/g, "-")}`,
 		short: false,
 		jurySelected: false,
 		monthId: 0,
@@ -142,12 +143,22 @@ async function cacheReleases(date: string, games: IGDBGameWithPopularity[]): Pro
 	for (const game of games) {
 		const cover = game.cover?.url?.replace("t_thumb", "t_cover_big") || null;
 		const year = new Date(game.first_release_date * 1000).getFullYear().toString();
-		const popularityScore = (game.total_rating_count ?? 0) * 100 + (game.hypes ?? 0) + (game.follows ?? 0);
+		const popularityScore =
+			(game.total_rating_count ?? 0) * 100 + (game.hypes ?? 0) + (game.follows ?? 0);
 
 		await db.execute({
 			sql: `INSERT OR IGNORE INTO igdb_releases (release_date, game_id, game_name, game_cover, game_summary, game_year, game_url, popularity_score)
 				  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			args: [date, game.id, game.name, cover, game.summary || null, year, game.url || null, popularityScore],
+			args: [
+				date,
+				game.id,
+				game.name,
+				cover,
+				game.summary || null,
+				year,
+				game.url || null,
+				popularityScore,
+			],
 		});
 	}
 }
@@ -163,20 +174,22 @@ async function getCachedReleases(date: string): Promise<Release[] | null> {
 		return null;
 	}
 
-	return result.rows.map((row): Nomination => ({
-		id: row.id as number,
-		gameId: (row.game_id as number).toString(),
-		gameName: row.game_name as string,
-		gameCover: (row.game_cover as string) || undefined,
-		summary: (row.game_summary as string) || undefined,
-		gameYear: (row.game_year as string) || "",
-		gameUrl: (row.game_url as string) || "",
-		short: false,
-		jurySelected: false,
-		monthId: 0,
-		discordId: "",
-		pitches: [],
-	}));
+	return result.rows.map(
+		(row): Nomination => ({
+			id: row.id as number,
+			gameId: (row.game_id as number).toString(),
+			gameName: row.game_name as string,
+			gameCover: (row.game_cover as string) || undefined,
+			summary: (row.game_summary as string) || undefined,
+			gameYear: (row.game_year as string) || "",
+			gameUrl: (row.game_url as string) || "",
+			short: false,
+			jurySelected: false,
+			monthId: 0,
+			discordId: "",
+			pitches: [],
+		}),
+	);
 }
 
 export async function getReleasesForDate(date: string): Promise<Release[]> {

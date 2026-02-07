@@ -35,9 +35,7 @@ async function getIGDBToken() {
 			});
 			const errorText = await response.text();
 			console.error("Twitch Auth Error Response:", errorText);
-			throw new Error(
-				`Twitch auth error: ${response.status} ${response.statusText}`,
-			);
+			throw new Error(`Twitch auth error: ${response.status} ${response.statusText}`);
 		}
 
 		const data = (await response.json()) as TwitchAuth;
@@ -82,9 +80,7 @@ export async function searchGames(query: string): Promise<Nomination[]> {
 		});
 		const errorText = await response.text();
 		console.error("IGDB API Error Response:", errorText);
-		throw new Error(
-			`IGDB API error: ${response.status} ${response.statusText}`,
-		);
+		throw new Error(`IGDB API error: ${response.status} ${response.statusText}`);
 	}
 
 	const games = await response.json();
@@ -118,12 +114,8 @@ export async function searchGames(query: string): Promise<Nomination[]> {
 			gamePlatformIds: "",
 			gameId: game.id,
 			gameName: game.name,
-			gameCover: game.cover
-				? game.cover.url.replace("t_thumb", "t_cover_big")
-				: undefined,
-			gameYear: new Date(game.first_release_date * 1000)
-				.getFullYear()
-				.toString(),
+			gameCover: game.cover ? game.cover.url.replace("t_thumb", "t_cover_big") : undefined,
+			gameYear: new Date(game.first_release_date * 1000).getFullYear().toString(),
 			summary: game.summary,
 			gameUrl: game.url,
 		}));

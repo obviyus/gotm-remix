@@ -29,9 +29,7 @@ export default function handleRequest(
 		const userAgent = request.headers.get("user-agent");
 
 		const readyOption: keyof RenderToPipeableStreamOptions =
-			(userAgent && isbot(userAgent)) || routerContext.isSpaMode
-				? "onAllReady"
-				: "onShellReady";
+			(userAgent && isbot(userAgent)) || routerContext.isSpaMode ? "onAllReady" : "onShellReady";
 
 		let timeoutId: ReturnType<typeof setTimeout> | undefined = setTimeout(
 			() => abort(),
