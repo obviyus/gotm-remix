@@ -65,7 +65,7 @@ const FRAME_DURATION_MS = 700;
 
 // AIDEV-NOTE: Lazy-load ECharts to keep base bundle smaller; cache promise to avoid re-import churn.
 let echartsPromise: Promise<typeof import("echarts/core")> | null = null;
-export const loadEcharts = () => {
+const loadEcharts = () => {
 	if (!echartsPromise) {
 		echartsPromise = Promise.all([
 			import("echarts/core"),
@@ -85,7 +85,7 @@ export const prefetchEcharts = () => {
 	void loadEcharts();
 };
 
-export function buildSankeyData(
+function buildSankeyData(
 	results: SankeyDataPoint[],
 	gameColorsOverride?: Map<string, string>,
 ): SankeyProcessedData | null {
