@@ -38,9 +38,9 @@ export default function PitchesModal({ isOpen, onClose, nomination }: PitchesMod
 				<ScrollArea className="max-h-[65vh] pr-2">
 					<div className="space-y-4">
 						{nomination.pitches.length > 0 ? (
-							nomination.pitches.map((pitch, index) => (
+							nomination.pitches.map((pitch) => (
 								<div
-									key={`${nomination?.id}-${pitch.discordId}-${index}`}
+									key={pitch.id}
 									className="rounded-xl border border-gray-700/50 p-5 bg-gray-800/30 hover:bg-gray-800/60 hover:border-gray-600/70 transition-all duration-200 backdrop-blur-sm"
 								>
 									<div className="flex items-center mb-3">
