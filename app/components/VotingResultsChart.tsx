@@ -62,6 +62,7 @@ const COLOR_PALETTE = [
 
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 const FRAME_DURATION_MS = 700;
+const EMPTY_GAME_URLS: Record<string, string> = {};
 
 // AIDEV-NOTE: Lazy-load ECharts to keep base bundle smaller; cache promise to avoid re-import churn.
 let echartsPromise: Promise<typeof import("echarts/core")> | null = null;
@@ -175,7 +176,7 @@ function buildSankeyData(
 export function VotingResultsChart({
 	canvasId,
 	results,
-	gameUrls = {},
+	gameUrls = EMPTY_GAME_URLS,
 	showWinner = false,
 	timelapse,
 }: VotingResultsChartProps) {
@@ -322,24 +323,23 @@ export function VotingResultsChart({
 	useEffect(() => {
 		if (!isPlaying) return;
 		if (timelapseFrames.length <= 1) return;
-		if (playIndex >= timelapseFrames.length - 1) {
-			setIsPlaying(false);
-			return;
-		}
+		if (playIndex >= timelapseFrames.length - 1) return;
+
+		const lastFrameIndex = timelapseFrames.length - 1;
 		const timer = window.setTimeout(() => {
-			setPlayIndex((prev) => Math.min(prev + 1, timelapseFrames.length - 1));
+			setPlayIndex((prev) => {
+				const nextIndex = Math.min(prev + 1, lastFrameIndex);
+				if (nextIndex === lastFrameIndex) {
+					setIsPlaying(false);
+				}
+				return nextIndex;
+			});
 		}, FRAME_DURATION_MS);
 
 		return () => {
 			window.clearTimeout(timer);
 		};
 	}, [isPlaying, playIndex, timelapseFrames.length]);
-
-	useEffect(() => {
-		if (!isPlaying) {
-			setPlayIndex(0);
-		}
-	}, [isPlaying, results]);
 
 	useEffect(() => {
 		const chartInstance = chartInstanceRef.current;
@@ -378,6 +378,7 @@ export function VotingResultsChart({
 
 	const handleStop = () => {
 		setIsPlaying(false);
+		setPlayIndex(0);
 	};
 
 	return (

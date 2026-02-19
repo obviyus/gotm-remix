@@ -1,7 +1,7 @@
 import type { Row, Value } from "@libsql/client";
 import type { ChangeEvent } from "react";
-import { useEffect, useId, useState } from "react";
-import { Link, redirect, useFetcher, useNavigate } from "react-router";
+import { useId, useState } from "react";
+import { Link, redirect, useFetcher } from "react-router";
 import PitchesModal from "~/components/PitchesModal";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -162,7 +162,7 @@ export async function action({ request }: Route.ActionArgs) {
 					args: [year, month, statusId, themeId],
 				});
 
-				return Response.json({ success: true });
+				return redirect(new URL(request.url).pathname);
 			} catch (error) {
 				// Check for unique constraint violation
 				if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
@@ -252,13 +252,12 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const { months, selectedMonth, nominations, themeCategories } = loaderData;
 	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
 	const [isPitchesModalOpen, setIsPitchesModalOpen] = useState(false);
-	const navigate = useNavigate();
 	const createMonthFetcher = useFetcher<ActionResponse>();
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
 	const jurySelectionFetcher = useFetcher<ActionResponse>();
-	const [error, setError] = useState<string | null>(null);
 	const [csvCopied, setCsvCopied] = useState(false);
 	const [showCreateForm, setShowCreateForm] = useState(false);
+	const createMonthError = createMonthFetcher.data?.error ?? null;
 	const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
 		event.target.form?.requestSubmit();
 	};
@@ -283,17 +282,6 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const themeCategorySelectId = useId();
 	const themeNameInputId = useId();
 	const themeDescriptionTextareaId = useId();
-
-	// Clear error when submission is successful
-	useEffect(() => {
-		if (createMonthFetcher.state === "idle" && createMonthFetcher.data?.success) {
-			setError(null);
-			setShowCreateForm(false);
-			void navigate(".", { replace: true });
-		} else if (createMonthFetcher.data?.error) {
-			setError(createMonthFetcher.data.error);
-		}
-	}, [createMonthFetcher.state, createMonthFetcher.data, navigate]);
 
 	const handleToggleJurySelected = (nomination: Nomination) => {
 		void jurySelectionFetcher.submit(
@@ -627,15 +615,15 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									disabled={createMonthFetcher.state !== "idle"}
 									variant="outline"
 									className="text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
-								>
-									{createMonthFetcher.state !== "idle" ? "Creating…" : "Create Month"}
-								</Button>
-							</div>
-							{error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-						</createMonthFetcher.Form>
-					</CardContent>
-				</Card>
-			)}
+									>
+										{createMonthFetcher.state !== "idle" ? "Creating…" : "Create Month"}
+									</Button>
+								</div>
+								{createMonthError && <p className="mt-2 text-sm text-red-400">{createMonthError}</p>}
+							</createMonthFetcher.Form>
+						</CardContent>
+					</Card>
+				)}
 
 			{/* Jury Selection Section */}
 			{selectedMonth && nominations.length > 0 && (

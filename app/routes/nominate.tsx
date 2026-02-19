@@ -912,7 +912,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				{isSearching ? (
 					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
 						{Array.from({ length: 10 }).map((_, i) => (
-							<GameSkeleton key={`skeleton-${Date.now()}-${i}`} />
+							<GameSkeleton key={`skeleton-${i}`} />
 						))}
 					</div>
 				) : filteredDisplayedGames.length > 0 ? (
