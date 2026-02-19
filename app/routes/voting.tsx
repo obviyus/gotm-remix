@@ -140,6 +140,121 @@ export async function loader({ request }: Route.LoaderArgs) {
 	};
 }
 
+interface VotingGamesListProps {
+	droppableId: "long" | "short";
+	games: Nomination[];
+	order: string[];
+	onViewPitches: (nomination: Nomination) => void;
+	onRank: (itemId: string) => void;
+	onUnrank: (itemId: string) => void;
+}
+
+function VotingGamesList({
+	droppableId,
+	games,
+	order,
+	onViewPitches,
+	onRank,
+	onUnrank,
+}: VotingGamesListProps) {
+	const dividerIndex = order.indexOf("divider");
+
+	const rankedGames = games
+		.filter((game) => dividerIndex > -1 && order.slice(0, dividerIndex).includes(String(game.id)))
+		.sort((a, b) => order.indexOf(String(a.id)) - order.indexOf(String(b.id)));
+
+	const unrankedGames = games
+		.filter(
+			(game) =>
+				dividerIndex === -1 ||
+				order.slice(dividerIndex + 1).includes(String(game.id)) ||
+				!order.includes(String(game.id)),
+		)
+		.sort((a, b) => order.indexOf(String(a.id)) - order.indexOf(String(b.id)));
+
+	return (
+		<Droppable droppableId={droppableId}>
+			{(provided) => (
+				<div {...provided.droppableProps} ref={provided.innerRef}>
+					<div className="space-y-4">
+						{rankedGames.length === 0 && order.length === 0 ? (
+							<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+								<p className="text-sm text-gray-500">
+									Drag games here to rank them in order of preference
+								</p>
+							</div>
+						) : (
+							rankedGames.map((game, index) => (
+								<Draggable key={game.id} draggableId={String(game.id)} index={index}>
+									{(draggableProvided) => (
+										<GameCard
+											game={game}
+											draggableProps={draggableProvided.draggableProps}
+											dragHandleProps={draggableProvided.dragHandleProps ?? undefined}
+											innerRef={draggableProvided.innerRef}
+											isRanked={true}
+											onUnrank={() => onUnrank(String(game.id))}
+											onViewPitches={() => onViewPitches(game)}
+											pitchCount={game.pitches?.length || 0}
+											showVotingButtons={true}
+										/>
+									)}
+								</Draggable>
+							))
+						)}
+					</div>
+
+					<Draggable draggableId="divider" index={rankedGames.length} isDragDisabled>
+						{(draggableProvided) => (
+							<div
+								ref={draggableProvided.innerRef}
+								{...draggableProvided.draggableProps}
+								{...draggableProvided.dragHandleProps}
+								className="border-t-2 border-gray-600/60 my-8 relative max-w-3xl mx-auto w-full"
+							>
+								<span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-6 py-1.5 text-sm font-medium text-gray-200 select-none rounded-full border border-gray-600/60">
+									Drag above to rank
+								</span>
+							</div>
+						)}
+					</Draggable>
+
+					<div className="space-y-4">
+						{unrankedGames.length === 0 ? (
+							<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+								<p className="text-sm text-gray-500">No unranked games</p>
+							</div>
+						) : (
+							unrankedGames.map((game, index) => (
+								<Draggable
+									key={game.id}
+									draggableId={String(game.id)}
+									index={rankedGames.length + 1 + index}
+								>
+									{(draggableProvided) => (
+										<GameCard
+											game={game}
+											draggableProps={draggableProvided.draggableProps}
+											dragHandleProps={draggableProvided.dragHandleProps ?? undefined}
+											innerRef={draggableProvided.innerRef}
+											isRanked={false}
+											onRank={() => onRank(String(game.id))}
+											onViewPitches={() => onViewPitches(game)}
+											pitchCount={game.pitches?.length || 0}
+											showVotingButtons={true}
+										/>
+									)}
+								</Draggable>
+							))
+						)}
+					</div>
+					{provided.placeholder}
+				</div>
+			)}
+		</Droppable>
+	);
+}
+
 export default function Voting({ loaderData }: Route.ComponentProps) {
 	const {
 		monthId,
@@ -317,133 +432,6 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		}
 	};
 
-	const renderGames = (games: Nomination[], isShort: boolean) => {
-		const shortKey = isShort ? 1 : 0;
-		const order = currentOrder[shortKey];
-		const dividerIndex = order.indexOf("divider");
-
-		// Initialize ranked and unranked games based on the current order
-		const rankedGames = games
-			.filter((g) => dividerIndex > -1 && order.slice(0, dividerIndex).includes(String(g.id)))
-			.sort((a, b) => {
-				const aIndex = order.indexOf(String(a.id));
-				const bIndex = order.indexOf(String(b.id));
-				return aIndex - bIndex;
-			});
-
-		const unrankedGames = games
-			.filter(
-				(g) =>
-					dividerIndex === -1 ||
-					order.slice(dividerIndex + 1).includes(String(g.id)) ||
-					!order.includes(String(g.id)),
-			)
-			.sort((a, b) => {
-				const aIndex = order.indexOf(String(a.id));
-				const bIndex = order.indexOf(String(b.id));
-				return aIndex - bIndex;
-			});
-
-		const viewPitchHandlers = new Map<string, () => void>(
-			games.map((game) => [String(game.id), () => handleOpenPitches(game)] as const),
-		);
-		const unrankHandlers = new Map<string, () => void>(
-			rankedGames.map(
-				(game) => [String(game.id), () => moveItemBelowDivider(isShort, String(game.id))] as const,
-			),
-		);
-		const rankHandlers = new Map<string, () => void>(
-			unrankedGames.map(
-				(game) => [String(game.id), () => moveItemAboveDivider(isShort, String(game.id))] as const,
-			),
-		);
-
-		return (
-			<Droppable droppableId={isShort ? "short" : "long"}>
-				{(provided) => (
-					<div {...provided.droppableProps} ref={provided.innerRef}>
-						{/* Ranked Section */}
-						<div className="space-y-4">
-							{rankedGames.length === 0 && order.length === 0 ? (
-								<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-									<p className="text-sm text-gray-500">
-										Drag games here to rank them in order of preference
-									</p>
-								</div>
-							) : (
-								rankedGames.map((game, index) => (
-									<Draggable key={game.id} draggableId={String(game.id)} index={index}>
-										{(provided) => (
-											<GameCard
-												game={game}
-												draggableProps={provided.draggableProps}
-												dragHandleProps={provided.dragHandleProps ?? undefined}
-												innerRef={provided.innerRef}
-												isRanked={true}
-												onUnrank={unrankHandlers.get(String(game.id))}
-												onViewPitches={viewPitchHandlers.get(String(game.id))}
-												pitchCount={game.pitches?.length || 0}
-												showVotingButtons={true}
-											/>
-										)}
-									</Draggable>
-								))
-							)}
-						</div>
-
-						{/* Divider */}
-						<Draggable draggableId="divider" index={rankedGames.length} isDragDisabled>
-							{(provided) => (
-								<div
-									ref={provided.innerRef}
-									{...provided.draggableProps}
-									{...provided.dragHandleProps}
-									className="border-t-2 border-gray-600/60 my-8 relative max-w-3xl mx-auto w-full"
-								>
-									<span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-6 py-1.5 text-sm font-medium text-gray-200 select-none rounded-full border border-gray-600/60">
-										Drag above to rank
-									</span>
-								</div>
-							)}
-						</Draggable>
-
-						{/* Unranked Section */}
-						<div className="space-y-4">
-							{unrankedGames.length === 0 ? (
-								<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-									<p className="text-sm text-gray-500">No unranked games</p>
-								</div>
-							) : (
-								unrankedGames.map((game, index) => (
-									<Draggable
-										key={game.id}
-										draggableId={String(game.id)}
-										index={rankedGames.length + 1 + index}
-									>
-										{(provided) => (
-											<GameCard
-												game={game}
-												draggableProps={provided.draggableProps}
-												dragHandleProps={provided.dragHandleProps ?? undefined}
-												innerRef={provided.innerRef}
-												isRanked={false}
-												onRank={rankHandlers.get(String(game.id))}
-												onViewPitches={viewPitchHandlers.get(String(game.id))}
-												pitchCount={game.pitches?.length || 0}
-												showVotingButtons={true}
-											/>
-										)}
-									</Draggable>
-								))
-							)}
-						</div>
-						{provided.placeholder}
-					</div>
-				)}
-			</Droppable>
-		);
-	};
-
 	const statusBadges = {
 		long: {
 			text: votedLong ? "Voted" : "Not Voted",
@@ -497,13 +485,35 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		>
 			<Column title="Long Games" statusBadge={statusBadges.long} action={longAction}>
 				<DragDropContext onDragEnd={onDragEnd}>
-					{renderGames(longNominations, false)}
+					<VotingGamesList
+						droppableId="long"
+						games={longNominations}
+						order={currentOrder[0]}
+						onViewPitches={handleOpenPitches}
+						onRank={(itemId) => {
+							void moveItemAboveDivider(false, itemId);
+						}}
+						onUnrank={(itemId) => {
+							void moveItemBelowDivider(false, itemId);
+						}}
+					/>
 				</DragDropContext>
 			</Column>
 
 			<Column title="Short Games" statusBadge={statusBadges.short} action={shortAction}>
 				<DragDropContext onDragEnd={onDragEnd}>
-					{renderGames(shortNominations, true)}
+					<VotingGamesList
+						droppableId="short"
+						games={shortNominations}
+						order={currentOrder[1]}
+						onViewPitches={handleOpenPitches}
+						onRank={(itemId) => {
+							void moveItemAboveDivider(true, itemId);
+						}}
+						onUnrank={(itemId) => {
+							void moveItemBelowDivider(true, itemId);
+						}}
+					/>
 				</DragDropContext>
 			</Column>
 
