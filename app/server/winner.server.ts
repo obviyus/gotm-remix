@@ -113,48 +113,49 @@ async function calculateAndStoreWinner(
 	}
 }
 
-async function getLatestVoteActivityTimestamp(
-	monthId: number,
-	short: boolean,
-): Promise<number | null> {
+async function getMonthStatus(monthId: number): Promise<string | null> {
 	const result = await db.execute({
-		sql: `SELECT
-                MAX(v.updated_at) AS vote_updated_at,
-                MAX(r.updated_at) AS ranking_updated_at
-             FROM votes v
-             LEFT JOIN rankings r ON r.vote_id = v.id
-             WHERE v.month_id = ?1
-               AND v.short = ?2;`,
-		args: [monthId, short ? 1 : 0],
+		sql: `SELECT ms.status
+              FROM months m
+              JOIN month_status ms ON m.status_id = ms.id
+             WHERE m.id = ?1
+             LIMIT 1;`,
+		args: [monthId],
 	});
-
 	if (!result.rows.length) {
 		return null;
 	}
+	return String(result.rows[0].status);
+}
 
-	const row = result.rows[0] as {
-		vote_updated_at?: number | string | null;
-		ranking_updated_at?: number | string | null;
+const statusAllowsWinnerCalculation = (status: string | null): boolean =>
+	status === "voting" || status === "playing" || status === "over" || status === "complete";
+
+function winnerRowToNomination(
+	winner: Record<string, number | string | null | undefined>,
+): Nomination {
+	return {
+		id: Number(winner.nomination_id),
+		gameId: String(winner.game_id),
+		monthId: Number(winner.month_id),
+		short: Boolean(winner.short),
+		gameName: String(winner.game_name),
+		gameYear: String(winner.game_year),
+		gameCover: String(winner.game_cover),
+		gameUrl: String(winner.game_url),
+		jurySelected: true,
+		discordId: "",
+		pitches: [],
 	};
+}
 
-	const voteUpdatedAt =
-		row.vote_updated_at === null || row.vote_updated_at === undefined
-			? null
-			: Number(row.vote_updated_at);
-	const rankingUpdatedAt =
-		row.ranking_updated_at === null || row.ranking_updated_at === undefined
-			? null
-			: Number(row.ranking_updated_at);
-
-	if (voteUpdatedAt === null && rankingUpdatedAt === null) {
-		return null;
-	}
-
-	return Math.max(voteUpdatedAt ?? 0, rankingUpdatedAt ?? 0);
+export async function recalculateWinnersForMonth(monthId: number): Promise<void> {
+	await Promise.all([calculateAndStoreWinner(monthId, true), calculateAndStoreWinner(monthId, false)]);
 }
 
 export async function getWinner(monthId: number, short: boolean): Promise<Nomination | null> {
 	try {
+		const monthStatus = await getMonthStatus(monthId);
 		const winners = await db.execute({
 			sql: `SELECT game_id,
                     month_id,
@@ -174,6 +175,9 @@ export async function getWinner(monthId: number, short: boolean): Promise<Nomina
 		});
 
 		if (!winners.rows.length) {
+			if (!statusAllowsWinnerCalculation(monthStatus)) {
+				return null;
+			}
 			try {
 				return await calculateAndStoreWinner(monthId, short);
 			} catch (calcError) {
@@ -185,45 +189,9 @@ export async function getWinner(monthId: number, short: boolean): Promise<Nomina
 			}
 		}
 
-		const winner = winners.rows[0];
-
-		// Check if votes have changed since the winner was last calculated
-		const winnerUpdatedAt =
-			winner.updated_at === null || winner.updated_at === undefined
-				? null
-				: Number(winner.updated_at);
-
-		try {
-			const latestVoteActivity = await getLatestVoteActivityTimestamp(monthId, short);
-			if (
-				latestVoteActivity !== null &&
-				(winnerUpdatedAt === null || latestVoteActivity > winnerUpdatedAt)
-			) {
-				const refreshedWinner = await calculateAndStoreWinner(monthId, short);
-				if (refreshedWinner) {
-					return refreshedWinner;
-				}
-			}
-		} catch (activityError) {
-			console.error(
-				`[Winner] Error checking vote activity for month ${monthId} (short: ${short}):`,
-				activityError,
-			);
-		}
-
-		return {
-			id: Number(winner.nomination_id),
-			gameId: String(winner.game_id),
-			monthId: Number(winner.month_id),
-			short: Boolean(winner.short),
-			gameName: String(winner.game_name),
-			gameYear: String(winner.game_year),
-			gameCover: String(winner.game_cover),
-			gameUrl: String(winner.game_url),
-			jurySelected: true,
-			discordId: "",
-			pitches: [],
-		};
+		return winnerRowToNomination(
+			winners.rows[0] as Record<string, number | string | null | undefined>,
+		);
 	} catch (error) {
 		console.error("[Winner] Error getting winner:", error);
 		return null;
@@ -232,11 +200,13 @@ export async function getWinner(monthId: number, short: boolean): Promise<Nomina
 
 export async function recalculateAllWinners(): Promise<void> {
 	try {
-		// Get all months
+		// Only recalculate mutable winners while voting is active.
 		const months = await db.execute({
-			sql: `SELECT id
-             FROM months
-             ORDER BY year DESC, month DESC;`,
+			sql: `SELECT m.id
+             FROM months m
+             JOIN month_status ms ON m.status_id = ms.id
+             WHERE ms.status = 'voting'
+             ORDER BY m.year DESC, m.month DESC;`,
 			args: [],
 		});
 

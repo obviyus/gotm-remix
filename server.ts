@@ -2,7 +2,6 @@ import { createRequestHandler } from "react-router";
 import type { ServerBuild } from "react-router";
 import * as build from "./build/server/index.js";
 import { Cron } from "croner";
-import { recalculateAllWinners } from "~/server/winner.server";
 import { sendDiscordWebhook } from "~/server/discord.server";
 
 const remix_build = build as unknown as ServerBuild;
@@ -10,9 +9,6 @@ const handler = createRequestHandler(remix_build, Bun.env.NODE_ENV);
 const port = Bun.env.PORT || 3000;
 
 console.log(`🚀 Server starting on port ${port}`);
-
-console.info("Re-calculating winners...");
-await recalculateAllWinners();
 
 function getDaysInMonth(month: number, year: number): number {
 	// The 0 gets the last day of the previous month, effectively giving us

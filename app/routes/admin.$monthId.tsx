@@ -11,6 +11,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { db } from "~/server/database.server";
 import { getMonth, getThemeCategories } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import { recalculateWinnersForMonth } from "~/server/winner.server";
 import { getSession } from "~/sessions";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/admin.$monthId";
@@ -179,8 +180,27 @@ export async function action({ request }: Route.ActionArgs) {
 			if (!monthId || !newStatus || typeof newStatus !== "string") {
 				return Response.json({ error: "Missing required fields" }, { status: 400 });
 			}
+			const monthIdNumber = Number(monthId);
+			if (!Number.isFinite(monthIdNumber)) {
+				return Response.json({ error: "Invalid month ID" }, { status: 400 });
+			}
 
 			try {
+				const currentStatusResult = await db.execute({
+					sql: `SELECT ms.status
+                          FROM months m
+                          JOIN month_status ms ON m.status_id = ms.id
+                          WHERE m.id = ?`,
+					args: [monthId],
+				});
+				if (currentStatusResult.rows.length === 0) {
+					return Response.json({ error: "Month not found" }, { status: 404 });
+				}
+				const currentStatus = String(currentStatusResult.rows[0].status);
+				if (currentStatus === newStatus) {
+					return Response.json({ success: true });
+				}
+
 				// Check if there's already an active month when trying to set an active status
 				if (["nominating", "jury", "voting"].includes(newStatus)) {
 					const activeMonthsResult = await db.execute({
@@ -219,6 +239,7 @@ export async function action({ request }: Route.ActionArgs) {
 					sql: "UPDATE months SET status_id = ? WHERE id = ?",
 					args: [statusId, monthId],
 				});
+				await recalculateWinnersForMonth(monthIdNumber);
 
 				return Response.json({ success: true });
 			} catch (error) {
