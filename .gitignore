@@ -6,5 +6,6 @@ node_modules
 mysql/
 .idea/
 .aider*
+AGENT_SCRATCHPAD.md
 
 .react-router/
