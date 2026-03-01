@@ -1,10 +1,15 @@
 import { Menu, X } from "lucide-react";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getSession } from "~/sessions";
 import type { Route } from "./+types/layout";
+
+function getDefaultDiscordAvatarUrl(discordId: string): string {
+	const defaultAvatarIndex = Number((BigInt(discordId) >> 22n) % 6n);
+	return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
+}
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const [currentMonth, session] = await Promise.all([
@@ -13,9 +18,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 	]);
 
 	const discordId = session.get("discordId");
+	let pseudoHandle: string | null = null;
+	let discordAvatarUrl: string | null = null;
 
 	let isAdmin = false;
 	if (discordId) {
+		const { uniqueNameGenerator } = await import("~/server/nameGenerator");
+		pseudoHandle = uniqueNameGenerator(discordId);
+		discordAvatarUrl = session.get("discordAvatarUrl") ?? getDefaultDiscordAvatarUrl(discordId);
+
 		const result = await db.execute({
 			sql: "SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1",
 			args: [discordId],
@@ -26,13 +37,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return Response.json({
 		monthStatus: currentMonth?.status || "ready",
 		isAdmin,
+		discordId: discordId ?? null,
+		discordAvatarUrl,
+		pseudoHandle,
 	});
 }
 
 export default function Layout({ loaderData }: Route.ComponentProps) {
 	const location = useLocation();
-	const { monthStatus, isAdmin } = loaderData;
+	const { monthStatus, isAdmin, discordId, discordAvatarUrl, pseudoHandle } = loaderData;
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
 	const getLinkClassName = (path: string, isMobile = false) => {
 		const isActive = location.pathname === path;
@@ -78,9 +93,17 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 	const closeMobileMenu = () => {
 		setIsMobileMenuOpen(false);
 	};
+	const toggleUserMenu = () => {
+		setIsUserMenuOpen((prev) => !prev);
+	};
 	const mobileMenuPointerStyle: CSSProperties = {
 		pointerEvents: isMobileMenuOpen ? "auto" : "none",
 	};
+	const avatarAlt = pseudoHandle ? `${pseudoHandle} avatar` : "User avatar";
+
+	useEffect(() => {
+		setIsUserMenuOpen(false);
+	}, [location.pathname]);
 
 	return (
 		<div className="min-h-screen flex flex-col bg-zinc-900">
@@ -92,7 +115,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 			</a>
 			<nav className="border-b border-zinc-800 bg-zinc-900">
 				<div className="w-full px-2 sm:px-4 lg:px-8">
-					<div className="flex h-16 justify-between md:justify-center">
+					<div className="relative flex h-16 justify-between md:justify-center">
 						{/* Mobile menu button and active page title */}
 						<div className="flex items-center gap-4 md:hidden">
 							<button
@@ -171,8 +194,84 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 							</div>
 						</div>
 
-						{/* Placeholder div to maintain centering on desktop */}
-						<div className="w-10 md:hidden" />
+						{pseudoHandle ? (
+							<div className="relative md:hidden">
+								<button
+									type="button"
+									aria-expanded={isUserMenuOpen}
+									aria-label="Open profile details"
+									className="inline-flex items-center justify-center rounded-full border border-zinc-700/70 bg-zinc-800/60 p-2 text-blue-300 hover:bg-zinc-700/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+									onClick={toggleUserMenu}
+								>
+									{discordAvatarUrl && (
+										<img
+											src={discordAvatarUrl}
+											alt={avatarAlt}
+											className="h-6 w-6 rounded-full object-cover"
+										/>
+									)}
+								</button>
+								{isUserMenuOpen && discordId && (
+									<div className="absolute right-0 mt-2 w-72 rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-lg shadow-black/40 z-50">
+										{discordAvatarUrl && (
+											<img
+												src={discordAvatarUrl}
+												alt={avatarAlt}
+												className="mb-3 h-10 w-10 rounded-full border border-zinc-700 object-cover"
+											/>
+										)}
+										<p className="text-xs uppercase tracking-wide text-zinc-400">Name</p>
+										<p className="mt-1 truncate text-sm font-semibold text-zinc-100">
+											{pseudoHandle}
+										</p>
+										<p className="mt-3 text-xs uppercase tracking-wide text-zinc-400">ID</p>
+										<p className="mt-1 truncate font-mono text-xs text-zinc-200">{discordId}</p>
+									</div>
+								)}
+							</div>
+						) : (
+							/* Placeholder div to maintain centering on mobile */
+							<div className="w-10 md:hidden" />
+						)}
+
+						<div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2">
+							{pseudoHandle && (
+								<div className="relative">
+									<button
+										type="button"
+										aria-expanded={isUserMenuOpen}
+										aria-label="Open profile details"
+										className="inline-flex items-center justify-center rounded-full border border-zinc-700/70 bg-zinc-800/60 p-2 text-blue-300 hover:bg-zinc-700/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+										onClick={toggleUserMenu}
+									>
+										{discordAvatarUrl && (
+											<img
+												src={discordAvatarUrl}
+												alt={avatarAlt}
+												className="h-6 w-6 rounded-full object-cover"
+											/>
+										)}
+									</button>
+									{isUserMenuOpen && discordId && (
+										<div className="absolute right-0 mt-2 w-72 rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-lg shadow-black/40 z-50">
+											{discordAvatarUrl && (
+												<img
+													src={discordAvatarUrl}
+													alt={avatarAlt}
+													className="mb-3 h-10 w-10 rounded-full border border-zinc-700 object-cover"
+												/>
+											)}
+											<p className="text-xs uppercase tracking-wide text-zinc-400">Name</p>
+											<p className="mt-1 truncate text-sm font-semibold text-zinc-100">
+												{pseudoHandle}
+											</p>
+											<p className="mt-3 text-xs uppercase tracking-wide text-zinc-400">ID</p>
+											<p className="mt-1 truncate font-mono text-xs text-zinc-200">{discordId}</p>
+										</div>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 

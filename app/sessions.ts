@@ -2,7 +2,7 @@ import { createCookieSessionStorage } from "react-router";
 
 type SessionData = {
 	discordId: string;
-	accessToken: string;
+	discordAvatarUrl: string;
 };
 
 type SessionFlashData = {

@@ -6,6 +6,16 @@ import type { Route } from "./+types/auth.discord.callback";
 
 type MonthStatus = "ready" | "nominating" | "jury" | "voting" | "playing" | "over";
 
+function getDiscordAvatarUrl(userId: string, avatarHash: string | null): string {
+	if (avatarHash) {
+		const ext = avatarHash.startsWith("a_") ? "gif" : "png";
+		return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}?size=128`;
+	}
+
+	const defaultAvatarIndex = Number((BigInt(userId) >> 22n) % 6n);
+	return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
@@ -60,7 +70,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		const user = await userResponse.json();
 		const session = await sessionPromise;
 		session.set("discordId", user.id);
-		session.set("accessToken", access_token);
+		session.set("discordAvatarUrl", getDiscordAvatarUrl(user.id, user.avatar ?? null));
 
 		// Get current month status and determine redirect path
 		const currentMonth = await currentMonthPromise;
