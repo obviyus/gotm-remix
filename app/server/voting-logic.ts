@@ -18,9 +18,13 @@ export type VoteWithRankings = {
 export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[]): VotingResult[] {
 	const results: VotingResult[] = [];
 	const graph = new Map<string, { votes: number; edges: Map<string, number> }>();
+	const voteCountHistory = new Map<number, number[]>();
 
 	// Active candidates
 	let activeNominations = [...nominations];
+	for (const nomination of nominations) {
+		voteCountHistory.set(nomination.id, []);
+	}
 
 	// Map of voteId -> current preferred nomination ID
 	// We track the index in the rankings array for each vote
@@ -77,58 +81,39 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 			});
 		}
 
-		// 3. Find loser (lowest votes)
-		// Calculate weighted scores for tie-breaking (Borda Count)
-		// Score = Sum of (MaxRank - Rank) for all votes
-		const weightedScores = new Map<number, number>();
-		const maxRank = nominations.length; // Max possible rank is total number of candidates
-
-		// Initialize scores
 		for (const nom of activeNominations) {
-			weightedScores.set(nom.id, 0);
-		}
-
-		// Calculate scores based on ALL votes (not just active ones, usually Borda is global)
-		// However, for IRV tie-breaking, it's often better to use the current state or global state.
-		// The original implementation used global state (all votes).
-		for (const vote of votes) {
-			for (const rank of vote.rankings) {
-				// Only count if the candidate is still active?
-				// Original implementation: "Calculate weighted scores using the inverse index... for const nom of nominations"
-				// It calculated for ALL nominations, but we only care about active ones for sorting.
-				if (weightedScores.has(rank.nominationId)) {
-					// Rank is 1-based. Weight = MaxRank - (Rank - 1) = MaxRank - Rank + 1 ?
-					// Original: rankWeights[i] = maxRank - i; (where i is 0-based index)
-					// vote.rank is 1-based.
-					// If rank=1, index=0, weight = maxRank.
-					// If rank=maxRank, index=maxRank-1, weight = 1.
-					// So Weight = maxRank - (rank - 1) = maxRank - rank + 1.
-					// Wait, original code:
-					// rankWeights[i] = maxRank - i;
-					// if (vote.rank <= maxRank) sum += rankWeights[vote.rank - 1];
-					// So if rank=1, weight = rankWeights[0] = maxRank. Correct.
-					const weight = maxRank - rank.rank + 1;
-					if (weight > 0) {
-						weightedScores.set(
-							rank.nominationId,
-							(weightedScores.get(rank.nominationId) || 0) + weight,
-						);
-					}
-				}
+			const history = voteCountHistory.get(nom.id);
+			if (!history) {
+				throw new Error(`Missing vote count history for nomination ${nom.id}`);
 			}
+			history.push(currentVoteCounts.get(nom.id) || 0);
 		}
 
+		// 3. Find loser (lowest votes).
+		// Tie-breaker order:
+		// 1) Prior round totals (most recent first)
+		// 2) Nomination ID (deterministic)
 		activeNominations.sort((a, b) => {
 			const countA = currentVoteCounts.get(a.id) || 0;
 			const countB = currentVoteCounts.get(b.id) || 0;
 			if (countA !== countB) {
 				return countA - countB; // Ascending (loser first)
 			}
-			// Tie-breaker: Weighted Score (Ascending - lowest score loses)
-			const scoreA = weightedScores.get(a.id) || 0;
-			const scoreB = weightedScores.get(b.id) || 0;
-			if (scoreA !== scoreB) {
-				return scoreA - scoreB;
+
+			const historyA = voteCountHistory.get(a.id);
+			const historyB = voteCountHistory.get(b.id);
+			if (!historyA || !historyB) {
+				throw new Error(`Missing vote count history for tie-break: ${a.id}, ${b.id}`);
+			}
+			for (let idx = historyA.length - 2; idx >= 0; idx--) {
+				const priorA = historyA[idx];
+				const priorB = historyB[idx];
+				if (priorA === undefined || priorB === undefined) {
+					throw new Error(`Missing prior vote count for tie-break: ${a.id}, ${b.id}`);
+				}
+				if (priorA !== priorB) {
+					return priorA - priorB; // Lower prior support loses
+				}
 			}
 
 			// Final Tie-breaker: ID
