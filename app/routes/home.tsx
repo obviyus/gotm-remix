@@ -8,7 +8,12 @@ import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import type { Result } from "~/server/voting.server";
-import { calculateVotingResults, getGameUrls, getTotalVotesForMonth } from "~/server/voting.server";
+import {
+	calculateVotingResults,
+	getGameUrls,
+	getTotalVotesForMonth,
+	getVotingTimelapse,
+} from "~/server/voting.server";
 import type { Nomination } from "~/types";
 import type { Route } from "./+types/home";
 
@@ -22,11 +27,17 @@ type ResultsByType = {
 	short: Result[];
 };
 
+type TimelapseByType = {
+	long: Awaited<ReturnType<typeof getVotingTimelapse>> | null;
+	short: Awaited<ReturnType<typeof getVotingTimelapse>> | null;
+};
+
 type LoaderData = {
 	month: Awaited<ReturnType<typeof getCurrentMonth>>;
 	gameUrls: Awaited<ReturnType<typeof getGameUrls>>;
 	nominations?: NominationsByType;
 	results?: ResultsByType;
+	timelapse?: TimelapseByType;
 	totalVotes?: number;
 };
 
@@ -86,6 +97,14 @@ async function getResults(monthId: number): Promise<ResultsByType> {
 	return { long, short };
 }
 
+async function getTimelapse(monthId: number): Promise<TimelapseByType> {
+	const [long, short] = await Promise.all([
+		getVotingTimelapse(monthId, false),
+		getVotingTimelapse(monthId, true),
+	]);
+	return { long, short };
+}
+
 export async function loader(): Promise<LoaderData> {
 	const month = await getCurrentMonth();
 	const gameUrlsPromise = getGameUrls(month.id);
@@ -121,11 +140,17 @@ export async function loader(): Promise<LoaderData> {
 		case "playing":
 		case "complete": {
 			const resultsPromise = getResults(month.id);
-			const [gameUrls, results] = await Promise.all([gameUrlsPromise, resultsPromise]);
+			const timelapsePromise = getTimelapse(month.id);
+			const [gameUrls, results, timelapse] = await Promise.all([
+				gameUrlsPromise,
+				resultsPromise,
+				timelapsePromise,
+			]);
 
 			return {
 				month,
 				results,
+				timelapse,
 				gameUrls,
 			} satisfies LoaderData;
 		}
@@ -164,6 +189,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
 	const longResults = results?.long ?? EMPTY_RESULTS;
 	const shortResults = results?.short ?? EMPTY_RESULTS;
+	const timelapse = loaderData.timelapse;
 
 	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
 	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
@@ -176,6 +202,20 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
 	const totalVotes = loaderData.totalVotes ?? 0;
 	const totalVotesLabel = totalVotes.toLocaleString();
+	const longTimelapse =
+		timelapse?.long?.frames?.length && timelapse.long.totalVotes
+			? {
+					frames: timelapse.long.frames,
+					totalVotes: timelapse.long.totalVotes,
+				}
+			: undefined;
+	const shortTimelapse =
+		timelapse?.short?.frames?.length && timelapse.short.totalVotes
+			? {
+					frames: timelapse.short.frames,
+					totalVotes: timelapse.short.totalVotes,
+				}
+			: undefined;
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -264,12 +304,14 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 							results={longResults}
 							gameUrls={gameUrls}
 							showWinner={showWinner}
+							timelapse={longTimelapse}
 						/>
 						<VotingResultsChart
 							canvasId={shortGamesCanvasId}
 							results={shortResults}
 							gameUrls={gameUrls}
 							showWinner={showWinner}
+							timelapse={shortTimelapse}
 						/>
 					</div>
 				) : null}
