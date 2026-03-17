@@ -9,11 +9,11 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { db } from "~/server/database.server";
-import { getMonth, getThemeCategories } from "~/server/month.server";
+import { getMonths, getThemeCategories } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import { recalculateWinnersForMonth } from "~/server/winner.server";
 import { getSession } from "~/sessions";
-import type { Nomination } from "~/types";
+import type { Month, Nomination } from "~/types";
 import type { Route } from "./+types/admin.$monthId";
 
 const escapeCsvField = (text: string | null | undefined) => {
@@ -61,29 +61,22 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	if (!Number.isFinite(selectedMonthId)) {
 		throw new Response("Invalid month ID", { status: 400 });
 	}
-	const monthsResultPromise = db.execute({
-		sql: "SELECT id FROM months ORDER BY year DESC, month DESC",
-		args: [],
-	});
-	const selectedMonthPromise = getMonth(selectedMonthId);
 	const nominationsPromise = getNominationsForMonth(selectedMonthId);
 	const themeCategoriesPromise = getThemeCategories();
 
-	const [monthsResult, selectedMonth, nominations, themeCategories] = await Promise.all([
-		monthsResultPromise,
-		selectedMonthPromise,
+	const [months, nominations, themeCategories] = await Promise.all([
+		getMonths(),
 		nominationsPromise,
 		themeCategoriesPromise,
 	]);
+	const selectedMonth = months.find((month): month is Month => month.id === selectedMonthId);
 
 	if (!selectedMonth) {
 		throw new Response("Month not found", { status: 404 });
 	}
 
 	return {
-		months: await Promise.all(
-			(monthsResult.rows as unknown as MonthRow[]).map(async (row) => getMonth(row.id)),
-		),
+		months,
 		selectedMonth,
 		nominations,
 		themeCategories,

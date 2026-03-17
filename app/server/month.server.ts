@@ -11,23 +11,18 @@ interface MonthRow {
 	status: "nominating" | "jury" | "voting" | "complete" | "playing" | "over" | "ready";
 }
 
-export async function getMonth(monthId: number): Promise<Month> {
-	const result = await db.execute({
-		sql: `SELECT m.id AS month_id, m.month, m.year, 
-                t.id AS theme_id, t.name, t.description,
-                ms.status as status
-         FROM months m
-         JOIN themes t ON m.theme_id = t.id
-         JOIN month_status ms ON m.status_id = ms.id
-         WHERE m.id = ?`,
-		args: [monthId],
-	});
+const monthSelect = `SELECT m.id AS month_id,
+                            m.month,
+                            m.year,
+                            t.id AS theme_id,
+                            t.name,
+                            t.description,
+                            ms.status as status
+                     FROM months m
+                     JOIN themes t ON m.theme_id = t.id
+                     JOIN month_status ms ON m.status_id = ms.id`;
 
-	if (result.rows.length === 0) {
-		throw new Response("Month not found", { status: 404 });
-	}
-
-	const month = result.rows[0] as unknown as MonthRow;
+function monthRowToMonth(month: MonthRow): Month {
 	return {
 		id: month.month_id,
 		month: month.month,
@@ -42,37 +37,48 @@ export async function getMonth(monthId: number): Promise<Month> {
 	};
 }
 
-export async function getCurrentMonth(): Promise<Month> {
-	// Get the current active month (nominating / jury / voting)
-	const activeResult = await db.execute({
-		sql: `SELECT m.id
-         FROM months m
-         JOIN month_status ms ON m.status_id = ms.id
-         WHERE ms.status IN ('nominating', 'jury', 'voting')
-         LIMIT 1`,
-		args: [],
+export async function getMonth(monthId: number): Promise<Month> {
+	const result = await db.execute({
+		sql: `${monthSelect}
+	         WHERE m.id = ?`,
+		args: [monthId],
 	});
 
-	if (activeResult.rows.length > 0) {
-		const activeRow = activeResult.rows[0] as unknown as { id: number };
-		return getMonth(activeRow.id);
+	if (result.rows.length === 0) {
+		throw new Response("Month not found", { status: 404 });
 	}
 
-	// If no active month, fall back to latest month
-	const latestResult = await db.execute({
-		sql: `SELECT id, year, month
-         FROM months
-         ORDER BY year DESC, month DESC
-         LIMIT 1`,
+	return monthRowToMonth(result.rows[0] as unknown as MonthRow);
+}
+
+export async function getCurrentMonth(): Promise<Month> {
+	const result = await db.execute({
+		sql: `${monthSelect}
+	         ORDER BY CASE
+	                   WHEN ms.status IN ('nominating', 'jury', 'voting') THEN 0
+	                   ELSE 1
+	                  END,
+	                  m.year DESC,
+	                  m.month DESC
+	         LIMIT 1`,
 		args: [],
 	});
 
-	if (latestResult.rows.length === 0) {
+	if (result.rows.length === 0) {
 		throw new Response("No months found", { status: 404 });
 	}
 
-	const latestRow = latestResult.rows[0] as unknown as { id: number };
-	return getMonth(latestRow.id);
+	return monthRowToMonth(result.rows[0] as unknown as MonthRow);
+}
+
+export async function getMonths(): Promise<Month[]> {
+	const result = await db.execute({
+		sql: `${monthSelect}
+	         ORDER BY m.year DESC, m.month DESC`,
+		args: [],
+	});
+
+	return result.rows.map((row) => monthRowToMonth(row as unknown as MonthRow));
 }
 
 export async function getThemeCategories(): Promise<ThemeCategory[]> {

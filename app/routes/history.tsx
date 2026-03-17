@@ -4,59 +4,53 @@ import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { db } from "~/server/database.server";
-import { getMonth } from "~/server/month.server";
-import { getWinner } from "~/server/winner.server";
-import type { Month, Theme } from "~/types";
+import { getMonths } from "~/server/month.server";
+import type { Month, Nomination } from "~/types";
 import type { Route } from "./+types/history";
 
 export async function loader() {
-	const result = await db.execute(
-		`SELECT id FROM months WHERE status_id NOT IN (
-			SELECT id FROM month_status WHERE status = 'nominating'
-		) ORDER BY id DESC;`,
-	);
-
-	const months: Month[] = await Promise.all(
-		result.rows.map(async (row) => {
-			try {
-				const month = await getMonth(row.id as number);
-
-				// Only fetch winners for months that have completed voting
-				if (month.status === "voting") {
-					return month;
-				}
-
-				try {
-					const [longWinner, shortWinner] = await Promise.all([
-						getWinner(month.id, false),
-						getWinner(month.id, true),
-					]);
-
-					if (!longWinner && !shortWinner) {
-						return month;
-					}
-
-					return {
-						...month,
-						winners: [...(longWinner ? [longWinner] : []), ...(shortWinner ? [shortWinner] : [])],
-					};
-				} catch (winnerError) {
-					console.error(`Error fetching winners for month ${month.id}:`, winnerError);
-					return month;
-				}
-			} catch (monthError) {
-				console.error(`Error fetching month ${row.id}:`, monthError);
-				return {
-					id: row.id as number,
-					month: 0,
-					year: 0,
-					status: "complete" as const,
-					winners: [],
-					theme: null as unknown as Theme,
-				} as Month;
-			}
+	const [allMonths, winnersResult] = await Promise.all([
+		getMonths(),
+		db.execute({
+			sql: `SELECT game_id,
+			             month_id,
+			             nomination_id,
+			             short,
+			             game_name,
+			             game_year,
+			             game_cover,
+			             game_url
+			      FROM winners`,
+			args: [],
 		}),
-	);
+	]);
+
+	const winnersByMonth = new Map<number, Nomination[]>();
+	for (const row of winnersResult.rows) {
+		const monthId = Number(row.month_id);
+		const existing = winnersByMonth.get(monthId) ?? [];
+		existing.push({
+			id: Number(row.nomination_id),
+			gameId: String(row.game_id),
+			monthId,
+			short: Boolean(row.short),
+			gameName: String(row.game_name),
+			gameYear: String(row.game_year),
+			gameCover: String(row.game_cover),
+			gameUrl: String(row.game_url),
+			jurySelected: true,
+			discordId: "",
+			pitches: [],
+		});
+		winnersByMonth.set(monthId, existing);
+	}
+
+	const months: Month[] = allMonths
+		.filter((month) => month.status !== "nominating")
+		.map((month) => ({
+			...month,
+			winners: month.status === "voting" ? [] : (winnersByMonth.get(month.id) ?? []),
+		}));
 
 	return { months };
 }

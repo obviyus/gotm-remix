@@ -107,31 +107,29 @@ async function getTimelapse(monthId: number): Promise<TimelapseByType> {
 
 export async function loader(): Promise<LoaderData> {
 	const month = await getCurrentMonth();
-	const gameUrlsPromise = getGameUrls(month.id);
 
 	switch (month.status) {
 		case "nominating":
 		case "jury": {
 			const nominationsPromise = getNominationsForMonth(month.id).then(groupNominationsByType);
-			const [gameUrls, nominations] = await Promise.all([gameUrlsPromise, nominationsPromise]);
+			const nominations = await nominationsPromise;
 
 			return {
 				month,
 				nominations,
-				gameUrls,
+				gameUrls: {},
 			} satisfies LoaderData;
 		}
 		case "voting": {
 			const nominationsPromise = getNominationsForMonth(month.id).then(groupNominationsByType);
-			const [gameUrls, totalVotes, nominations] = await Promise.all([
-				gameUrlsPromise,
+			const [totalVotes, nominations] = await Promise.all([
 				getTotalVotesForMonth(month.id),
 				nominationsPromise,
 			]);
 
 			return {
 				month,
-				gameUrls,
+				gameUrls: {},
 				totalVotes,
 				nominations,
 			} satisfies LoaderData;
@@ -142,7 +140,7 @@ export async function loader(): Promise<LoaderData> {
 			const resultsPromise = getResults(month.id);
 			const timelapsePromise = getTimelapse(month.id);
 			const [gameUrls, results, timelapse] = await Promise.all([
-				gameUrlsPromise,
+				getGameUrls(month.id),
 				resultsPromise,
 				timelapsePromise,
 			]);
@@ -155,8 +153,7 @@ export async function loader(): Promise<LoaderData> {
 			} satisfies LoaderData;
 		}
 		default: {
-			const gameUrls = await gameUrlsPromise;
-			return { month, gameUrls } satisfies LoaderData;
+			return { month, gameUrls: {} } satisfies LoaderData;
 		}
 	}
 }

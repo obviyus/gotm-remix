@@ -89,10 +89,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	const shouldShowResults =
 		month.status === "over" || month.status === "complete" || month.status === "playing";
 
-	const [gameUrls, allNominations] = await Promise.all([
-		getGameUrls(monthId),
-		getNominationsForMonth(monthId),
-	]);
+	const allNominations = await getNominationsForMonth(monthId);
 
 	let results: { long: Result[]; short: Result[] } = { long: [], short: [] };
 	let timelapse: {
@@ -100,9 +97,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 		short: Awaited<ReturnType<typeof getVotingTimelapse>> | null;
 	} = { long: null, short: null };
 	let totalVotes: number | null = null;
+	let gameUrls: Awaited<ReturnType<typeof getGameUrls>> = {};
 
 	if (shouldShowResults) {
-		[results.long, results.short, timelapse.long, timelapse.short] = await Promise.all([
+		[gameUrls, results.long, results.short, timelapse.long, timelapse.short] = await Promise.all([
+			getGameUrls(monthId),
 			calculateVotingResults(monthId, false),
 			calculateVotingResults(monthId, true),
 			getVotingTimelapse(monthId, false),
