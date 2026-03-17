@@ -30,12 +30,6 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	if (request.method === "DELETE") {
-		// Delete vote and associated rankings
-		await db.execute({
-			sql: "DELETE FROM rankings WHERE vote_id IN (SELECT id FROM votes WHERE month_id = ? AND discord_id = ? AND short = ?)",
-			args: [monthId, userId, short ? 1 : 0],
-		});
-
 		await db.execute({
 			sql: "DELETE FROM votes WHERE month_id = ? AND discord_id = ? AND short = ?",
 			args: [monthId, userId, short ? 1 : 0],
@@ -48,45 +42,45 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	try {
-		// First check if a vote already exists
-		const existingVote = await db.execute({
-			sql: "SELECT id FROM votes WHERE month_id = ? AND discord_id = ? AND short = ?",
-			args: [monthId, userId, short ? 1 : 0],
-		});
-
+		const transaction = await db.transaction("write");
 		let voteId: number;
-		const existingVoteId = existingVote.rows[0]?.id;
 
-		if (existingVoteId !== undefined && existingVoteId !== null) {
-			voteId = Number(existingVoteId);
-			// Delete existing rankings
-			await db.execute({
-				sql: "DELETE FROM rankings WHERE vote_id = ?",
-				args: [voteId],
-			});
-		} else {
-			// Insert new vote
-			const insertResult = await db.execute({
-				sql: "INSERT INTO votes (month_id, discord_id, short, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
+		try {
+			const voteResult = await transaction.execute({
+				sql: `INSERT INTO votes (month_id, discord_id, short, created_at, updated_at)
+				      VALUES (?, ?, ?, unixepoch(), unixepoch())
+				      ON CONFLICT(month_id, discord_id, short) DO UPDATE
+				      SET updated_at = unixepoch()
+				      RETURNING id`,
 				args: [monthId, userId, short ? 1 : 0],
 			});
 
-			if (!insertResult.lastInsertRowid) {
-				throw new Error("Failed to create vote - no insert ID returned");
+			const returnedVoteId = voteResult.rows[0]?.id;
+			if (returnedVoteId === undefined || returnedVoteId === null) {
+				throw new Error("Failed to resolve vote ID");
 			}
-			voteId = Number(insertResult.lastInsertRowid);
-		}
+			voteId = Number(returnedVoteId);
 
-		// Insert new rankings if provided
-		if (data.order && data.order.length > 0) {
-			const rankingInsertPromises = data.order.map((nominationId, index) =>
-				db.execute({
-					sql: "INSERT INTO rankings (vote_id, nomination_id, rank, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
-					args: [voteId, nominationId, index + 1],
-				}),
-			);
+			await transaction.execute({
+				sql: "DELETE FROM rankings WHERE vote_id = ?",
+				args: [voteId],
+			});
 
-			await Promise.all(rankingInsertPromises);
+			if (data.order && data.order.length > 0) {
+				for (const [index, nominationId] of data.order.entries()) {
+					await transaction.execute({
+						sql: "INSERT INTO rankings (vote_id, nomination_id, rank, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
+						args: [voteId, nominationId, index + 1],
+					});
+				}
+			}
+
+			await transaction.commit();
+		} catch (error) {
+			await transaction.rollback();
+			throw error;
+		} finally {
+			transaction.close();
 		}
 
 		// Invalidate cache after successful vote
