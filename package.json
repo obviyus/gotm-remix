@@ -10,6 +10,7 @@
 		"format:write": "oxfmt --write .",
 		"lint": "oxlint --type-aware .",
 		"lint:fix": "oxlint --type-aware . --fix",
+		"schema:sync": "bun run scripts/sync-turso-schema.ts",
 		"start": "bun run server.ts",
 		"typecheck": "tsgo --noEmit -p tsconfig.json",
 		"knip": "knip"
