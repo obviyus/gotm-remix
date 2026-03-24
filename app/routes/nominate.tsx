@@ -1204,6 +1204,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				isOpen={isViewingPitches}
 				onClose={closePitchesModal}
 				nomination={selectedNomination}
+				userDiscordId={userDiscordId}
+				canManagePitch
 			/>
 		</div>
 	);

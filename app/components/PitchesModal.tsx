@@ -104,24 +104,45 @@ export default function PitchesModal({
 				<ScrollArea className="max-h-[65vh] pr-2">
 					<div className="space-y-4">
 						{nomination.pitches.length > 0 ? (
-							nomination.pitches.map((pitch) => (
-								<div
-									key={pitch.id}
-									className="rounded-xl border border-gray-700/50 p-5 bg-gray-800/30 hover:bg-gray-800/60 hover:border-gray-600/70 transition-all duration-200 backdrop-blur-sm"
-								>
-									<div className="flex items-center mb-3">
+							nomination.pitches.map((pitch) => {
+								const isCurrentUserPitch = pitch.discordId === userDiscordId;
+
+								return (
+									<div
+										key={pitch.id}
+										className={`rounded-xl border p-5 transition-all duration-200 backdrop-blur-sm ${
+											isCurrentUserPitch
+												? "border-emerald-500/50 bg-emerald-500/10 shadow-lg shadow-emerald-950/40"
+												: "border-gray-700/50 bg-gray-800/30 hover:bg-gray-800/60 hover:border-gray-600/70"
+										}`}
+									>
+										<div className="mb-3 flex items-center gap-2">
+											{isCurrentUserPitch && (
+												<span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
+													Your pitch
+												</span>
+											)}
 										<Badge
 											variant="default"
-											className="bg-blue-600 hover:bg-blue-600 text-white font-medium px-3 py-1 text-xs"
+											className={`font-medium px-3 py-1 text-xs text-white ${
+												isCurrentUserPitch
+													? "bg-emerald-600 hover:bg-emerald-600"
+													: "bg-blue-600 hover:bg-blue-600"
+											}`}
 										>
 											{pitch.generatedName}
 										</Badge>
 									</div>
-									<div className="whitespace-pre-wrap text-sm text-gray-200 leading-relaxed">
+									<div
+										className={`whitespace-pre-wrap text-sm leading-relaxed ${
+											isCurrentUserPitch ? "text-emerald-50" : "text-gray-200"
+										}`}
+									>
 										{pitch.pitch}
 									</div>
-								</div>
-							))
+									</div>
+								);
+							})
 						) : (
 							<div className="rounded-xl border border-dashed border-gray-700/50 p-8 text-center bg-gray-800/20">
 								<p className="text-sm text-gray-400">No pitches available for this game</p>
@@ -176,13 +197,13 @@ export default function PitchesModal({
 									</Button>
 								</div>
 							</div>
-						) : (
-							<div className="flex items-center justify-between gap-3">
-								<p className="text-sm text-gray-400">
-									{currentUserPitch
-										? "Want to tighten your case for this game?"
-										: "Have a case for this game?"}
-								</p>
+						) : null}
+					</div>
+				)}
+				<DialogFooter className="pt-6 sm:justify-between">
+					<div className="flex w-full items-center justify-between gap-3">
+						<div>
+							{canManagePitch && !isEditorOpen && (
 								<Button
 									type="button"
 									onClick={() => setIsEditorOpen(true)}
@@ -190,18 +211,16 @@ export default function PitchesModal({
 								>
 									{currentUserPitch ? "Edit Pitch" : "Add Pitch"}
 								</Button>
-							</div>
-						)}
+							)}
+						</div>
+						<Button
+							variant="outline"
+							onClick={onClose}
+							className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500 transition-all duration-200 px-6"
+						>
+							Close
+						</Button>
 					</div>
-				)}
-				<DialogFooter className="pt-6">
-					<Button
-						variant="outline"
-						onClick={onClose}
-						className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500 transition-all duration-200 px-6"
-					>
-						Close
-					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

@@ -521,6 +521,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 				isOpen={isViewingPitches}
 				onClose={closePitchesModal}
 				nomination={selectedNomination}
+				userDiscordId={userId}
 			/>
 		</TwoColumnLayout>
 	);
