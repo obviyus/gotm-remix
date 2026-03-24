@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
+import { useFetcher, useRevalidator } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -14,18 +16,82 @@ interface PitchesModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	nomination: Nomination | null;
+	userDiscordId?: string | null;
+	canManagePitch?: boolean;
 }
 
-export default function PitchesModal({ isOpen, onClose, nomination }: PitchesModalProps) {
+interface PitchMutationResponse {
+	error?: string;
+	success?: boolean;
+}
+
+export default function PitchesModal({
+	isOpen,
+	onClose,
+	nomination,
+	userDiscordId,
+	canManagePitch = false,
+}: PitchesModalProps) {
+	const fetcher = useFetcher<PitchMutationResponse>();
+	const revalidator = useRevalidator();
+	const [isEditorOpen, setIsEditorOpen] = useState(false);
+	const [draftPitch, setDraftPitch] = useState("");
+
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
 			onClose();
 		}
 	};
 
+	const currentUserPitch = useMemo(() => {
+		if (!nomination || !userDiscordId) {
+			return null;
+		}
+
+		return nomination.pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
+	}, [nomination, userDiscordId]);
+
+	useEffect(() => {
+		if (!isOpen || !nomination) {
+			setIsEditorOpen(false);
+			setDraftPitch("");
+			return;
+		}
+
+		setDraftPitch(currentUserPitch?.pitch ?? "");
+		setIsEditorOpen(false);
+	}, [currentUserPitch, isOpen, nomination]);
+
+	useEffect(() => {
+		if (fetcher.state !== "idle" || !fetcher.data?.success) {
+			return;
+		}
+
+		revalidator.revalidate();
+		onClose();
+	}, [fetcher.data?.success, fetcher.state, onClose, revalidator]);
+
 	if (!nomination) {
 		return null;
 	}
+
+	const isSaveDisabled = draftPitch.trim().length === 0;
+	const isSubmitting = fetcher.state !== "idle";
+
+	const handleSavePitch = () => {
+		if (isSaveDisabled) {
+			return;
+		}
+
+		fetcher.submit(
+			{
+				intent: "savePitch",
+				nominationId: nomination.id.toString(),
+				pitch: draftPitch.trim(),
+			},
+			{ action: "/nominate", method: "PATCH" },
+		);
+	};
 
 	return (
 		<Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -63,6 +129,71 @@ export default function PitchesModal({ isOpen, onClose, nomination }: PitchesMod
 						)}
 					</div>
 				</ScrollArea>
+				{canManagePitch && (
+					<div className="border-t border-gray-800 pt-5">
+						{isEditorOpen ? (
+							<div className="space-y-3">
+								<label htmlFor="pitch-modal-input" className="text-sm font-medium text-gray-200">
+									{currentUserPitch ? "Edit your pitch" : "Add your pitch"}
+								</label>
+								<textarea
+									id="pitch-modal-input"
+									name="pitch"
+									rows={4}
+									value={draftPitch}
+									onChange={(event) => setDraftPitch(event.target.value)}
+									placeholder="Write your pitch here…"
+									className="flex min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+								/>
+								{fetcher.data?.error && (
+									<p className="text-sm text-red-400">{fetcher.data.error}</p>
+								)}
+								<div className="flex justify-end gap-2">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => {
+											setIsEditorOpen(false);
+											setDraftPitch(currentUserPitch?.pitch ?? "");
+										}}
+										className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500"
+									>
+										Cancel
+									</Button>
+									<Button
+										type="button"
+										onClick={handleSavePitch}
+										disabled={isSaveDisabled || isSubmitting}
+										className="bg-blue-600 text-white hover:bg-blue-700"
+									>
+										{isSubmitting
+											? currentUserPitch
+												? "Saving..."
+												: "Adding..."
+											: currentUserPitch
+												? "Save Changes"
+												: "Add Pitch"}
+									</Button>
+								</div>
+							</div>
+						) : (
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-sm text-gray-400">
+									{currentUserPitch
+										? "Want to tighten your case for this game?"
+										: "Have a case for this game?"}
+								</p>
+								<Button
+									type="button"
+									onClick={() => setIsEditorOpen(true)}
+									className="bg-blue-600 text-white hover:bg-blue-700"
+								>
+									{currentUserPitch ? "Edit Pitch" : "Add Pitch"}
+								</Button>
+							</div>
+						)}
+					</div>
+				)}
 				<DialogFooter className="pt-6">
 					<Button
 						variant="outline"

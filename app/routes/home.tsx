@@ -7,6 +7,7 @@ import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import { getSession } from "~/sessions";
 import type { Result } from "~/server/voting.server";
 import {
 	calculateVotingResults,
@@ -35,6 +36,7 @@ type TimelapseByType = {
 type LoaderData = {
 	month: Awaited<ReturnType<typeof getCurrentMonth>>;
 	gameUrls: Awaited<ReturnType<typeof getGameUrls>>;
+	userDiscordId: string | null;
 	nominations?: NominationsByType;
 	results?: ResultsByType;
 	timelapse?: TimelapseByType;
@@ -105,7 +107,9 @@ async function getTimelapse(monthId: number): Promise<TimelapseByType> {
 	return { long, short };
 }
 
-export async function loader(): Promise<LoaderData> {
+export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
+	const session = await getSession(request.headers.get("Cookie"));
+	const userDiscordId = session.get("discordId") ?? null;
 	const month = await getCurrentMonth();
 
 	switch (month.status) {
@@ -117,6 +121,7 @@ export async function loader(): Promise<LoaderData> {
 			return {
 				month,
 				nominations,
+				userDiscordId,
 				gameUrls: {},
 			} satisfies LoaderData;
 		}
@@ -130,6 +135,7 @@ export async function loader(): Promise<LoaderData> {
 			return {
 				month,
 				gameUrls: {},
+				userDiscordId,
 				totalVotes,
 				nominations,
 			} satisfies LoaderData;
@@ -149,17 +155,18 @@ export async function loader(): Promise<LoaderData> {
 				month,
 				results,
 				timelapse,
+				userDiscordId,
 				gameUrls,
 			} satisfies LoaderData;
 		}
 		default: {
-			return { month, gameUrls: {} } satisfies LoaderData;
+			return { month, gameUrls: {}, userDiscordId } satisfies LoaderData;
 		}
 	}
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-	const { month, results, nominations, gameUrls } = loaderData;
+	const { month, results, nominations, gameUrls, userDiscordId } = loaderData;
 	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
 	const [isViewingPitches, setIsViewingPitches] = useState(false);
 	const handleViewPitches = (nomination: Nomination) => {
@@ -318,6 +325,8 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 				isOpen={isViewingPitches}
 				onClose={handleCloseModal}
 				nomination={selectedNomination}
+				userDiscordId={userDiscordId}
+				canManagePitch={month.status === "nominating" && Boolean(userDiscordId)}
 			/>
 		</div>
 	);
