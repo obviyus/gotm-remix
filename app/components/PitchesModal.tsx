@@ -10,7 +10,7 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import type { Nomination } from "~/types";
+import type { Nomination, Pitch } from "~/types";
 
 interface PitchesModalProps {
 	isOpen: boolean;
@@ -36,6 +36,7 @@ export default function PitchesModal({
 	const revalidator = useRevalidator();
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
 	const [draftPitch, setDraftPitch] = useState("");
+	const [pitches, setPitches] = useState<Pitch[]>([]);
 
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
@@ -55,9 +56,11 @@ export default function PitchesModal({
 		if (!isOpen || !nomination) {
 			setIsEditorOpen(false);
 			setDraftPitch("");
+			setPitches([]);
 			return;
 		}
 
+		setPitches(nomination.pitches);
 		setDraftPitch(currentUserPitch?.pitch ?? "");
 		setIsEditorOpen(false);
 	}, [currentUserPitch, isOpen, nomination]);
@@ -67,9 +70,17 @@ export default function PitchesModal({
 			return;
 		}
 
+		if (currentUserPitch) {
+			setPitches((existingPitches) =>
+				existingPitches.map((pitch) =>
+					pitch.discordId === userDiscordId ? { ...pitch, pitch: draftPitch.trim() } : pitch,
+				),
+			);
+		}
+
+		setIsEditorOpen(false);
 		revalidator.revalidate();
-		onClose();
-	}, [fetcher.data?.success, fetcher.state, onClose, revalidator]);
+	}, [currentUserPitch, draftPitch, fetcher.data?.success, fetcher.state, revalidator, userDiscordId]);
 
 	if (!nomination) {
 		return null;
@@ -103,8 +114,8 @@ export default function PitchesModal({
 				</DialogHeader>
 				<ScrollArea className="max-h-[65vh] pr-2">
 					<div className="space-y-4">
-						{nomination.pitches.length > 0 ? (
-							nomination.pitches.map((pitch) => {
+						{pitches.length > 0 ? (
+							pitches.map((pitch) => {
 								const isCurrentUserPitch = pitch.discordId === userDiscordId;
 
 								return (
