@@ -174,7 +174,7 @@ export default function PitchesModal({
 									rows={4}
 									value={draftPitch}
 									onChange={(event) => setDraftPitch(event.target.value)}
-									placeholder="Write your pitch here…"
+									placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
 									className="flex min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
 								/>
 								{fetcher.data?.error && (
