@@ -1100,7 +1100,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
 							value={editPitch}
 							onChange={handleEditPitchChange}
-							placeholder="Write your pitch here…"
+							placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
 						/>
 					</div>
 
