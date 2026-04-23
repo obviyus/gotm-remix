@@ -16,6 +16,7 @@ import {
 	getVotingTimelapse,
 } from "~/server/voting.server";
 import type { Nomination } from "~/types";
+import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import type { Route } from "./+types/home";
 
 type NominationsByType = {
@@ -194,9 +195,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 	const longResults = results?.long ?? EMPTY_RESULTS;
 	const shortResults = results?.short ?? EMPTY_RESULTS;
 	const timelapse = loaderData.timelapse;
-
-	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
-	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
+	const labels = categoryLabelsFromMonth(month);
 
 	const showWinner =
 		month.status === "over" || month.status === "complete" || month.status === "playing";
@@ -231,11 +230,11 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 						title="Current Nominations"
 						description="These games have been nominated for this month's Game of the Month."
 					>
-						<Column title="Long Games" statusBadge={columnStatus?.long}>
+						<Column title={categoryGameTitle(labels.long)} statusBadge={columnStatus?.long}>
 							<NominationsList games={nominations.long} onViewPitches={handleViewPitches} />
 						</Column>
 
-						<Column title="Short Games" statusBadge={columnStatus?.short}>
+						<Column title={categoryGameTitle(labels.short)} statusBadge={columnStatus?.short}>
 							<NominationsList games={nominations.short} onViewPitches={handleViewPitches} />
 						</Column>
 					</TwoColumnLayout>
@@ -256,11 +255,11 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 							title="All Nominations"
 							description="These games have been nominated for this month's Game of the Month. The jury is currently selecting which games will advance to the voting phase."
 						>
-							<Column title="Long Games" statusBadge={columnStatus?.long}>
+							<Column title={categoryGameTitle(labels.long)} statusBadge={columnStatus?.long}>
 								<NominationsList games={nominations.long} onViewPitches={handleViewPitches} />
 							</Column>
 
-							<Column title="Short Games" statusBadge={columnStatus?.short}>
+							<Column title={categoryGameTitle(labels.short)} statusBadge={columnStatus?.short}>
 								<NominationsList games={nominations.short} onViewPitches={handleViewPitches} />
 							</Column>
 						</TwoColumnLayout>
@@ -291,11 +290,11 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 								title="Games Up for Vote"
 								description="These games have been selected by the jury for this month's vote."
 							>
-								<Column title="Long Games" statusBadge={columnStatus?.long}>
+								<Column title={categoryGameTitle(labels.long)} statusBadge={columnStatus?.long}>
 									<NominationsList games={nominations.long} onViewPitches={handleViewPitches} />
 								</Column>
 
-								<Column title="Short Games" statusBadge={columnStatus?.short}>
+								<Column title={categoryGameTitle(labels.short)} statusBadge={columnStatus?.short}>
 									<NominationsList games={nominations.short} onViewPitches={handleViewPitches} />
 								</Column>
 							</TwoColumnLayout>
@@ -304,14 +303,14 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 				) : showResults ? (
 					<div className="space-y-6">
 						<VotingResultsChart
-							canvasId={longGamesCanvasId}
+							title={labels.long}
 							results={longResults}
 							gameUrls={gameUrls}
 							showWinner={showWinner}
 							timelapse={longTimelapse}
 						/>
 						<VotingResultsChart
-							canvasId={shortGamesCanvasId}
+							title={labels.short}
 							results={shortResults}
 							gameUrls={gameUrls}
 							showWinner={showWinner}

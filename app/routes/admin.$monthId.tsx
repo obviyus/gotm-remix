@@ -14,6 +14,12 @@ import { getNominationsForMonth } from "~/server/nomination.server";
 import { recalculateWinnersForMonth } from "~/server/winner.server";
 import { getSession } from "~/sessions";
 import type { Month, Nomination } from "~/types";
+import {
+	categoryGameLabel,
+	categoryGameTitle,
+	categoryLabelsFromMonth,
+	DEFAULT_CATEGORY_LABELS,
+} from "~/utils/categoryLabels";
 import type { Route } from "./+types/admin.$monthId";
 
 const escapeCsvField = (text: string | null | undefined) => {
@@ -95,6 +101,8 @@ export async function action({ request }: Route.ActionArgs) {
 			const themeCategoryId = Number(formData.get("themeCategoryId"));
 			const themeName = formData.get("themeName");
 			const themeDescription = formData.get("themeDescription");
+			const longLabel = formData.get("longLabel")?.toString().trim();
+			const shortLabel = formData.get("shortLabel")?.toString().trim();
 
 			if (
 				!year ||
@@ -102,6 +110,8 @@ export async function action({ request }: Route.ActionArgs) {
 				!status ||
 				!themeCategoryId ||
 				!themeName ||
+				!longLabel ||
+				!shortLabel ||
 				typeof status !== "string" ||
 				typeof themeName !== "string"
 			) {
@@ -152,8 +162,8 @@ export async function action({ request }: Route.ActionArgs) {
 
 				// Then create month with the new theme
 				await db.execute({
-					sql: "INSERT INTO months (year, month, status_id, theme_id) VALUES (?, ?, ?, ?)",
-					args: [year, month, statusId, themeId],
+					sql: "INSERT INTO months (year, month, status_id, theme_id, long_label, short_label) VALUES (?, ?, ?, ?, ?, ?)",
+					args: [year, month, statusId, themeId, longLabel, shortLabel],
 				});
 
 				return redirect(new URL(request.url).pathname);
@@ -164,6 +174,27 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 				throw error;
 			}
+		}
+
+		case "updateLabels": {
+			const monthId = formData.get("monthId")?.toString();
+			const longLabel = formData.get("longLabel")?.toString().trim();
+			const shortLabel = formData.get("shortLabel")?.toString().trim();
+
+			if (!monthId || !longLabel || !shortLabel) {
+				return Response.json({ error: "Missing required fields" }, { status: 400 });
+			}
+			const monthIdNumber = Number(monthId);
+			if (!Number.isFinite(monthIdNumber)) {
+				return Response.json({ error: "Invalid month ID" }, { status: 400 });
+			}
+
+			await db.execute({
+				sql: "UPDATE months SET long_label = ?, short_label = ?, updated_at = unixepoch() WHERE id = ?",
+				args: [longLabel, shortLabel, monthIdNumber],
+			});
+
+			return Response.json({ success: true });
 		}
 
 		case "updateStatus": {
@@ -268,10 +299,12 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const [isPitchesModalOpen, setIsPitchesModalOpen] = useState(false);
 	const createMonthFetcher = useFetcher<ActionResponse>();
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
+	const labelUpdateFetcher = useFetcher<ActionResponse>();
 	const jurySelectionFetcher = useFetcher<ActionResponse>();
 	const [csvCopied, setCsvCopied] = useState(false);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 	const createMonthError = createMonthFetcher.data?.error ?? null;
+	const labels = categoryLabelsFromMonth(selectedMonth);
 	const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
 		event.target.form?.requestSubmit();
 	};
@@ -296,6 +329,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const themeCategorySelectId = useId();
 	const themeNameInputId = useId();
 	const themeDescriptionTextareaId = useId();
+	const createLongLabelInputId = useId();
+	const createShortLabelInputId = useId();
+	const longLabelInputId = useId();
+	const shortLabelInputId = useId();
 
 	const handleToggleJurySelected = (nomination: Nomination) => {
 		void jurySelectionFetcher.submit(
@@ -334,7 +371,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		const shortGames = nominations.filter((n) => n.short);
 
 		if (longGames.length > 0) {
-			csvString += "Long Games\t\t\n";
+			csvString += `${categoryGameTitle(labels.long)}\t\t\n`;
 			for (const nomination of longGames) {
 				if (nomination.pitches && nomination.pitches.length > 0) {
 					const combinedPitches = nomination.pitches
@@ -348,7 +385,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		}
 
 		if (shortGames.length > 0) {
-			csvString += "Short Games\t\t\n";
+			csvString += `${categoryGameTitle(labels.short)}\t\t\n`;
 			for (const nomination of shortGames) {
 				if (nomination.pitches && nomination.pitches.length > 0) {
 					const combinedPitches = nomination.pitches
@@ -505,6 +542,53 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 					{statusUpdateFetcher.data?.error && (
 						<p className="mt-2 text-sm text-red-400">{statusUpdateFetcher.data.error}</p>
 					)}
+					<labelUpdateFetcher.Form
+						key={selectedMonth.id}
+						method="POST"
+						className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-4 sm:grid-cols-[1fr_1fr_auto]"
+					>
+						<input type="hidden" name="intent" value="updateLabels" />
+						<input type="hidden" name="monthId" value={selectedMonth.id} />
+						<div>
+							<Label htmlFor={longLabelInputId} className="text-sm font-medium text-zinc-400">
+								Long label
+							</Label>
+							<Input
+								id={longLabelInputId}
+								name="longLabel"
+								autoComplete="off"
+								required
+								defaultValue={labels.long}
+								className="mt-1 bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+							/>
+						</div>
+						<div>
+							<Label htmlFor={shortLabelInputId} className="text-sm font-medium text-zinc-400">
+								Short label
+							</Label>
+							<Input
+								id={shortLabelInputId}
+								name="shortLabel"
+								autoComplete="off"
+								required
+								defaultValue={labels.short}
+								className="mt-1 bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+							/>
+						</div>
+						<div className="flex items-end">
+							<Button
+								type="submit"
+								disabled={labelUpdateFetcher.state !== "idle"}
+								variant="outline"
+								className="w-full text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10 sm:w-auto"
+							>
+								{labelUpdateFetcher.state !== "idle" ? "Saving…" : "Save Labels"}
+							</Button>
+						</div>
+					</labelUpdateFetcher.Form>
+					{labelUpdateFetcher.data?.error && (
+						<p className="mt-2 text-sm text-red-400">{labelUpdateFetcher.data.error}</p>
+					)}
 				</div>
 			)}
 
@@ -606,6 +690,40 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										placeholder="Enter theme name"
 									/>
 								</div>
+								<div>
+									<Label
+										htmlFor={createLongLabelInputId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Long label
+									</Label>
+									<Input
+										type="text"
+										id={createLongLabelInputId}
+										name="longLabel"
+										autoComplete="off"
+										required
+										defaultValue={DEFAULT_CATEGORY_LABELS.long}
+										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor={createShortLabelInputId}
+										className="text-sm font-medium text-zinc-400 mb-1"
+									>
+										Short label
+									</Label>
+									<Input
+										type="text"
+										id={createShortLabelInputId}
+										name="shortLabel"
+										autoComplete="off"
+										required
+										defaultValue={DEFAULT_CATEGORY_LABELS.short}
+										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+									/>
+								</div>
 								<div className="md:col-span-2">
 									<Label
 										htmlFor={themeDescriptionTextareaId}
@@ -629,15 +747,15 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									disabled={createMonthFetcher.state !== "idle"}
 									variant="outline"
 									className="text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
-									>
-										{createMonthFetcher.state !== "idle" ? "Creating…" : "Create Month"}
-									</Button>
-								</div>
-								{createMonthError && <p className="mt-2 text-sm text-red-400">{createMonthError}</p>}
-							</createMonthFetcher.Form>
-						</CardContent>
-					</Card>
-				)}
+								>
+									{createMonthFetcher.state !== "idle" ? "Creating…" : "Create Month"}
+								</Button>
+							</div>
+							{createMonthError && <p className="mt-2 text-sm text-red-400">{createMonthError}</p>}
+						</createMonthFetcher.Form>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Jury Selection Section */}
 			{selectedMonth && nominations.length > 0 && (
@@ -714,7 +832,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 															: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
 													}`}
 												>
-													{nomination.short ? "Short" : "Long"}
+													{categoryGameLabel(nomination.short ? labels.short : labels.long)}
 												</span>
 											</td>
 											<td className="px-4 py-3 whitespace-nowrap text-sm text-center">

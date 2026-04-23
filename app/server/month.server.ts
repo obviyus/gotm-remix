@@ -5,6 +5,8 @@ interface MonthRow {
 	month_id: number;
 	month: number;
 	year: number;
+	long_label: string;
+	short_label: string;
 	theme_id: number;
 	name: string;
 	description: string | null;
@@ -14,6 +16,8 @@ interface MonthRow {
 const monthSelect = `SELECT m.id AS month_id,
                             m.month,
                             m.year,
+                            m.long_label,
+                            m.short_label,
                             t.id AS theme_id,
                             t.name,
                             t.description,
@@ -27,6 +31,8 @@ function monthRowToMonth(month: MonthRow): Month {
 		id: month.month_id,
 		month: month.month,
 		year: month.year,
+		longLabel: month.long_label,
+		shortLabel: month.short_label,
 		status: month.status,
 		theme: {
 			id: month.theme_id,

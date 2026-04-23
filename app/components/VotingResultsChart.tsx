@@ -38,7 +38,7 @@ export interface SankeyProcessedData {
 }
 
 interface VotingResultsChartProps {
-	canvasId: string;
+	title: string;
 	results: SankeyDataPoint[];
 	gameUrls?: Record<string, string>;
 	showWinner?: boolean;
@@ -174,7 +174,7 @@ function buildSankeyData(
 }
 
 export function VotingResultsChart({
-	canvasId,
+	title,
 	results,
 	gameUrls = EMPTY_GAME_URLS,
 	showWinner = false,
@@ -362,7 +362,6 @@ export function VotingResultsChart({
 		};
 	}, []);
 
-	const chartTitle = canvasId.startsWith("long") ? "Long" : "Short";
 	const winner = getWinnerName(results);
 	const winnerUrl = winner ? gameUrls[winner] : null;
 	const timelapseProgress =
@@ -386,7 +385,7 @@ export function VotingResultsChart({
 			<div className="flex flex-col gap-3 mb-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h2 className="text-xl font-bold tracking-tight text-zinc-100 sm:text-2xl">
-						{chartTitle}
+						{title}
 						{showWinner && winner ? (
 							<>
 								{" 🏆 "}

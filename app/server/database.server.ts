@@ -59,3 +59,24 @@ await db.batch(
 	],
 	"write",
 );
+
+const monthColumns = new Set(
+	(await db.execute("PRAGMA table_info(months)")).rows.map((row) => String(row.name)),
+);
+const monthLabelMigrations: string[] = [];
+
+if (!monthColumns.has("long_label")) {
+	monthLabelMigrations.push(
+		"ALTER TABLE months ADD COLUMN long_label TEXT NOT NULL DEFAULT 'Long'",
+	);
+}
+
+if (!monthColumns.has("short_label")) {
+	monthLabelMigrations.push(
+		"ALTER TABLE months ADD COLUMN short_label TEXT NOT NULL DEFAULT 'Short'",
+	);
+}
+
+if (monthLabelMigrations.length > 0) {
+	await db.batch(monthLabelMigrations, "write");
+}

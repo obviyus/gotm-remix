@@ -10,6 +10,7 @@ import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
 import { getSession } from "~/sessions";
 import type { Nomination } from "~/types";
+import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import type { Route } from "./+types/voting";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -25,7 +26,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const monthId = monthRow.status === "voting" ? monthRow.id : undefined;
 
 	if (!monthId) {
-		return Response.json({ monthId: undefined });
+		return Response.json({ monthId: undefined, labels: categoryLabelsFromMonth(monthRow) });
 	}
 
 	// Check if user has already voted (in parallel)
@@ -137,6 +138,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		votedLong: Boolean(longVoteResult.rows[0]),
 		shortRankings,
 		longRankings,
+		labels: categoryLabelsFromMonth(monthRow),
 	};
 }
 
@@ -265,6 +267,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		votedLong: initialVotedLong,
 		shortRankings = [],
 		longRankings = [],
+		labels,
 	} = loaderData;
 
 	const voteFetcher = useFetcher();
@@ -483,7 +486,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 			subtitle="to sort them in the priority you want them to win"
 			description="Please only vote for games you actually want to play next month :)"
 		>
-			<Column title="Long Games" statusBadge={statusBadges.long} action={longAction}>
+			<Column
+				title={categoryGameTitle(labels.long)}
+				statusBadge={statusBadges.long}
+				action={longAction}
+			>
 				<DragDropContext onDragEnd={onDragEnd}>
 					<VotingGamesList
 						droppableId="long"
@@ -500,7 +507,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 				</DragDropContext>
 			</Column>
 
-			<Column title="Short Games" statusBadge={statusBadges.short} action={shortAction}>
+			<Column
+				title={categoryGameTitle(labels.short)}
+				statusBadge={statusBadges.short}
+				action={shortAction}
+			>
 				<DragDropContext onDragEnd={onDragEnd}>
 					<VotingGamesList
 						droppableId="short"

@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS months (
   theme_id   INTEGER,
   year       INTEGER NOT NULL,
   month      INTEGER NOT NULL,
+  long_label TEXT NOT NULL DEFAULT 'Long',
+  short_label TEXT NOT NULL DEFAULT 'Short',
   status_id  INTEGER DEFAULT 1 NOT NULL,
   created_at INTEGER DEFAULT (unixepoch()),
   updated_at INTEGER DEFAULT (unixepoch()),

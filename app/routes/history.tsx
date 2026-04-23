@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { getMonths } from "~/server/month.server";
 import type { Month, Nomination } from "~/types";
+import { categoryWinnerLabel } from "~/utils/categoryLabels";
 import type { Route } from "./+types/history";
 
 export async function loader() {
@@ -131,7 +132,7 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																<div>
 																	<div className="flex items-center text-xs font-medium text-blue-400 mb-0.5">
 																		<Trophy className="h-3.5 w-3.5 mr-1" />
-																		Long Winner
+																		{categoryWinnerLabel(month.longLabel)}
 																	</div>
 																	<div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors duration-200">
 																		{winner.gameName}
@@ -156,7 +157,7 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																<div>
 																	<div className="flex items-center text-xs font-medium text-emerald-400 mb-0.5">
 																		<Trophy className="h-3.5 w-3.5 mr-1" />
-																		Short Winner
+																		{categoryWinnerLabel(month.shortLabel)}
 																	</div>
 																	<div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors duration-200">
 																		{winner.gameName}

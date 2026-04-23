@@ -49,6 +49,8 @@ export interface Month {
 	id: number;
 	month: number;
 	year: number;
+	longLabel: string;
+	shortLabel: string;
 	theme: Theme;
 	status: "nominating" | "jury" | "voting" | "complete" | "playing" | "over" | "ready";
 	winners: Nomination[];

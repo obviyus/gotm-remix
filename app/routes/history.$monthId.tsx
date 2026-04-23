@@ -16,6 +16,7 @@ import {
 } from "~/server/voting.server";
 import { getWinner } from "~/server/winner.server";
 import type { Nomination } from "~/types";
+import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import type { Route } from "./+types/history.$monthId";
 
 type LoaderData = Route.ComponentProps["loaderData"];
@@ -174,13 +175,11 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 		},
 	};
 
-	const longGamesCanvasId = `longGamesChart-${month.month}-${month.year}`;
-	const shortGamesCanvasId = `shortGamesChart-${month.month}-${month.year}`;
-
 	const showResults =
 		month.status === "over" || month.status === "complete" || month.status === "playing";
 
 	const showWinner = showResults;
+	const labels = categoryLabelsFromMonth(month);
 	const totalVotesLabel = (totalVotes ?? 0).toLocaleString();
 	const longTimelapse =
 		timelapse.long?.frames?.length && timelapse.long.totalVotes
@@ -231,14 +230,14 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 			) : showResults ? (
 				<div className="space-y-6">
 					<VotingResultsChart
-						canvasId={longGamesCanvasId}
+						title={labels.long}
 						results={results.long}
 						gameUrls={gameUrls}
 						showWinner={showWinner}
 						timelapse={longTimelapse}
 					/>
 					<VotingResultsChart
-						canvasId={shortGamesCanvasId}
+						title={labels.short}
 						results={results.short}
 						gameUrls={gameUrls}
 						showWinner={showWinner}
@@ -252,7 +251,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 					title="All Nominations"
 					description="These games were nominated for this month's Game of the Month."
 				>
-					<Column title="Long Games" statusBadge={columnStatus.long}>
+					<Column title={categoryGameTitle(labels.long)} statusBadge={columnStatus.long}>
 						<SortedNominationsList
 							games={nominations.long}
 							isShort={false}
@@ -262,7 +261,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 						/>
 					</Column>
 
-					<Column title="Short Games" statusBadge={columnStatus.short}>
+					<Column title={categoryGameTitle(labels.short)} statusBadge={columnStatus.short}>
 						<SortedNominationsList
 							games={nominations.short}
 							isShort

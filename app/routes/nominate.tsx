@@ -20,6 +20,11 @@ import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
 import { getSession } from "~/sessions";
 import type { Nomination, Pitch } from "~/types";
+import {
+	categoryGameLabel,
+	categoryLabelsFromMonth,
+	isDefaultCategoryLabels,
+} from "~/utils/categoryLabels";
 import type { Route } from "./+types/nominate";
 
 interface NominationResponse {
@@ -189,6 +194,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		games: [],
 		monthId,
 		monthStatus: monthRow.status,
+		labels: categoryLabelsFromMonth(monthRow),
 		userDiscordId: discordId,
 		userNominations,
 		allNominations,
@@ -423,6 +429,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		games: initialGames,
 		monthId,
 		monthStatus,
+		labels,
 		userNominations,
 		allNominations,
 		userDiscordId,
@@ -492,6 +499,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const isSearching = shouldUseLocalSearch
 		? false
 		: search.state === "submitting" || search.state === "loading";
+	const showDurationHints = isDefaultCategoryLabels(labels);
 	const hasSearched = shouldUseLocalSearch
 		? normalizedSearchTerm.length > 0
 		: search.data !== undefined;
@@ -864,14 +872,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					<ul className="mt-2 space-y-1 text-sm text-zinc-400">
 						<li className="flex items-center">
 							<span className={shortNomination ? "text-emerald-400" : "text-zinc-400"}>
-								{shortNomination ? "✓" : "○"} Short Game (
+								{shortNomination ? "✓" : "○"} {categoryGameLabel(labels.short)} (
 								{shortNomination ? "Nominated" : "Available"})
 							</span>
 						</li>
 						<li className="flex items-center">
 							<span className={longNomination ? "text-emerald-400" : "text-zinc-400"}>
-								{longNomination ? "✓" : "○"} Long Game ({longNomination ? "Nominated" : "Available"}
-								)
+								{longNomination ? "✓" : "○"} {categoryGameLabel(labels.long)} (
+								{longNomination ? "Nominated" : "Available"})
 							</span>
 						</li>
 					</ul>
@@ -879,8 +887,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 				{hasReachedNominationLimit && (
 					<div className="mb-6 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-						You have nominated a short and a long game. You can still add pitches to existing
-						nominations using the search below.
+						You have nominated a {labels.short} game and a {labels.long} game. You can still add
+						pitches to existing nominations using the search below.
 					</div>
 				)}
 
@@ -994,8 +1002,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
 						<h3 className="text-lg font-semibold text-zinc-200">Search for games to nominate</h3>
 						<p className="mt-2 text-zinc-400">
-							Type in the search box above to find games. You can nominate one short game and one
-							long game.
+							Type in the search box above to find games. You can nominate one {labels.short} game
+							and one {labels.long} game.
 						</p>
 					</div>
 				)}
@@ -1056,8 +1064,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
 								}`}
 							>
-								<span>Short Game</span>
-								<span className="text-xs opacity-80">(&lt; 12 hours)</span>
+								<span>{categoryGameLabel(labels.short)}</span>
+								{showDurationHints && <span className="text-xs opacity-80">(&lt; 12 hours)</span>}
 								{shortNomination && <span className="text-xs">Already nominated</span>}
 							</button>
 							<button
@@ -1070,8 +1078,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
 								}`}
 							>
-								<span>Long Game</span>
-								<span className="text-xs opacity-80">(&gt; 12 hours)</span>
+								<span>{categoryGameLabel(labels.long)}</span>
+								{showDurationHints && <span className="text-xs opacity-80">(&gt; 12 hours)</span>}
 								{longNomination && <span className="text-xs">Already nominated</span>}
 							</button>
 						</div>
