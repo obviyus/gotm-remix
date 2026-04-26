@@ -16,20 +16,18 @@ import { getSession } from "~/sessions";
 import type { Month, Nomination } from "~/types";
 import {
 	categoryGameLabel,
-	categoryGameTitle,
 	categoryLabelsFromMonth,
 	DEFAULT_CATEGORY_LABELS,
 } from "~/utils/categoryLabels";
 import type { Route } from "./+types/admin.$monthId";
 
-const escapeCsvField = (text: string | null | undefined) => {
-	if (text === null || text === undefined) return "";
-
-	return String(text)
+const csvField = (value: string | number) => {
+	const text = String(value)
 		.replace(/\t/g, " ")
 		.replace(/[\r\n]/g, " ")
-		.replace(/"/g, '""')
 		.trim();
+
+	return text;
 };
 
 interface ActionResponse {
@@ -365,38 +363,16 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	};
 
 	const handleCopyAsCSV = () => {
-		const header = "Category\tGame Name\tSubmitted Pitches\n";
-		let csvString = header;
-		const longGames = nominations.filter((n) => !n.short);
-		const shortGames = nominations.filter((n) => n.short);
-
-		if (longGames.length > 0) {
-			csvString += `${categoryGameTitle(labels.long)}\t\t\n`;
-			for (const nomination of longGames) {
-				if (nomination.pitches && nomination.pitches.length > 0) {
-					const combinedPitches = nomination.pitches
-						.map((pitch) => escapeCsvField(pitch.pitch))
-						.join("; ");
-					csvString += `\t${escapeCsvField(nomination.gameName)}\t"${combinedPitches}"\n`;
-				} else {
-					csvString += `\t${escapeCsvField(nomination.gameName)}\t\n`;
-				}
-			}
-		}
-
-		if (shortGames.length > 0) {
-			csvString += `${categoryGameTitle(labels.short)}\t\t\n`;
-			for (const nomination of shortGames) {
-				if (nomination.pitches && nomination.pitches.length > 0) {
-					const combinedPitches = nomination.pitches
-						.map((pitch) => escapeCsvField(pitch.pitch))
-						.join("; ");
-					csvString += `\t${escapeCsvField(nomination.gameName)}\t"${combinedPitches}"\n`;
-				} else {
-					csvString += `\t${escapeCsvField(nomination.gameName)}\t\n`;
-				}
-			}
-		}
+		const csvString = [
+			...nominations.map((nomination) => [
+				nomination.gameName,
+				nomination.short ? labels.short : labels.long,
+				nomination.pitches.map((pitch) => pitch.pitch).join("; "),
+				nomination.pitches.length,
+			]),
+		]
+			.map((row) => row.map(csvField).join("\t"))
+			.join("\n");
 
 		void navigator.clipboard.writeText(csvString).then(() => {
 			setCsvCopied(true);
