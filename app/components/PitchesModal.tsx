@@ -79,8 +79,15 @@ export default function PitchesModal({
 		}
 
 		setIsEditorOpen(false);
-		revalidator.revalidate();
-	}, [currentUserPitch, draftPitch, fetcher.data?.success, fetcher.state, revalidator, userDiscordId]);
+		void revalidator.revalidate();
+	}, [
+		currentUserPitch,
+		draftPitch,
+		fetcher.data?.success,
+		fetcher.state,
+		revalidator,
+		userDiscordId,
+	]);
 
 	if (!nomination) {
 		return null;
@@ -94,7 +101,7 @@ export default function PitchesModal({
 			return;
 		}
 
-		fetcher.submit(
+		void fetcher.submit(
 			{
 				intent: "savePitch",
 				nominationId: nomination.id.toString(),
@@ -133,24 +140,24 @@ export default function PitchesModal({
 													Your pitch
 												</span>
 											)}
-										<Badge
-											variant="default"
-											className={`font-medium px-3 py-1 text-xs text-white ${
-												isCurrentUserPitch
-													? "bg-emerald-600 hover:bg-emerald-600"
-													: "bg-blue-600 hover:bg-blue-600"
+											<Badge
+												variant="default"
+												className={`font-medium px-3 py-1 text-xs text-white ${
+													isCurrentUserPitch
+														? "bg-emerald-600 hover:bg-emerald-600"
+														: "bg-blue-600 hover:bg-blue-600"
+												}`}
+											>
+												{pitch.generatedName}
+											</Badge>
+										</div>
+										<div
+											className={`whitespace-pre-wrap text-sm leading-relaxed ${
+												isCurrentUserPitch ? "text-emerald-50" : "text-gray-200"
 											}`}
 										>
-											{pitch.generatedName}
-										</Badge>
-									</div>
-									<div
-										className={`whitespace-pre-wrap text-sm leading-relaxed ${
-											isCurrentUserPitch ? "text-emerald-50" : "text-gray-200"
-										}`}
-									>
-										{pitch.pitch}
-									</div>
+											{pitch.pitch}
+										</div>
 									</div>
 								);
 							})
