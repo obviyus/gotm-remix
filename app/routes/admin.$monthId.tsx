@@ -10,7 +10,7 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { db } from "~/server/database.server";
 import { getMonths, getThemeCategories } from "~/server/month.server";
-import { getNominationsForMonth } from "~/server/nomination.server";
+import { getNominationsForMonth, updateNominationCategory } from "~/server/nomination.server";
 import { recalculateWinnersForMonth } from "~/server/winner.server";
 import { getSession } from "~/sessions";
 import type { Month, Nomination } from "~/types";
@@ -88,6 +88,22 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
+	const session = await getSession(request.headers.get("Cookie"));
+	const discordId = session.get("discordId");
+
+	if (!discordId) {
+		return redirect("/auth/discord");
+	}
+
+	const adminResult = await db.execute({
+		sql: "SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1",
+		args: [discordId],
+	});
+
+	if (adminResult.rows.length === 0) {
+		throw new Response("Unauthorized", { status: 403 });
+	}
+
 	const formData = await request.formData();
 	const intent = formData.get("intent");
 
@@ -286,6 +302,20 @@ export async function action({ request }: Route.ActionArgs) {
 			return Response.json({ success: true });
 		}
 
+		case "updateNominationCategory": {
+			const nominationId = Number(formData.get("nominationId"));
+			const category = formData.get("category");
+
+			if (!Number.isFinite(nominationId) || (category !== "long" && category !== "short")) {
+				return Response.json({ error: "Invalid nomination category" }, { status: 400 });
+			}
+
+			const monthId = await updateNominationCategory(nominationId, category === "short");
+			await recalculateWinnersForMonth(monthId);
+
+			return Response.json({ success: true });
+		}
+
 		default:
 			return Response.json({ error: "Invalid action" }, { status: 400 });
 	}
@@ -299,6 +329,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
 	const labelUpdateFetcher = useFetcher<ActionResponse>();
 	const jurySelectionFetcher = useFetcher<ActionResponse>();
+	const categoryUpdateFetcher = useFetcher<ActionResponse>();
 	const [csvCopied, setCsvCopied] = useState(false);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 	const createMonthError = createMonthFetcher.data?.error ?? null;
@@ -343,6 +374,20 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		);
 	};
 
+	const handleNominationCategoryChange = (
+		nomination: Nomination,
+		event: ChangeEvent<HTMLSelectElement>,
+	) => {
+		void categoryUpdateFetcher.submit(
+			{
+				intent: "updateNominationCategory",
+				nominationId: nomination.id.toString(),
+				category: event.target.value,
+			},
+			{ method: "POST" },
+		);
+	};
+
 	// Function to determine if a nomination is being processed
 	const isProcessingNomination = (nominationId: number) => {
 		if (jurySelectionFetcher.state === "idle") return false;
@@ -362,15 +407,30 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		return jurySelectionFetcher.formData?.get("selected") === "true";
 	};
 
+	const isProcessingNominationCategory = (nominationId: number) => {
+		if (categoryUpdateFetcher.state === "idle") return false;
+
+		return categoryUpdateFetcher.formData?.get("nominationId") === nominationId.toString();
+	};
+
+	const getNominationCategory = (nomination: Nomination) => {
+		const isProcessing = isProcessingNominationCategory(nomination.id);
+		if (!isProcessing) return nomination.short ? "short" : "long";
+
+		const category = categoryUpdateFetcher.formData?.get("category");
+		if (category === "long" || category === "short") return category;
+
+		throw new Error("Invalid optimistic nomination category");
+	};
+
 	const handleCopyAsCSV = () => {
-		const csvString = [
-			...nominations.map((nomination) => [
+		const csvString = nominations
+			.map((nomination) => [
 				nomination.gameName,
 				nomination.short ? labels.short : labels.long,
 				nomination.pitches.map((pitch) => pitch.pitch).join("; "),
 				nomination.pitches.length,
-			]),
-		]
+			])
 			.map((row) => row.map(csvField).join("\t"))
 			.join("\n");
 
@@ -801,15 +861,16 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 												{nomination.gameYear}
 											</td>
 											<td className="px-4 py-3 whitespace-nowrap">
-												<span
-													className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-														nomination.short
-															? "bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20"
-															: "bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/20"
-													}`}
+												<select
+													value={getNominationCategory(nomination)}
+													onChange={(event) => handleNominationCategoryChange(nomination, event)}
+													disabled={isProcessingNominationCategory(nomination.id)}
+													className="rounded-md border-white/10 bg-black/20 px-2 py-1 text-xs font-medium text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-70"
+													aria-label={`Category for ${nomination.gameName}`}
 												>
-													{categoryGameLabel(nomination.short ? labels.short : labels.long)}
-												</span>
+													<option value="long">{categoryGameLabel(labels.long)}</option>
+													<option value="short">{categoryGameLabel(labels.short)}</option>
+												</select>
 											</td>
 											<td className="px-4 py-3 whitespace-nowrap text-sm text-center">
 												<Button
