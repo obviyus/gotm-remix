@@ -1,4 +1,5 @@
 const VOTE_COUNT_SUFFIX = /\s*\(\d+\)\s*$/;
+const NODE_VOTE_COUNT = /\((\d+)\)\s*$/;
 
 export interface VotingResultEdge {
 	source: string;
@@ -7,6 +8,14 @@ export interface VotingResultEdge {
 
 export const getBaseGameName = (nodeName: string): string =>
 	nodeName.replace(VOTE_COUNT_SUFFIX, "").trim();
+
+export const getNodeVoteCount = (nodeName: string): number => {
+	const match = nodeName.trimEnd().match(NODE_VOTE_COUNT);
+	if (!match) {
+		throw new Error(`Missing node vote count: ${nodeName}`);
+	}
+	return Number(match[1]);
+};
 
 export const getWinnerNode = <T extends VotingResultEdge>(results: T[]): string | null => {
 	if (results.length === 0) {

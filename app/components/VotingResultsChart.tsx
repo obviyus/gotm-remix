@@ -5,7 +5,7 @@ import type { CallbackDataParams } from "echarts/types/dist/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import type { VotingTimelapseFrame } from "~/server/voting.server";
-import { getBaseGameName, getWinnerName } from "~/utils/votingResults";
+import { getBaseGameName, getNodeVoteCount, getWinnerName } from "~/utils/votingResults";
 
 type ECOption = ComposeOption<SankeySeriesOption | TooltipComponentOption>;
 
@@ -250,7 +250,7 @@ export function VotingResultsChart({
 						}
 						if (sankeyParams.dataType === "node") {
 							const baseName = getBaseGameName(sankeyParams.name);
-							const nodeValue = Math.round(sankeyParams.value as number);
+							const nodeValue = getNodeVoteCount(sankeyParams.name);
 							return `${sankeyParams.name} - ${baseName}<br/>Total Votes: ${nodeValue}`;
 						}
 						return "";
@@ -286,7 +286,7 @@ export function VotingResultsChart({
 								}
 								const trimmedNodeName = rawName.trimEnd();
 								const baseName = getBaseGameName(trimmedNodeName);
-								const nodeValue = Math.round(Number(params.value ?? 0));
+								const nodeValue = getNodeVoteCount(trimmedNodeName);
 								const hasNameLabel = initialNodes.has(rawName) || finalNodes.has(rawName);
 
 								if (hasNameLabel) {
