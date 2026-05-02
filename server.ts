@@ -1,7 +1,6 @@
 import { createRequestHandler } from "react-router";
 import type { ServerBuild } from "react-router";
 import * as build from "./build/server/index.js";
-import { Cron } from "croner";
 import { sendDiscordWebhook } from "~/server/discord.server";
 
 const remix_build = build as unknown as ServerBuild;
@@ -38,12 +37,29 @@ function getMonthDates(month: number, year: number) {
 	};
 }
 
-// Check daily at midnight for phase transitions
-const _dailyPhaseCron = new Cron("0 0 0 * * *", { timezone: "America/New_York" }, async () => {
-	const now = new Date();
-	const currentMonth = now.getMonth() + 1;
-	const currentYear = now.getFullYear();
-	const currentDay = now.getDate();
+function getNewYorkDateParts(date: Date) {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "numeric",
+		day: "numeric",
+	}).formatToParts(date);
+
+	const values = new Map(parts.map((part) => [part.type, Number(part.value)]));
+
+	return {
+		month: values.get("month")!,
+		year: values.get("year")!,
+		day: values.get("day")!,
+	};
+}
+
+Bun.cron("0 5 * * *", async () => {
+	const {
+		month: currentMonth,
+		year: currentYear,
+		day: currentDay,
+	} = getNewYorkDateParts(new Date());
 	const dates = getMonthDates(currentMonth, currentYear);
 
 	// Check if today is a phase transition day
@@ -65,8 +81,7 @@ const _dailyPhaseCron = new Cron("0 0 0 * * *", { timezone: "America/New_York" }
 	}
 });
 
-// 1st: Voting Ends, new GotM begins (same for all months)
-const _monthlyResetCron = new Cron("0 0 0 1 * *", { timezone: "America/New_York" }, async () => {
+Bun.cron("0 5 1 * *", async () => {
 	await sendDiscordWebhook("Voting ends soon!", {
 		title: "🏆 New Month Begins",
 	});
