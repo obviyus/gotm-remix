@@ -8,7 +8,14 @@ WORKDIR /app
 
 COPY bun.lock package.json ./
 
-RUN bun install
+RUN bun install --frozen-lockfile
+
+FROM base AS production-deps
+WORKDIR /app
+
+COPY bun.lock package.json ./
+
+RUN bun install --frozen-lockfile --production
 
 # Build the app
 FROM base AS build
@@ -31,5 +38,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 COPY --from=build /app/server.js /app/server.js
 COPY --from=build /app/build /app/build
 COPY --from=build /app/public /app/public
+COPY --from=production-deps /app/node_modules /app/node_modules
 
 CMD ["bun", "server.js"]
