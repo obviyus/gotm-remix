@@ -26,6 +26,8 @@ FROM base AS runtime
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/server.js /app/server.js
 COPY --from=build /app/build /app/build
 COPY --from=build /app/public /app/public
