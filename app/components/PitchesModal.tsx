@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useFetcher, useRevalidator } from "react-router";
+import { useState } from "react";
+import { useRevalidator } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import type { Nomination, Pitch } from "~/types";
+import type { Nomination } from "~/types";
 
 interface PitchesModalProps {
 	isOpen: boolean;
@@ -25,6 +25,16 @@ interface PitchMutationResponse {
 	success?: boolean;
 }
 
+async function savePitch(nominationId: number, pitch: string): Promise<PitchMutationResponse> {
+	const formData = new FormData();
+	formData.set("intent", "savePitch");
+	formData.set("nominationId", nominationId.toString());
+	formData.set("pitch", pitch);
+
+	const response = await fetch("/nominate", { method: "PATCH", body: formData });
+	return (await response.json()) as PitchMutationResponse;
+}
+
 export default function PitchesModal({
 	isOpen,
 	onClose,
@@ -32,11 +42,41 @@ export default function PitchesModal({
 	userDiscordId,
 	canManagePitch = false,
 }: PitchesModalProps) {
-	const fetcher = useFetcher<PitchMutationResponse>();
+	if (!isOpen || !nomination) {
+		return null;
+	}
+
+	return (
+		<OpenPitchesModal
+			key={nomination.id}
+			onClose={onClose}
+			nomination={nomination}
+			userDiscordId={userDiscordId}
+			canManagePitch={canManagePitch}
+		/>
+	);
+}
+
+interface OpenPitchesModalProps {
+	onClose: () => void;
+	nomination: Nomination;
+	userDiscordId?: string | null;
+	canManagePitch: boolean;
+}
+
+function OpenPitchesModal({
+	onClose,
+	nomination,
+	userDiscordId,
+	canManagePitch,
+}: OpenPitchesModalProps) {
 	const revalidator = useRevalidator();
+	const currentUserPitch =
+		nomination.pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
-	const [draftPitch, setDraftPitch] = useState("");
-	const [pitches, setPitches] = useState<Pitch[]>([]);
+	const [draftPitch, setDraftPitch] = useState(currentUserPitch?.pitch ?? "");
+	const [saveError, setSaveError] = useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
@@ -44,85 +84,40 @@ export default function PitchesModal({
 		}
 	};
 
-	const currentUserPitch = useMemo(() => {
-		if (!nomination || !userDiscordId) {
-			return null;
-		}
-
-		return nomination.pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
-	}, [nomination, userDiscordId]);
-
-	useEffect(() => {
-		if (!isOpen || !nomination) {
-			setIsEditorOpen(false);
-			setDraftPitch("");
-			setPitches([]);
-			return;
-		}
-
-		setPitches(nomination.pitches);
-		setDraftPitch(currentUserPitch?.pitch ?? "");
-		setIsEditorOpen(false);
-	}, [currentUserPitch, isOpen, nomination]);
-
-	useEffect(() => {
-		if (fetcher.state !== "idle" || !fetcher.data?.success) {
-			return;
-		}
-
-		if (currentUserPitch) {
-			setPitches((existingPitches) =>
-				existingPitches.map((pitch) =>
-					pitch.discordId === userDiscordId ? { ...pitch, pitch: draftPitch.trim() } : pitch,
-				),
-			);
-		}
-
-		setIsEditorOpen(false);
-		void revalidator.revalidate();
-	}, [
-		currentUserPitch,
-		draftPitch,
-		fetcher.data?.success,
-		fetcher.state,
-		revalidator,
-		userDiscordId,
-	]);
-
-	if (!nomination) {
-		return null;
-	}
-
 	const isSaveDisabled = draftPitch.trim().length === 0;
-	const isSubmitting = fetcher.state !== "idle";
 
-	const handleSavePitch = () => {
+	const handleSavePitch = async () => {
 		if (isSaveDisabled) {
 			return;
 		}
 
-		void fetcher.submit(
-			{
-				intent: "savePitch",
-				nominationId: nomination.id.toString(),
-				pitch: draftPitch.trim(),
-			},
-			{ action: "/nominate", method: "PATCH" },
-		);
+		setIsSubmitting(true);
+		setSaveError(null);
+		const result = await savePitch(nomination.id, draftPitch.trim());
+
+		if (result.error) {
+			setSaveError(result.error);
+			setIsSubmitting(false);
+			return;
+		}
+
+		setIsEditorOpen(false);
+		await revalidator.revalidate();
+		setIsSubmitting(false);
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={handleOpenChange}>
+		<Dialog open onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-3xl bg-gray-900 border-gray-700 shadow-2xl">
 				<DialogHeader className="pb-4">
 					<DialogTitle className="text-xl font-bold text-white">
-						Pitches for {nomination?.gameName}
+						Pitches for {nomination.gameName}
 					</DialogTitle>
 				</DialogHeader>
 				<ScrollArea className="max-h-[65vh] pr-2">
 					<div className="space-y-4">
-						{pitches.length > 0 ? (
-							pitches.map((pitch) => {
+						{nomination.pitches.length > 0 ? (
+							nomination.pitches.map((pitch) => {
 								const isCurrentUserPitch = pitch.discordId === userDiscordId;
 
 								return (
@@ -184,9 +179,7 @@ export default function PitchesModal({
 									placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
 									className="flex min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
 								/>
-								{fetcher.data?.error && (
-									<p className="text-sm text-red-400">{fetcher.data.error}</p>
-								)}
+								{saveError && <p className="text-sm text-red-400">{saveError}</p>}
 								<div className="flex justify-end gap-2">
 									<Button
 										type="button"

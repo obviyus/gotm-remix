@@ -1,5 +1,5 @@
 import { Menu, X } from "lucide-react";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";
@@ -90,8 +90,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 	const toggleMobileMenu = () => {
 		setIsMobileMenuOpen((prev) => !prev);
 	};
-	const closeMobileMenu = () => {
+	const closeNavigationMenus = () => {
 		setIsMobileMenuOpen(false);
+		setIsUserMenuOpen(false);
 	};
 	const toggleUserMenu = () => {
 		setIsUserMenuOpen((prev) => !prev);
@@ -100,10 +101,6 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 		pointerEvents: isMobileMenuOpen ? "auto" : "none",
 	};
 	const avatarAlt = pseudoHandle ? `${pseudoHandle} avatar` : "User avatar";
-
-	useEffect(() => {
-		setIsUserMenuOpen(false);
-	}, [location.pathname]);
 
 	return (
 		<div className="min-h-screen flex flex-col bg-zinc-900">
@@ -146,6 +143,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 												prefetch="viewport"
 												aria-current={location.pathname === link.path ? "page" : undefined}
 												className={getLinkClassName(link.path)}
+												onClick={closeNavigationMenus}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
 													{link.label}
@@ -161,6 +159,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 											prefetch="viewport"
 											aria-current={location.pathname === centerItem.path ? "page" : undefined}
 											className={getLinkClassName(centerItem.path)}
+											onClick={closeNavigationMenus}
 										>
 											<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-[0.8rem] md:text-sm">
 												{centerItem.label}
@@ -184,6 +183,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 												prefetch="viewport"
 												aria-current={location.pathname === link.path ? "page" : undefined}
 												className={getLinkClassName(link.path)}
+												onClick={closeNavigationMenus}
 											>
 												<span className="relative z-10 flex items-center justify-center gap-1 sm:gap-2 transition-transform group-hover/btn:scale-105 text-xs sm:text-sm">
 													{link.label}
@@ -290,7 +290,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 								prefetch="viewport"
 								aria-current={location.pathname === link.path ? "page" : undefined}
 								className={getLinkClassName(link.path, true)}
-								onClick={closeMobileMenu}
+								onClick={closeNavigationMenus}
 							>
 								{link.label}
 							</Link>

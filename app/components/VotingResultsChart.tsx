@@ -63,6 +63,7 @@ const COLOR_PALETTE = [
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 const FRAME_DURATION_MS = 700;
 const EMPTY_GAME_URLS: Record<string, string> = {};
+const EMPTY_TIMELAPSE_FRAMES: VotingTimelapseFrame[] = [];
 
 // AIDEV-NOTE: Lazy-load ECharts to keep base bundle smaller; cache promise to avoid re-import churn.
 let echartsPromise: Promise<typeof import("echarts/core")> | null = null;
@@ -186,7 +187,7 @@ export function VotingResultsChart({
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [playIndex, setPlayIndex] = useState(0);
 
-	const timelapseFrames = timelapse?.frames ?? [];
+	const timelapseFrames = timelapse?.frames ?? EMPTY_TIMELAPSE_FRAMES;
 	const hasTimelapse = timelapseFrames.length > 1;
 	const activeFrame = isPlaying ? timelapseFrames[playIndex] : null;
 	const activeResults = activeFrame?.results ?? results;
@@ -318,7 +319,7 @@ export function VotingResultsChart({
 		return () => {
 			isActive = false;
 		};
-	}, [activeResults]);
+	}, [activeResults, stableGameColors]);
 
 	useEffect(() => {
 		if (!isPlaying) return;
@@ -342,10 +343,8 @@ export function VotingResultsChart({
 	}, [isPlaying, playIndex, timelapseFrames.length]);
 
 	useEffect(() => {
-		const chartInstance = chartInstanceRef.current;
-		if (!chartInstance) return;
 		const handleResize = () => {
-			chartInstance.resize();
+			chartInstanceRef.current?.resize();
 		};
 		window.addEventListener("resize", handleResize);
 		return () => {
