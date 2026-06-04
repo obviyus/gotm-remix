@@ -24,7 +24,6 @@
 		"@radix-ui/react-separator": "^1.1.8",
 		"@radix-ui/react-slot": "^1.2.4",
 		"@react-router/node": "^7.16.0",
-		"@react-router/serve": "^7.16.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"echarts": "^6.1.0",
