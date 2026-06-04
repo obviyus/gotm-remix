@@ -39,7 +39,10 @@ function normalizeStatement(sql: string): string {
 		.replace(/\r\n/g, "\n")
 		.replace(/\n[ \t]+/g, "\n  ");
 
-	if (normalized.startsWith("CREATE TABLE ") && !normalized.startsWith("CREATE TABLE IF NOT EXISTS ")) {
+	if (
+		normalized.startsWith("CREATE TABLE ") &&
+		!normalized.startsWith("CREATE TABLE IF NOT EXISTS ")
+	) {
 		normalized = normalized.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ");
 	}
 
@@ -47,13 +50,13 @@ function normalizeStatement(sql: string): string {
 		normalized.startsWith("CREATE UNIQUE INDEX ") &&
 		!normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS ")
 	) {
-		normalized = normalized.replace(
-			"CREATE UNIQUE INDEX ",
-			"CREATE UNIQUE INDEX IF NOT EXISTS ",
-		);
+		normalized = normalized.replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ");
 	}
 
-	if (normalized.startsWith("CREATE INDEX ") && !normalized.startsWith("CREATE INDEX IF NOT EXISTS ")) {
+	if (
+		normalized.startsWith("CREATE INDEX ") &&
+		!normalized.startsWith("CREATE INDEX IF NOT EXISTS ")
+	) {
 		normalized = normalized.replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ");
 	}
 
@@ -72,7 +75,9 @@ if (statements.length === 0) {
 }
 
 const nextSchema = `${statements.join("\n\n")}\n`;
-const currentSchema = await Bun.file(targetPath).text().catch(() => null);
+const currentSchema = await Bun.file(targetPath)
+	.text()
+	.catch(() => null);
 
 if (currentSchema === nextSchema) {
 	console.log(`Schema already up to date: ${targetPath}`);

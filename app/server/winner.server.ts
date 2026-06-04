@@ -150,7 +150,10 @@ function winnerRowToNomination(
 }
 
 export async function recalculateWinnersForMonth(monthId: number): Promise<void> {
-	await Promise.all([calculateAndStoreWinner(monthId, true), calculateAndStoreWinner(monthId, false)]);
+	await Promise.all([
+		calculateAndStoreWinner(monthId, true),
+		calculateAndStoreWinner(monthId, false),
+	]);
 }
 
 export async function getWinner(monthId: number, short: boolean): Promise<Nomination | null> {

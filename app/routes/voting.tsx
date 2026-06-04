@@ -261,12 +261,12 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const {
 		monthId,
 		userId,
-		shortNominations = [],
-		longNominations = [],
+		shortNominations,
+		longNominations,
 		votedShort: initialVotedShort,
 		votedLong: initialVotedLong,
-		shortRankings = [],
-		longRankings = [],
+		shortRankings,
+		longRankings,
 		labels,
 	} = loaderData;
 
