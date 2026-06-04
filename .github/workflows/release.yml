@@ -6,6 +6,7 @@ on:
       - master
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   IMAGE: ghcr.io/obviyus/gotm-remix
 
 jobs:
