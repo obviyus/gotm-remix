@@ -91,7 +91,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	};
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, url }: Route.ActionArgs) {
 	const session = await getSession(request.headers.get("Cookie"));
 	const discordId = session.get("discordId");
 
@@ -184,7 +184,7 @@ export async function action({ request }: Route.ActionArgs) {
 					args: [year, month, statusId, themeId, longLabel, shortLabel],
 				});
 
-				return redirect(new URL(request.url).pathname);
+				return redirect(url.pathname);
 			} catch (error) {
 				// Check for unique constraint violation
 				if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {

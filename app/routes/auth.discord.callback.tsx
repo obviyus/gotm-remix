@@ -16,8 +16,7 @@ function getDiscordAvatarUrl(userId: string, avatarHash: string | null): string 
 	return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-	const url = new URL(request.url);
+export async function loader({ request, url }: Route.LoaderArgs) {
 	const code = url.searchParams.get("code");
 	const error = url.searchParams.get("error");
 
