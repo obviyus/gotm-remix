@@ -1,4 +1,4 @@
-import { createRequestHandler } from "react-router";
+import { createRequestHandler, RouterContextProvider } from "react-router";
 import type { ServerBuild } from "react-router";
 import { sendDiscordWebhook } from "~/server/discord.server";
 
@@ -95,7 +95,7 @@ Bun.serve({
 			const url = new URL(request.url);
 
 			if (url.pathname.includes("..")) {
-				return handler(request, {});
+				return handler(request, new RouterContextProvider());
 			}
 
 			const sanitizedPath = url.pathname.replace(/^\//, "");
@@ -132,7 +132,7 @@ Bun.serve({
 			}
 
 			// Handle Remix routes
-			const loadContext = {};
+			const loadContext = new RouterContextProvider();
 			return handler(request, loadContext);
 		} catch (error) {
 			console.error("Error processing request:", error);
