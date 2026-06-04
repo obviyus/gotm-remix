@@ -911,7 +911,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						<button
 							type="submit"
 							disabled={!shouldUseLocalSearch && (isSearching || !searchTerm.trim())}
-							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:border-zinc-400/20"
+							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-200 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-emerald-50 disabled:border-emerald-100/20 disabled:hover:bg-transparent"
 						>
 							{searchButtonLabel}
 						</button>

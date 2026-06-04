@@ -29,8 +29,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return Response.json({ monthId: undefined, labels: categoryLabelsFromMonth(monthRow) });
 	}
 
-	// Check if user has already voted (in parallel)
-	const [shortVoteResult, longVoteResult] = await Promise.all([
+	const [shortVoteResult, longVoteResult, shortNomIds, longNomIds] = await Promise.all([
 		db.execute({
 			sql: `SELECT id
          FROM votes
@@ -47,10 +46,6 @@ export async function loader({ request }: Route.LoaderArgs) {
            AND short = 0`,
 			args: [monthId, discordId],
 		}),
-	]);
-
-	// Fetch nomination IDs in parallel
-	const [shortNomIds, longNomIds] = await Promise.all([
 		db.execute({
 			sql: `SELECT id
          FROM nominations

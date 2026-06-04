@@ -30,6 +30,10 @@ const csvField = (value: string | number) => {
 	return text;
 };
 
+const submitContainingForm = (event: ChangeEvent<HTMLSelectElement>) => {
+	event.target.form?.requestSubmit();
+};
+
 interface ActionResponse {
 	success?: boolean;
 	error?: string;
@@ -334,9 +338,6 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const [showCreateForm, setShowCreateForm] = useState(false);
 	const createMonthError = createMonthFetcher.data?.error ?? null;
 	const labels = categoryLabelsFromMonth(selectedMonth);
-	const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
-		event.target.form?.requestSubmit();
-	};
 
 	const toggleCreateForm = () => {
 		setShowCreateForm((previous) => !previous);
@@ -481,7 +482,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								id={statusSelectId}
 								name="status"
 								value={selectedMonth.status}
-								onChange={handleStatusChange}
+								onChange={submitContainingForm}
 								className="w-full sm:w-auto rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
 							>
 								{monthStatuses.map((status) => (

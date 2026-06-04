@@ -57,8 +57,9 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 			// Find the first non-eliminated preference
 			let currentNomId: number | null = null;
 
-			while (state.rankIndex < vote.rankings.length) {
-				const rank = vote.rankings[state.rankIndex];
+			const { rankings } = vote;
+			while (state.rankIndex < rankings.length) {
+				const rank = rankings[state.rankIndex];
 				if (!eliminatedIds.has(rank.nominationId)) {
 					currentNomId = rank.nominationId;
 					break;

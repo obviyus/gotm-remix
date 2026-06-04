@@ -6,6 +6,12 @@ const serverBuildPath = "./build/server/index.js";
 const build: ServerBuild = await import(serverBuildPath);
 const handler = createRequestHandler(build, Bun.env.NODE_ENV);
 const port = Bun.env.PORT || 3000;
+const newYorkDateFormatter = new Intl.DateTimeFormat("en-US", {
+	timeZone: "America/New_York",
+	year: "numeric",
+	month: "numeric",
+	day: "numeric",
+});
 
 console.log(`🚀 Server starting on port ${port}`);
 
@@ -38,12 +44,7 @@ function getMonthDates(month: number, year: number) {
 }
 
 function getNewYorkDateParts(date: Date) {
-	const parts = new Intl.DateTimeFormat("en-US", {
-		timeZone: "America/New_York",
-		year: "numeric",
-		month: "numeric",
-		day: "numeric",
-	}).formatToParts(date);
+	const parts = newYorkDateFormatter.formatToParts(date);
 
 	const values = new Map(parts.map((part) => [part.type, Number(part.value)]));
 
