@@ -1,5 +1,6 @@
-/** @type {import('tailwindcss').Config} */
+import typography from "@tailwindcss/typography";
+
 export default {
 	content: ["./app/**/*.{js,jsx,ts,tsx}"],
-	plugins: [require("@tailwindcss/typography")],
+	plugins: [typography],
 };
