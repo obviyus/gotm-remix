@@ -1,10 +1,7 @@
 import { createClient } from "@libsql/client";
-import { getEnv } from "~/env.server";
+import { getDatabaseConfig } from "~/server/database-config.server";
 
-export const db = createClient({
-	url: getEnv("TURSO_DATABASE_URL"),
-	authToken: getEnv("TURSO_AUTH_TOKEN"),
-});
+export const db = createClient(getDatabaseConfig());
 
 await db.batch(
 	[
