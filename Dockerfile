@@ -3,7 +3,12 @@ FROM oven/bun AS base
 # set for base and all layer that inherit from it
 ENV NODE_ENV=production
 
-FROM base AS deps
+FROM node:22.22.0-bookworm-slim AS node
+
+FROM base AS build-base
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+
+FROM build-base AS deps
 WORKDIR /app
 
 COPY bun.lock package.json ./
@@ -18,7 +23,7 @@ COPY bun.lock package.json ./
 RUN bun install --frozen-lockfile --production
 
 # Build the app
-FROM base AS build
+FROM build-base AS build
 WORKDIR /app
 
 COPY --from=deps /app/node_modules /app/node_modules
