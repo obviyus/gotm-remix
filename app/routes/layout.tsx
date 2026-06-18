@@ -1,45 +1,20 @@
 import { Menu, X } from "lucide-react";
 import { type CSSProperties, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
-import { db } from "~/server/database.server";
+import { requestUserContext } from "~/route-context.server";
 import { getCurrentMonth } from "~/server/month.server";
-import { getSession } from "~/sessions";
 import type { Route } from "./+types/layout";
 
-function getDefaultDiscordAvatarUrl(discordId: string): string {
-	const defaultAvatarIndex = Number((BigInt(discordId) >> 22n) % 6n);
-	return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
-}
-
-export async function loader({ request }: Route.LoaderArgs) {
-	const [currentMonth, session] = await Promise.all([
-		getCurrentMonth(),
-		getSession(request.headers.get("Cookie")),
-	]);
-
-	const discordId = session.get("discordId");
-	let pseudoHandle: string | null = null;
-	let discordAvatarUrl: string | null = null;
-
-	let isAdmin = false;
-	if (discordId) {
-		const { uniqueNameGenerator } = await import("~/server/nameGenerator");
-		pseudoHandle = uniqueNameGenerator(discordId);
-		discordAvatarUrl = session.get("discordAvatarUrl") ?? getDefaultDiscordAvatarUrl(discordId);
-
-		const result = await db.execute({
-			sql: "SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1",
-			args: [discordId],
-		});
-		isAdmin = result.rows.length > 0;
-	}
+export async function loader({ context }: Route.LoaderArgs) {
+	const currentMonth = await getCurrentMonth();
+	const user = context.get(requestUserContext);
 
 	return Response.json({
 		monthStatus: currentMonth?.status || "ready",
-		isAdmin,
-		discordId: discordId ?? null,
-		discordAvatarUrl,
-		pseudoHandle,
+		isAdmin: user?.isAdmin ?? false,
+		discordId: user?.discordId ?? null,
+		discordAvatarUrl: user?.discordAvatarUrl ?? null,
+		pseudoHandle: user?.pseudoHandle ?? null,
 	});
 }
 

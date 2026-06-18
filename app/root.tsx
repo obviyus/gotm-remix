@@ -1,9 +1,12 @@
 import React from "react";
-import type { MetaFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { loadRequestUser } from "~/route-context.server";
+import type { Route } from "./+types/root";
 import "./tailwind.css";
 
-export const meta: MetaFunction = () => {
+export const middleware: Route.MiddlewareFunction[] = [loadRequestUser];
+
+export const meta: Route.MetaFunction = () => {
 	return [
 		{ title: "PG GOTM" },
 		{

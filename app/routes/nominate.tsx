@@ -1,6 +1,6 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useId, useState } from "react";
-import { Link, redirect, useFetcher } from "react-router";
+import { Link, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import { Button } from "~/components/ui/button";
@@ -14,11 +14,11 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { authenticatedUserContext, requireAuthenticatedUser } from "~/route-context.server";
 import { db } from "~/server/database.server";
 import { searchGames } from "~/server/igdb.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
-import { getSession } from "~/sessions";
 import type { Nomination, Pitch } from "~/types";
 import {
 	categoryGameLabel,
@@ -161,14 +161,10 @@ function PitchCard({
 	);
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-	const session = await getSession(request.headers.get("Cookie"));
-	const discordId = session.get("discordId");
+export const middleware: Route.MiddlewareFunction[] = [requireAuthenticatedUser];
 
-	if (!discordId) {
-		return redirect("/auth/discord");
-	}
-
+export async function loader({ context }: Route.LoaderArgs) {
+	const { discordId } = context.get(authenticatedUserContext);
 	const monthRow = await getCurrentMonth();
 	const monthId = monthRow.status === "nominating" ? monthRow.id : undefined;
 
@@ -202,7 +198,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	};
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
+	const { discordId } = context.get(authenticatedUserContext);
 	const method = request.method.toUpperCase();
 	const formData = await request.formData();
 	const intent = (formData.get("intent") || "").toString();
@@ -215,13 +212,6 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 		const games = await searchGames(query);
 		return Response.json({ games });
-	}
-
-	// All mutations below require auth
-	const session = await getSession(request.headers.get("Cookie"));
-	const discordId = session.get("discordId");
-	if (!discordId) {
-		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	// Reuse previous winners check
