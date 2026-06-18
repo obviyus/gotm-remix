@@ -1,4 +1,5 @@
 import { createCookieSessionStorage } from "react-router";
+import { getEnv } from "~/env.server";
 
 type SessionData = {
 	discordId: string;
@@ -18,8 +19,8 @@ const { getSession, commitSession, destroySession } = createCookieSessionStorage
 		httpOnly: true,
 		path: "/",
 		sameSite: "lax",
-		secrets: [Bun.env.COOKIE_SECRET ?? "secret"],
-		secure: Bun.env.NODE_ENV === "production",
+		secrets: [getEnv("COOKIE_SECRET")],
+		secure: process.env.NODE_ENV === "production",
 	},
 });
 

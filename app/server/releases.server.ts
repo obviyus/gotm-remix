@@ -1,4 +1,5 @@
 import { db } from "./database.server";
+import { getEnv } from "~/env.server";
 import type { Nomination } from "~/types";
 
 type TwitchAuth = {
@@ -31,8 +32,8 @@ async function getIGDBToken(): Promise<string> {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
-			client_id: Bun.env.TWITCH_CLIENT_ID,
-			client_secret: Bun.env.TWITCH_CLIENT_SECRET,
+			client_id: getEnv("TWITCH_CLIENT_ID"),
+			client_secret: getEnv("TWITCH_CLIENT_SECRET"),
 			grant_type: "client_credentials",
 		}),
 	});
@@ -56,11 +57,7 @@ type IGDBGameWithPopularity = IGDBGame & {
 
 async function fetchReleasesFromIGDB(date: string): Promise<IGDBGameWithPopularity[]> {
 	const token = await getIGDBToken();
-	const clientId = Bun.env.TWITCH_CLIENT_ID;
-
-	if (!clientId) {
-		throw new Error("TWITCH_CLIENT_ID must be defined");
-	}
+	const clientId = getEnv("TWITCH_CLIENT_ID");
 
 	// Parse YYYY-MM-DD and get timestamps for that day
 	const targetDate = new Date(`${date}T00:00:00Z`);

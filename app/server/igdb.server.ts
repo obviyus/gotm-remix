@@ -1,4 +1,5 @@
 import stringSimilarity from "string-similarity";
+import { getEnv } from "~/env.server";
 import type { Nomination } from "~/types";
 
 type TwitchAuth = {
@@ -21,8 +22,8 @@ async function getIGDBToken() {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				client_id: Bun.env.TWITCH_CLIENT_ID,
-				client_secret: Bun.env.TWITCH_CLIENT_SECRET,
+				client_id: getEnv("TWITCH_CLIENT_ID"),
+				client_secret: getEnv("TWITCH_CLIENT_SECRET"),
 				grant_type: "client_credentials",
 			}),
 		});
@@ -53,16 +54,13 @@ async function getIGDBToken() {
 }
 
 export async function searchGames(query: string): Promise<Nomination[]> {
-	if (!Bun.env.TWITCH_CLIENT_ID) {
-		throw new Error("TWITCH_CLIENT_ID must be defined");
-	}
-
+	const clientId = getEnv("TWITCH_CLIENT_ID");
 	const token = await getIGDBToken();
 
 	const response = await fetch("https://api.igdb.com/v4/games", {
 		method: "POST",
 		headers: {
-			"Client-ID": Bun.env.TWITCH_CLIENT_ID,
+			"Client-ID": clientId,
 			Authorization: `Bearer ${token}`,
 			"Content-Type": "application/json",
 		},

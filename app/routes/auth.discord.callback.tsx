@@ -1,5 +1,6 @@
 import React from "react";
 import { redirect } from "react-router";
+import { getEnv } from "~/env.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { commitSession, getSession } from "~/sessions";
 import type { Route } from "./+types/auth.discord.callback";
@@ -28,13 +29,9 @@ export async function loader({ request, url }: Route.LoaderArgs) {
 		return redirect("/");
 	}
 
-	if (
-		!Bun.env.DISCORD_CLIENT_ID ||
-		!Bun.env.DISCORD_CLIENT_SECRET ||
-		!Bun.env.DISCORD_REDIRECT_URI
-	) {
-		throw new Error("Discord environment variables must be defined");
-	}
+	const clientId = getEnv("DISCORD_CLIENT_ID");
+	const clientSecret = getEnv("DISCORD_CLIENT_SECRET");
+	const redirectUri = getEnv("DISCORD_REDIRECT_URI");
 
 	try {
 		const sessionPromise = getSession(request.headers.get("Cookie"));
@@ -44,11 +41,11 @@ export async function loader({ request, url }: Route.LoaderArgs) {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: new URLSearchParams({
-				client_id: Bun.env.DISCORD_CLIENT_ID,
-				client_secret: Bun.env.DISCORD_CLIENT_SECRET,
+				client_id: clientId,
+				client_secret: clientSecret,
 				grant_type: "authorization_code",
 				code,
-				redirect_uri: Bun.env.DISCORD_REDIRECT_URI,
+				redirect_uri: redirectUri,
 			}),
 		});
 

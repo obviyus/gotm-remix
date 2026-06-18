@@ -1,7 +1,9 @@
 import { createClient } from "@libsql/client";
+import { getEnv } from "~/env.server";
+
 export const db = createClient({
-	url: Bun.env.TURSO_DATABASE_URL ?? "",
-	authToken: Bun.env.TURSO_AUTH_TOKEN,
+	url: getEnv("TURSO_DATABASE_URL"),
+	authToken: getEnv("TURSO_AUTH_TOKEN"),
 });
 
 await db.batch(

@@ -1,4 +1,4 @@
-const GOTM_JURY_WEBHOOK_URL = Bun.env.GOTM_JURY_WEBHOOK_URL;
+import { getEnv } from "~/env.server";
 
 interface DiscordEmbed {
 	title?: string;
@@ -73,11 +73,7 @@ export async function sendDiscordWebhook(
 	};
 
 	try {
-		if (!GOTM_JURY_WEBHOOK_URL) {
-			throw new Error("GOTM_JURY_WEBHOOK_URL is not defined");
-		}
-
-		const response = await fetch(GOTM_JURY_WEBHOOK_URL, {
+		const response = await fetch(getEnv("GOTM_JURY_WEBHOOK_URL"), {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
