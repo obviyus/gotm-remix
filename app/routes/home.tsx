@@ -5,9 +5,9 @@ import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
 import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
 import { VotingResultsChart } from "~/components/VotingResultsChart";
+import { requestUserContext } from "~/route-context.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
-import { getSession } from "~/sessions";
 import type { Result } from "~/server/voting.server";
 import {
 	calculateVotingResults,
@@ -108,9 +108,8 @@ async function getTimelapse(monthId: number): Promise<TimelapseByType> {
 	return { long, short };
 }
 
-export async function loader({ request }: Route.LoaderArgs): Promise<LoaderData> {
-	const session = await getSession(request.headers.get("Cookie"));
-	const userDiscordId = session.get("discordId") ?? null;
+export async function loader({ context }: Route.LoaderArgs): Promise<LoaderData> {
+	const userDiscordId = context.get(requestUserContext)?.discordId ?? null;
 	const month = await getCurrentMonth();
 
 	switch (month.status) {

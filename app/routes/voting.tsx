@@ -1,27 +1,22 @@
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
-import { redirect, useFetcher } from "react-router";
+import { useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import TwoColumnLayout, { Column } from "~/components/TwoColumnLayout";
+import { authenticatedUserContext, requireAuthenticatedUser } from "~/route-context.server";
 import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
-import { getSession } from "~/sessions";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import type { Route } from "./+types/voting";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	// Check for authentication
-	const session = await getSession(request.headers.get("Cookie"));
-	const discordId = session.get("discordId");
+export const middleware: Route.MiddlewareFunction[] = [requireAuthenticatedUser];
 
-	if (!discordId) {
-		return redirect("/auth/discord");
-	}
-
+export async function loader({ context }: Route.LoaderArgs) {
+	const { discordId } = context.get(authenticatedUserContext);
 	const monthRow = await getCurrentMonth();
 	const monthId = monthRow.status === "voting" ? monthRow.id : undefined;
 

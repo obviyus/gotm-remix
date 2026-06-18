@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { requireAdmin, requireAuthenticatedUser } from "~/route-context.server";
 import { db } from "~/server/database.server";
 import { getMonths, getThemeCategories } from "~/server/month.server";
 import { getNominationsForMonth, updateNominationCategory } from "~/server/nomination.server";
 import { recalculateWinnersForMonth } from "~/server/winner.server";
-import { getSession } from "~/sessions";
 import type { Month, Nomination } from "~/types";
 import {
 	categoryGameLabel,
@@ -47,24 +47,9 @@ interface MonthRow extends DBRow {
 	id: number;
 }
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const session = await getSession(request.headers.get("Cookie"));
-	const discordId = session.get("discordId");
+export const middleware: Route.MiddlewareFunction[] = [requireAuthenticatedUser, requireAdmin];
 
-	if (!discordId) {
-		return redirect("/auth/discord");
-	}
-
-	// Check if user is a jury member
-	const result = await db.execute({
-		sql: "SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1",
-		args: [discordId],
-	});
-
-	if (result.rows.length === 0) {
-		throw new Response("Unauthorized", { status: 403 });
-	}
-
+export async function loader({ params }: Route.LoaderArgs) {
 	const selectedMonthId = Number(params.monthId);
 	if (!Number.isFinite(selectedMonthId)) {
 		throw new Response("Invalid month ID", { status: 400 });
@@ -92,22 +77,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export async function action({ request, url }: Route.ActionArgs) {
-	const session = await getSession(request.headers.get("Cookie"));
-	const discordId = session.get("discordId");
-
-	if (!discordId) {
-		return redirect("/auth/discord");
-	}
-
-	const adminResult = await db.execute({
-		sql: "SELECT 1 FROM jury_members WHERE discord_id = ? AND is_admin = 1",
-		args: [discordId],
-	});
-
-	if (adminResult.rows.length === 0) {
-		throw new Response("Unauthorized", { status: 403 });
-	}
-
 	const formData = await request.formData();
 	const intent = formData.get("intent");
 
