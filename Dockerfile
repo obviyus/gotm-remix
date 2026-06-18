@@ -31,6 +31,7 @@ COPY --from=deps /app/node_modules /app/node_modules
 COPY . .
 
 RUN bun run build
+RUN bun build --target=bun --packages=bundle --production build/server/index.js --outfile /app/build/server/index.js
 RUN bun build --target=bun --production --minify server.ts --outfile /app/server.js
 
 # Finally, build the production image with minimal footprint
@@ -38,11 +39,9 @@ FROM base AS runtime
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-
 COPY --from=build /app/server.js /app/server.js
 COPY --from=build /app/build /app/build
 COPY --from=build /app/public /app/public
-COPY --from=production-deps /app/node_modules /app/node_modules
+COPY --from=production-deps /app/node_modules/@libsql /app/node_modules/@libsql
 
 CMD ["bun", "server.js"]
