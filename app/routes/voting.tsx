@@ -249,7 +249,6 @@ function VotingGamesList({
 
 export default function Voting({ loaderData }: Route.ComponentProps) {
 	const {
-		monthId,
 		userId,
 		shortNominations,
 		longNominations,
@@ -330,7 +329,10 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	};
 
 	const deleteVote = async (short: boolean) => {
-		void voteFetcher.submit({ monthId, userId, short }, { method: "DELETE", action: "/api/votes" });
+		void voteFetcher.submit(
+			{ short },
+			{ method: "DELETE", action: "/api/votes", encType: "application/json" },
+		);
 
 		const shortKey = short ? 1 : 0;
 		const games = short ? shortNominations : longNominations;
@@ -354,7 +356,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		}
 
 		void voteFetcher.submit(
-			{ monthId, userId, short, order: validOrder },
+			{ short, order: validOrder },
 			{
 				method: "POST",
 				action: "/api/votes",
