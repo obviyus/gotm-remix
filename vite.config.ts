@@ -15,7 +15,7 @@ const bunExternalModules = [
 
 export default defineConfig(({ command }) => ({
 	build: {
-		rollupOptions: {
+		rolldownOptions: {
 			external: ["bun"],
 		},
 	},

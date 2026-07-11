@@ -1,5 +1,9 @@
 {
-	"$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"ignorePatterns": ["build/**"],
+	"options": {
+		"typeAware": true
+	},
 	"rules": {
 		"typescript/no-base-to-string": "off",
 		"typescript/restrict-template-expressions": "off"
