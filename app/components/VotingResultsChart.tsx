@@ -260,6 +260,7 @@ export function VotingResultsChart({
 				series: [
 					{
 						type: "sankey",
+						animationDuration: isPlaying ? 300 : 0,
 						data: nodes,
 						links: links,
 						emphasis: { focus: "adjacency" },
@@ -319,7 +320,7 @@ export function VotingResultsChart({
 		return () => {
 			isActive = false;
 		};
-	}, [activeResults, stableGameColors]);
+	}, [activeResults, isPlaying, stableGameColors]);
 
 	useEffect(() => {
 		if (!isPlaying) return;
