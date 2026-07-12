@@ -329,13 +329,11 @@ export function VotingResultsChart({
 
 		const lastFrameIndex = timelapseFrames.length - 1;
 		const timer = window.setTimeout(() => {
-			setPlayIndex((prev) => {
-				const nextIndex = Math.min(prev + 1, lastFrameIndex);
-				if (nextIndex === lastFrameIndex) {
-					setIsPlaying(false);
-				}
-				return nextIndex;
-			});
+			const nextIndex = Math.min(playIndex + 1, lastFrameIndex);
+			setPlayIndex(nextIndex);
+			if (nextIndex === lastFrameIndex) {
+				setIsPlaying(false);
+			}
 		}, FRAME_DURATION_MS);
 
 		return () => {

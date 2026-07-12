@@ -421,10 +421,14 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 						{/* Month title and status */}
 						<div className="flex flex-col sm:flex-row sm:items-center gap-3">
 							<h1 className="text-2xl font-bold text-zinc-200">
-								{new Date(selectedMonth.year, selectedMonth.month - 1).toLocaleString("default", {
-									month: "long",
-									year: "numeric",
-								})}
+								{new Date(Date.UTC(selectedMonth.year, selectedMonth.month - 1)).toLocaleString(
+									"en-US",
+									{
+										month: "long",
+										timeZone: "UTC",
+										year: "numeric",
+									},
+								)}
 							</h1>
 
 							{["nominating", "jury", "voting"].includes(selectedMonth.status) && (
