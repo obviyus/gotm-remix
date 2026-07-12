@@ -225,6 +225,7 @@ function OpenPitchesModal({
 							)}
 						</div>
 						<Button
+							type="button"
 							variant="outline"
 							onClick={onClose}
 							className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500 transition-all duration-200 px-6"

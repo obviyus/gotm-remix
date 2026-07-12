@@ -409,7 +409,12 @@ export function VotingResultsChart({
 					) : null}
 				</div>
 				{hasTimelapse ? (
-					<Button variant="secondary" size="sm" onClick={isPlaying ? handleStop : handlePlay}>
+					<Button
+						type="button"
+						variant="secondary"
+						size="sm"
+						onClick={isPlaying ? handleStop : handlePlay}
+					>
 						{isPlaying ? "Stop playback" : "Play timelapse"}
 					</Button>
 				) : null}

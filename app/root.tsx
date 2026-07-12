@@ -39,8 +39,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Meta />
 				<Links />
 			</head>
-			<body className="prose lg:prose-xl bg-zinc-900 text-zinc-100">
-				{children}
+			<body className="relative prose lg:prose-xl bg-zinc-900 text-zinc-100">
+				<div className="isolate">{children}</div>
 				<ScrollRestoration />
 				<Scripts />
 			</body>
