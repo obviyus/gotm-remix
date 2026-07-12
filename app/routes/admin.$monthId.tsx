@@ -3,7 +3,7 @@ import type { ChangeEvent } from "react";
 import { useId, useState } from "react";
 import { Link, redirect, useFetcher } from "react-router";
 import PitchesModal from "~/components/PitchesModal";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -472,18 +472,21 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							const currentIndex = months.findIndex((m) => m.id === selectedMonth.id);
 							const prev = months[currentIndex + 1];
 							return prev ? (
-								<Button
-									asChild
-									variant="outline"
-									size="sm"
-									className="px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40"
+								<Link
+									to={`/admin/${prev.id}`}
+									prefetch="viewport"
+									className={buttonVariants({
+										variant: "outline",
+										size: "sm",
+										className:
+											"px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40",
+									})}
 								>
-									<Link to={`/admin/${prev.id}`} prefetch="viewport">
-										← Previous Month
-									</Link>
-								</Button>
+									← Previous Month
+								</Link>
 							) : (
 								<Button
+									type="button"
 									variant="outline"
 									size="sm"
 									disabled
@@ -522,18 +525,21 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							const currentIndex = months.findIndex((m) => m.id === selectedMonth.id);
 							const next = months[currentIndex - 1];
 							return next ? (
-								<Button
-									asChild
-									variant="outline"
-									size="sm"
-									className="px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40"
+								<Link
+									to={`/admin/${next.id}`}
+									prefetch="viewport"
+									className={buttonVariants({
+										variant: "outline",
+										size: "sm",
+										className:
+											"px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40",
+									})}
 								>
-									<Link to={`/admin/${next.id}`} prefetch="viewport">
-										Next Month →
-									</Link>
-								</Button>
+									Next Month →
+								</Link>
 							) : (
 								<Button
+									type="button"
 									variant="outline"
 									size="sm"
 									disabled
