@@ -1,32 +1,44 @@
 # GOTM
 
-This is the code for https://pg-gotm.com. It is currently used for the Game of the Month (GOTM) voting for the PatientGamers Discord server.
+Every month the [PatientGamers](https://pg-gotm.com) Discord picks games to play together — one short (< 12h on HowLongToBeat) and one long (> 12h). This runs the election.
 
-## GOTM Process
+Live at **[pg-gotm.com](https://pg-gotm.com)**.
 
-Every month, the users and jury select one short (< 12 hours on HLTB) and one long (> 12 hours on HLTB) game to play.
+## How a month works
 
-- The GOTM process begins at the `nominating` status. The jury decides a theme and users can nominate games that fit the theme along with an optional pitch.
-- After the nomination period ends, the jury selects a list of games to be voted on and the month status changes to `jury`. The number of games per month is not fixed.
-- When the jury has selected the games, the month status changes to `voting`. Users can vote on the games they want to play. This is done via a ranked voting system.
-- Votes are ranked and displayed using a Sankey diagram. The game with the most votes is selected as the GOTM and the month status changes to `playing`.
-- Once the next month begins, the month status changes to `over` and the process starts again.
+A month moves through five states:
 
-## Development
+`nominating` → `jury` → `voting` → `playing` → `over`
 
-This repository uses Bun for package management and the runtime. To start the development server:
+- **Nominating** — the jury sets a theme; anyone nominates a fitting game with an optional pitch
+- **Jury** — the jury curates nominations down to a ballot (size isn't fixed)
+- **Voting** — members rank the ballot; the winner is decided by **Instant Runoff Voting**
+- **Playing** — winners are crowned and the community plays
+- **Over** — next month begins, and it all repeats
 
-1. Start the server (uses local file database):
+Votes are tallied with ranked choice and rendered as an animated **Sankey diagram** showing how support flows between rounds. Game metadata comes from IGDB; each voter is shown a stable, PII-free pseudonym seeded off their Discord ID — same person, same "Brave Mario", every time. There's also a **Patience** view tracking games that just turned a year old — proper patient-gamer territory.
 
-```sh
-$ bun run dev
+## Stack
+
+React 19 + React Router 8 (SSR) on Bun · Vite 8 · Tailwind CSS v4 · Base UI · ECharts (the Sankey) · libSQL/Turso. Discord OAuth for login; IGDB/Twitch for game data.
+
+## Develop
+
+```bash
+bun install
+bun run dev          # uses a local file database
 ```
 
-## Production
+## Build & run
 
-For production deployment, set up environment variables:
-
-```sh
-TURSO_DATABASE_URL=your_turso_url
-TURSO_AUTH_TOKEN=your_turso_token
+```bash
+bun run build
+bun run start
+bun run typecheck && bun run lint
 ```
+
+Docker: `docker compose up` (port 3000). CI publishes `ghcr.io/obviyus/gotm-remix` on push to `master`.
+
+## Configuration
+
+All required at runtime: `COOKIE_SECRET`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `GOTM_JURY_WEBHOOK_URL`, `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`.
