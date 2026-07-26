@@ -1,6 +1,6 @@
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -12,7 +12,14 @@ import { getNominationsByIds } from "~/server/nomination.server";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
+import { buildOrderFromRankings, resolveVotedStatus } from "~/utils/votingOrder";
 import type { Route } from "./+types/voting";
+
+type VoteActionResponse = {
+	success: boolean;
+	error?: string;
+	voteId?: number;
+};
 
 export const middleware: Route.MiddlewareFunction[] = [requireAuthenticatedUser];
 
@@ -253,63 +260,31 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		userId,
 		shortNominations,
 		longNominations,
-		votedShort: initialVotedShort,
-		votedLong: initialVotedLong,
+		votedShort: loaderVotedShort,
+		votedLong: loaderVotedLong,
 		shortRankings,
 		longRankings,
 		labels,
 	} = loaderData;
 
-	const voteFetcher = useFetcher();
+	const voteFetcher = useFetcher<VoteActionResponse>();
+	const loaderOrder = useMemo(
+		() => ({
+			0: buildOrderFromRankings(longNominations, longRankings),
+			1: buildOrderFromRankings(shortNominations, shortRankings),
+		}),
+		[longNominations, longRankings, shortNominations, shortRankings],
+	);
+	const [currentOrder, setCurrentOrder] = useState(loaderOrder);
 
-	// Initialize order based on existing rankings if available
-	const [currentOrder, setCurrentOrder] = useState<Record<number, string[]>>(() => {
-		const initialOrder: Record<number, string[]> = {
-			0: ["divider"], // long games
-			1: ["divider"], // short games
-		};
-
-		// For long games
-		if (longRankings?.length > 0) {
-			// Add ranked games in order
-			const rankedLongIds = longRankings
-				.sort((a, b) => a.rank - b.rank)
-				.map((r) => String(r.nomination_id));
-			initialOrder[0].unshift(...rankedLongIds);
-
-			// Add remaining unranked games below divider
-			const unrankedLongIds = longNominations
-				.filter((n) => !longRankings.find((r) => r.nomination_id === n.id))
-				.map((n) => String(n.id));
-			initialOrder[0].push(...unrankedLongIds);
-		} else {
-			// If no rankings, all games go below divider
-			initialOrder[0].push(...(longNominations || []).map((n) => String(n.id)));
+	useEffect(() => {
+		if (voteFetcher.state === "idle") {
+			setCurrentOrder(loaderOrder);
 		}
+	}, [voteFetcher.state, loaderOrder]);
 
-		// For short games
-		if (shortRankings?.length > 0) {
-			// Add ranked games in order
-			const rankedShortIds = shortRankings
-				.sort((a, b) => a.rank - b.rank)
-				.map((r) => String(r.nomination_id));
-			initialOrder[1].unshift(...rankedShortIds);
-
-			// Add remaining unranked games below divider
-			const unrankedShortIds = shortNominations
-				.filter((n) => !shortRankings.find((r) => r.nomination_id === n.id))
-				.map((n) => String(n.id));
-			initialOrder[1].push(...unrankedShortIds);
-		} else {
-			// If no rankings, all games go below divider
-			initialOrder[1].push(...(shortNominations || []).map((n) => String(n.id)));
-		}
-
-		return initialOrder;
-	});
-
-	const [votedLong, setVotedLong] = useState(initialVotedLong);
-	const [votedShort, setVotedShort] = useState(initialVotedShort);
+	const votedLong = resolveVotedStatus(Boolean(loaderVotedLong), false, voteFetcher);
+	const votedShort = resolveVotedStatus(Boolean(loaderVotedShort), true, voteFetcher);
 	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
 	const selectedNomination = findNominationById(
 		selectedNominationId,
@@ -323,15 +298,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		setSelectedNominationId(null);
 	};
 
-	const updateVoteStatus = (short: boolean, voted: boolean) => {
-		if (short) {
-			setVotedShort(voted);
-		} else {
-			setVotedLong(voted);
-		}
-	};
-
-	const deleteVote = async (short: boolean) => {
+	const deleteVote = (short: boolean) => {
 		void voteFetcher.submit(
 			{ short },
 			{ method: "DELETE", action: "/api/votes", encType: "application/json" },
@@ -342,19 +309,17 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 
 		setCurrentOrder((prev) => ({
 			...prev,
-			[shortKey]: ["divider", ...games.map((n) => String(n.id))],
+			[shortKey]: ["divider", ...(games ?? []).map((n) => String(n.id))],
 		}));
-
-		updateVoteStatus(short, false);
 	};
 
-	const saveVote = async (short: boolean, order: string[]) => {
+	const saveVote = (short: boolean, order: string[]) => {
 		const validOrder = order
 			.filter((id) => id && id !== "divider")
 			.map((id) => Number.parseInt(id, 10));
 
 		if (validOrder.length === 0) {
-			await deleteVote(short);
+			deleteVote(short);
 			return;
 		}
 
@@ -366,11 +331,9 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 				encType: "application/json",
 			},
 		);
-
-		updateVoteStatus(short, true);
 	};
 
-	const onDragEnd = async (result: DropResult) => {
+	const onDragEnd = (result: DropResult) => {
 		if (!result.destination) return;
 
 		const isShort = result.source.droppableId === "short";
@@ -386,13 +349,13 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		const rankedItems = items.slice(0, newDividerIndex);
 
 		if (rankedItems.length > 0) {
-			await saveVote(isShort, rankedItems);
+			saveVote(isShort, rankedItems);
 		} else {
-			await deleteVote(isShort);
+			deleteVote(isShort);
 		}
 	};
 
-	const moveItemAboveDivider = async (isShort: boolean, itemId: string) => {
+	const moveItemAboveDivider = (isShort: boolean, itemId: string) => {
 		const shortKey = isShort ? 1 : 0;
 		const items = Array.from(currentOrder[shortKey]);
 
@@ -406,11 +369,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
 		const rankedItems = items.slice(0, items.indexOf("divider"));
 		if (rankedItems.length > 0) {
-			await saveVote(isShort, rankedItems);
+			saveVote(isShort, rankedItems);
 		}
 	};
 
-	const moveItemBelowDivider = async (isShort: boolean, itemId: string) => {
+	const moveItemBelowDivider = (isShort: boolean, itemId: string) => {
 		const shortKey = isShort ? 1 : 0;
 		const items = Array.from(currentOrder[shortKey]);
 
@@ -424,9 +387,9 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 		setCurrentOrder((prevOrder) => ({ ...prevOrder, [shortKey]: items }));
 		const rankedItems = items.slice(0, dividerIndex);
 		if (rankedItems.length > 0) {
-			await saveVote(isShort, rankedItems);
+			saveVote(isShort, rankedItems);
 		} else {
-			await deleteVote(isShort);
+			deleteVote(isShort);
 		}
 	};
 
@@ -442,11 +405,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	};
 
 	const handleClearLongVote = () => {
-		void deleteVote(false);
+		deleteVote(false);
 	};
 
 	const handleClearShortVote = () => {
-		void deleteVote(true);
+		deleteVote(true);
 	};
 
 	const longAction = votedLong ? (
@@ -493,10 +456,10 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 						order={currentOrder[0]}
 						onViewPitches={handleOpenPitches}
 						onRank={(itemId) => {
-							void moveItemAboveDivider(false, itemId);
+							moveItemAboveDivider(false, itemId);
 						}}
 						onUnrank={(itemId) => {
-							void moveItemBelowDivider(false, itemId);
+							moveItemBelowDivider(false, itemId);
 						}}
 					/>
 				</DragDropContext>
@@ -514,10 +477,10 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 						order={currentOrder[1]}
 						onViewPitches={handleOpenPitches}
 						onRank={(itemId) => {
-							void moveItemAboveDivider(true, itemId);
+							moveItemAboveDivider(true, itemId);
 						}}
 						onUnrank={(itemId) => {
-							void moveItemBelowDivider(true, itemId);
+							moveItemBelowDivider(true, itemId);
 						}}
 					/>
 				</DragDropContext>
