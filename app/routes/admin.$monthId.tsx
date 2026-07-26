@@ -19,6 +19,7 @@ import {
 	categoryLabelsFromMonth,
 	DEFAULT_CATEGORY_LABELS,
 } from "~/utils/categoryLabels";
+import { findNominationById } from "~/utils/nominations";
 import type { Route } from "./+types/admin.$monthId";
 
 const csvField = (value: string | number) => {
@@ -296,8 +297,8 @@ export async function action({ request, url }: Route.ActionArgs) {
 
 export default function Admin({ loaderData }: Route.ComponentProps) {
 	const { months, selectedMonth, nominations, themeCategories } = loaderData;
-	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
-	const [isPitchesModalOpen, setIsPitchesModalOpen] = useState(false);
+	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
+	const selectedNomination = findNominationById(selectedNominationId, nominations);
 	const createMonthFetcher = useFetcher<ActionResponse>();
 	const statusUpdateFetcher = useFetcher<ActionResponse>();
 	const labelUpdateFetcher = useFetcher<ActionResponse>();
@@ -312,12 +313,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 		setShowCreateForm((previous) => !previous);
 	};
 	const openPitchesModal = (nomination: Nomination) => {
-		setSelectedNomination(nomination);
-		setIsPitchesModalOpen(true);
+		setSelectedNominationId(nomination.id);
 	};
 	const closePitchesModal = () => {
-		setIsPitchesModalOpen(false);
-		setSelectedNomination(null);
+		setSelectedNominationId(null);
 	};
 
 	// Generate unique IDs for form elements
@@ -903,7 +902,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			)}
 
 			<PitchesModal
-				isOpen={isPitchesModalOpen}
+				isOpen={selectedNomination !== null}
 				onClose={closePitchesModal}
 				nomination={selectedNomination}
 			/>

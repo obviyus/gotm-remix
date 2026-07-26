@@ -11,6 +11,7 @@ import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
+import { findNominationById } from "~/utils/nominations";
 import type { Route } from "./+types/voting";
 
 export const middleware: Route.MiddlewareFunction[] = [requireAuthenticatedUser];
@@ -309,15 +310,17 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 
 	const [votedLong, setVotedLong] = useState(initialVotedLong);
 	const [votedShort, setVotedShort] = useState(initialVotedShort);
-	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
-	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
+	const selectedNomination = findNominationById(
+		selectedNominationId,
+		longNominations,
+		shortNominations,
+	);
 	const handleOpenPitches = (nomination: Nomination) => {
-		setSelectedNomination(nomination);
-		setIsViewingPitches(true);
+		setSelectedNominationId(nomination.id);
 	};
 	const closePitchesModal = () => {
-		setIsViewingPitches(false);
-		setSelectedNomination(null);
+		setSelectedNominationId(null);
 	};
 
 	const updateVoteStatus = (short: boolean, voted: boolean) => {
@@ -521,7 +524,7 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 			</Column>
 
 			<PitchesModal
-				isOpen={isViewingPitches}
+				isOpen={selectedNomination !== null}
 				onClose={closePitchesModal}
 				nomination={selectedNomination}
 				userDiscordId={userId}
