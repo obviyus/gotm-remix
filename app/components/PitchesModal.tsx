@@ -96,8 +96,7 @@ function OpenPitchesModal({
 			: nomination.pitches;
 	const serverUserPitch =
 		nomination.pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
-	const currentUserPitch =
-		pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
+	const currentUserPitch = pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
 	const [draftPitch, setDraftPitch] = useState(serverUserPitch?.pitch ?? "");
 
