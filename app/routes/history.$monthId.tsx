@@ -17,6 +17,7 @@ import {
 import { getWinner } from "~/server/winner.server";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
+import { findNominationById } from "~/utils/nominations";
 import type { Route } from "./+types/history.$monthId";
 
 type LoaderData = Route.ComponentProps["loaderData"];
@@ -153,15 +154,17 @@ export async function loader({ params }: Route.LoaderArgs) {
 export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const { month, results, gameUrls, nominations, winners, totalVotes } = loaderData;
 	const timelapse = loaderData.timelapse;
-	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
-	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
+	const selectedNomination = findNominationById(
+		selectedNominationId,
+		nominations.long,
+		nominations.short,
+	);
 	const handleViewPitches = (nomination: Nomination) => {
-		setSelectedNomination(nomination);
-		setIsViewingPitches(true);
+		setSelectedNominationId(nomination.id);
 	};
 	const handleCloseModal = () => {
-		setIsViewingPitches(false);
-		setSelectedNomination(null);
+		setSelectedNominationId(null);
 	};
 
 	const columnStatus = {
@@ -274,7 +277,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			<PitchesModal
-				isOpen={isViewingPitches}
+				isOpen={selectedNomination !== null}
 				onClose={handleCloseModal}
 				nomination={selectedNomination}
 			/>

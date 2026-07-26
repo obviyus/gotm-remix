@@ -25,6 +25,7 @@ import {
 	categoryLabelsFromMonth,
 	isDefaultCategoryLabels,
 } from "~/utils/categoryLabels";
+import { findNominationById } from "~/utils/nominations";
 import type { Route } from "./+types/nominate";
 
 interface NominationResponse {
@@ -441,15 +442,23 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const [pitch, setPitch] = useState("");
 
 	// State for edit modal
-	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [editingNomination, setEditingNomination] = useState<Nomination | null>(null);
+	const [editingNominationId, setEditingNominationId] = useState<number | null>(null);
 	const [editPitch, setEditPitch] = useState("");
+	const editingNomination = findNominationById(
+		editingNominationId,
+		allNominations,
+		userNominations,
+	);
 
 	// Delete confirmation modal state
-	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-	const [deletingNomination, setDeletingNomination] = useState<Nomination | null>(null);
-	const [isDeletePitchOpen, setIsDeletePitchOpen] = useState(false);
-	const [pitchToDelete, setPitchToDelete] = useState<Nomination | null>(null);
+	const [deletingNominationId, setDeletingNominationId] = useState<number | null>(null);
+	const [pitchToDeleteId, setPitchToDeleteId] = useState<number | null>(null);
+	const deletingNomination = findNominationById(
+		deletingNominationId,
+		allNominations,
+		userNominations,
+	);
+	const pitchToDelete = findNominationById(pitchToDeleteId, allNominations, userNominations);
 
 	// Track short and long nominations
 	const shortNomination = userNominations.find((n) => n.short);
@@ -498,13 +507,20 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		: "Search for games…";
 	const searchButtonLabel = shouldUseLocalSearch ? "Filter" : isSearching ? "Searching…" : "Search";
 
-	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
-	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
+	const selectedNomination = findNominationById(
+		selectedNominationId,
+		allNominations,
+		userNominations,
+	);
 	const editingPitchEntry = editingNomination?.pitches.find(
 		(pitchEntry) => pitchEntry.discordId === userDiscordId,
 	);
 	const hasExistingEditingPitch = Boolean(editingPitchEntry);
 	const isSaveDisabled = editPitch.trim().length === 0;
+	const isEditOpen = editingNomination !== null;
+	const isDeleteOpen = deletingNomination !== null;
+	const isDeletePitchOpen = pitchToDelete !== null;
 
 	const handleSearch = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -544,8 +560,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
-		setDeletingNomination(fullNomination);
-		setIsDeleteOpen(true);
+		setDeletingNominationId(fullNomination.id);
 	};
 
 	const handlePitchEdit = (nomination: Nomination) => {
@@ -553,8 +568,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	};
 
 	const openDeletePitchDialog = (nomination: Nomination) => {
-		setPitchToDelete(nomination);
-		setIsDeletePitchOpen(true);
+		setPitchToDeleteId(nomination.id);
 	};
 
 	const handleEditSubmit = () => {
@@ -571,8 +585,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			{ method: "PATCH" },
 		);
 
-		setIsEditOpen(false);
-		setEditingNomination(null);
+		setEditingNominationId(null);
 		setEditPitch("");
 	};
 
@@ -588,8 +601,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			{ method: "DELETE" },
 		);
 
-		setIsDeleteOpen(false);
-		setDeletingNomination(null);
+		setDeletingNominationId(null);
 	};
 
 	const handleGameLength = (isShort: boolean) => {
@@ -630,33 +642,30 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	};
 
 	const handleEditDialogOpenChange = (open: boolean) => {
-		setIsEditOpen(open);
 		if (!open) {
+			setEditingNominationId(null);
 			setEditPitch("");
 		}
 	};
 
 	const handleDeleteDialogOpenChange = (open: boolean) => {
-		setIsDeleteOpen(open);
 		if (!open) {
-			setDeletingNomination(null);
+			setDeletingNominationId(null);
 		}
 	};
 
 	const closeEditModal = () => {
-		setIsEditOpen(false);
+		setEditingNominationId(null);
 		setEditPitch("");
 	};
 
 	const closeDeleteModal = () => {
-		setIsDeleteOpen(false);
-		setDeletingNomination(null);
+		setDeletingNominationId(null);
 	};
 
 	const handleDeletePitchDialogOpenChange = (open: boolean) => {
-		setIsDeletePitchOpen(open);
 		if (!open) {
-			setPitchToDelete(null);
+			setPitchToDeleteId(null);
 		}
 	};
 
@@ -673,27 +682,22 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			{ method: "PATCH" },
 		);
 
-		setIsDeletePitchOpen(false);
-		setPitchToDelete(null);
-		setIsEditOpen(false);
-		setEditingNomination(null);
+		setPitchToDeleteId(null);
+		setEditingNominationId(null);
 		setEditPitch("");
 	};
 
 	const closePitchesModal = () => {
-		setIsViewingPitches(false);
-		setSelectedNomination(null);
+		setSelectedNominationId(null);
 	};
 
 	const handleViewPitches = (nomination: Nomination) => {
-		setSelectedNomination(nomination);
-		setIsViewingPitches(true);
+		setSelectedNominationId(nomination.id);
 	};
 
 	const openNominationModal = (nomination: Nomination) => {
-		setEditingNomination(nomination);
+		setEditingNominationId(nomination.id);
 		setEditPitch(nomination.pitches.find((p) => p.discordId === userDiscordId)?.pitch || "");
-		setIsEditOpen(true);
 	};
 
 	const handleSearchTermChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1199,7 +1203,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Add PitchesModal */}
 			<PitchesModal
-				isOpen={isViewingPitches}
+				isOpen={selectedNomination !== null}
 				onClose={closePitchesModal}
 				nomination={selectedNomination}
 				userDiscordId={userDiscordId}

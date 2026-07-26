@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -86,11 +86,20 @@ function OpenPitchesModal({
 	canManagePitch,
 }: OpenPitchesModalProps) {
 	const fetcher = useFetcher<PitchMutationResponse>();
-	const [pitches, setPitches] = useState(nomination.pitches);
-	const currentUserPitch = pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
+	const pendingPitch =
+		fetcher.formData?.get("intent") === "savePitch"
+			? String(fetcher.formData.get("pitch") ?? "")
+			: null;
+	const pitches =
+		pendingPitch && userDiscordId
+			? upsertCurrentUserPitch(nomination.pitches, nomination.id, userDiscordId, pendingPitch)
+			: nomination.pitches;
+	const serverUserPitch =
+		nomination.pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
+	const currentUserPitch =
+		pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
-	const [draftPitch, setDraftPitch] = useState(currentUserPitch?.pitch ?? "");
-	const [appliedSuccess, setAppliedSuccess] = useState<PitchMutationResponse | null>(null);
+	const [draftPitch, setDraftPitch] = useState(serverUserPitch?.pitch ?? "");
 
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
@@ -102,30 +111,12 @@ function OpenPitchesModal({
 	const isSaveDisabled = draftPitch.trim().length === 0;
 	const saveError = fetcher.data?.error ?? null;
 
-	if (fetcher.state === "idle" && fetcher.data?.success && fetcher.data !== appliedSuccess) {
-		setAppliedSuccess(fetcher.data);
-		if (userDiscordId) {
-			setPitches((existing) =>
-				upsertCurrentUserPitch(existing, nomination.id, userDiscordId, draftPitch.trim()),
-			);
-		}
-		setIsEditorOpen(false);
-	}
-
-	const handleSavePitch = () => {
-		if (isSaveDisabled || isSubmitting) {
+	useEffect(() => {
+		if (fetcher.state !== "idle" || !fetcher.data?.success) {
 			return;
 		}
-
-		void fetcher.submit(
-			{
-				intent: "savePitch",
-				nominationId: nomination.id.toString(),
-				pitch: draftPitch.trim(),
-			},
-			{ action: "/nominate", method: "PATCH" },
-		);
-	};
+		setIsEditorOpen(false);
+	}, [fetcher.state, fetcher.data]);
 
 	return (
 		<Dialog open onOpenChange={handleOpenChange}>
@@ -143,7 +134,7 @@ function OpenPitchesModal({
 
 								return (
 									<div
-										key={pitch.id}
+										key={pitch.id === -1 ? `pending-${pitch.discordId}` : pitch.id}
 										className={`rounded-xl border p-5 transition-all duration-200 backdrop-blur-sm ${
 											isCurrentUserPitch
 												? "border-emerald-500/50 bg-emerald-500/10 shadow-lg shadow-emerald-950/40"
@@ -187,9 +178,20 @@ function OpenPitchesModal({
 				{canManagePitch && (
 					<div className="border-t border-gray-800 pt-5">
 						{isEditorOpen ? (
-							<div className="space-y-3">
+							<fetcher.Form
+								method="patch"
+								action="/nominate"
+								className="space-y-3"
+								onSubmit={(event) => {
+									if (isSaveDisabled || isSubmitting) {
+										event.preventDefault();
+									}
+								}}
+							>
+								<input type="hidden" name="intent" value="savePitch" />
+								<input type="hidden" name="nominationId" value={nomination.id} />
 								<label htmlFor="pitch-modal-input" className="text-sm font-medium text-gray-200">
-									{currentUserPitch ? "Edit your pitch" : "Add your pitch"}
+									{serverUserPitch ? "Edit your pitch" : "Add your pitch"}
 								</label>
 								<textarea
 									id="pitch-modal-input"
@@ -216,21 +218,20 @@ function OpenPitchesModal({
 										Cancel
 									</Button>
 									<Button
-										type="button"
-										onClick={handleSavePitch}
+										type="submit"
 										disabled={isSaveDisabled || isSubmitting}
 										className="bg-blue-600 text-white hover:bg-blue-700"
 									>
 										{isSubmitting
-											? currentUserPitch
+											? serverUserPitch
 												? "Saving..."
 												: "Adding..."
-											: currentUserPitch
+											: serverUserPitch
 												? "Save Changes"
 												: "Add Pitch"}
 									</Button>
 								</div>
-							</div>
+							</fetcher.Form>
 						) : null}
 					</div>
 				)}
@@ -240,7 +241,10 @@ function OpenPitchesModal({
 							{canManagePitch && !isEditorOpen && (
 								<Button
 									type="button"
-									onClick={() => setIsEditorOpen(true)}
+									onClick={() => {
+										setDraftPitch(currentUserPitch?.pitch ?? "");
+										setIsEditorOpen(true);
+									}}
 									className="bg-blue-600 text-white hover:bg-blue-700"
 								>
 									{currentUserPitch ? "Edit Pitch" : "Add Pitch"}

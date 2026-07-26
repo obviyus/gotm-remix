@@ -17,6 +17,7 @@ import {
 } from "~/server/voting.server";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
+import { findNominationById } from "~/utils/nominations";
 import type { Route } from "./+types/home";
 
 type NominationsByType = {
@@ -167,15 +168,17 @@ export async function loader({ context }: Route.LoaderArgs): Promise<LoaderData>
 
 export default function Index({ loaderData }: Route.ComponentProps) {
 	const { month, results, nominations, gameUrls, userDiscordId } = loaderData;
-	const [selectedNomination, setSelectedNomination] = useState<Nomination | null>(null);
-	const [isViewingPitches, setIsViewingPitches] = useState(false);
+	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
+	const selectedNomination = findNominationById(
+		selectedNominationId,
+		nominations?.long,
+		nominations?.short,
+	);
 	const handleViewPitches = (nomination: Nomination) => {
-		setSelectedNomination(nomination);
-		setIsViewingPitches(true);
+		setSelectedNominationId(nomination.id);
 	};
 	const handleCloseModal = () => {
-		setIsViewingPitches(false);
-		setSelectedNomination(null);
+		setSelectedNominationId(null);
 	};
 
 	const columnStatus = nominations
@@ -320,7 +323,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			<PitchesModal
-				isOpen={isViewingPitches}
+				isOpen={selectedNomination !== null}
 				onClose={handleCloseModal}
 				nomination={selectedNomination}
 				userDiscordId={userDiscordId}
