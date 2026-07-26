@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRevalidator } from "react-router";
+import { useFetcher } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import type { Nomination } from "~/types";
+import type { Nomination, Pitch } from "~/types";
 
 interface PitchesModalProps {
 	isOpen: boolean;
@@ -23,16 +23,6 @@ interface PitchesModalProps {
 interface PitchMutationResponse {
 	error?: string;
 	success?: boolean;
-}
-
-async function savePitch(nominationId: number, pitch: string): Promise<PitchMutationResponse> {
-	const formData = new FormData();
-	formData.set("intent", "savePitch");
-	formData.set("nominationId", nominationId.toString());
-	formData.set("pitch", pitch);
-
-	const response = await fetch("/nominate", { method: "PATCH", body: formData });
-	return (await response.json()) as PitchMutationResponse;
 }
 
 export default function PitchesModal({
@@ -64,19 +54,43 @@ interface OpenPitchesModalProps {
 	canManagePitch: boolean;
 }
 
+function upsertCurrentUserPitch(
+	pitches: Pitch[],
+	nominationId: number,
+	discordId: string,
+	pitchText: string,
+): Pitch[] {
+	const existingIndex = pitches.findIndex((pitch) => pitch.discordId === discordId);
+	if (existingIndex >= 0) {
+		return pitches.map((pitch, index) =>
+			index === existingIndex ? { ...pitch, pitch: pitchText } : pitch,
+		);
+	}
+
+	return [
+		...pitches,
+		{
+			id: -1,
+			nominationId,
+			discordId,
+			pitch: pitchText,
+			generatedName: "You",
+		},
+	];
+}
+
 function OpenPitchesModal({
 	onClose,
 	nomination,
 	userDiscordId,
 	canManagePitch,
 }: OpenPitchesModalProps) {
-	const revalidator = useRevalidator();
-	const currentUserPitch =
-		nomination.pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
+	const fetcher = useFetcher<PitchMutationResponse>();
+	const [pitches, setPitches] = useState(nomination.pitches);
+	const currentUserPitch = pitches.find((pitch) => pitch.discordId === userDiscordId) ?? null;
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
 	const [draftPitch, setDraftPitch] = useState(currentUserPitch?.pitch ?? "");
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [appliedSuccess, setAppliedSuccess] = useState<PitchMutationResponse | null>(null);
 
 	const handleOpenChange = (open: boolean) => {
 		if (!open) {
@@ -84,26 +98,33 @@ function OpenPitchesModal({
 		}
 	};
 
+	const isSubmitting = fetcher.state !== "idle";
 	const isSaveDisabled = draftPitch.trim().length === 0;
+	const saveError = fetcher.data?.error ?? null;
 
-	const handleSavePitch = async () => {
-		if (isSaveDisabled) {
-			return;
+	if (fetcher.state === "idle" && fetcher.data?.success && fetcher.data !== appliedSuccess) {
+		setAppliedSuccess(fetcher.data);
+		if (userDiscordId) {
+			setPitches((existing) =>
+				upsertCurrentUserPitch(existing, nomination.id, userDiscordId, draftPitch.trim()),
+			);
 		}
-
-		setIsSubmitting(true);
-		setSaveError(null);
-		const result = await savePitch(nomination.id, draftPitch.trim());
-
-		if (result.error) {
-			setSaveError(result.error);
-			setIsSubmitting(false);
-			return;
-		}
-
 		setIsEditorOpen(false);
-		await revalidator.revalidate();
-		setIsSubmitting(false);
+	}
+
+	const handleSavePitch = () => {
+		if (isSaveDisabled || isSubmitting) {
+			return;
+		}
+
+		void fetcher.submit(
+			{
+				intent: "savePitch",
+				nominationId: nomination.id.toString(),
+				pitch: draftPitch.trim(),
+			},
+			{ action: "/nominate", method: "PATCH" },
+		);
 	};
 
 	return (
@@ -116,8 +137,8 @@ function OpenPitchesModal({
 				</DialogHeader>
 				<ScrollArea className="max-h-[65vh] pr-2">
 					<div className="space-y-4">
-						{nomination.pitches.length > 0 ? (
-							nomination.pitches.map((pitch) => {
+						{pitches.length > 0 ? (
+							pitches.map((pitch) => {
 								const isCurrentUserPitch = pitch.discordId === userDiscordId;
 
 								return (
@@ -176,8 +197,9 @@ function OpenPitchesModal({
 									rows={4}
 									value={draftPitch}
 									onChange={(event) => setDraftPitch(event.target.value)}
+									disabled={isSubmitting}
 									placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
-									className="flex min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+									className="flex min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-60"
 								/>
 								{saveError && <p className="text-sm text-red-400">{saveError}</p>}
 								<div className="flex justify-end gap-2">
@@ -188,6 +210,7 @@ function OpenPitchesModal({
 											setIsEditorOpen(false);
 											setDraftPitch(currentUserPitch?.pitch ?? "");
 										}}
+										disabled={isSubmitting}
 										className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500"
 									>
 										Cancel
