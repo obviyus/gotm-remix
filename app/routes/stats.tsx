@@ -17,11 +17,11 @@ import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/stats";
 
 export const meta: Route.MetaFunction = ({ loaderData }) => {
-	const { total_nominations, unique_games, total_votes } = loaderData.totalStats;
+	const { total_nominations, total_votes } = loaderData.totalStats;
 
 	return pageMeta({
-		title: `Club Stats — ${SITE_NAME}`,
-		description: `${total_nominations} nominations, ${unique_games} unique games, and ${total_votes} votes cast since the PatientGamers game club began. Winners, jury picks, and voting trends.`,
+		title: `Stats | ${SITE_NAME}`,
+		description: `${total_nominations} nominations and ${total_votes} votes since the PatientGamers Discord started picking a game of the month.`,
 		path: "/stats",
 	});
 };

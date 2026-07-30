@@ -31,7 +31,7 @@ import type { Route } from "./+types/nominate";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
-		title: `Nominate a Game — ${SITE_NAME}`,
+		title: `Nominate a Game | ${SITE_NAME}`,
 		description: "Put a game forward for this month's theme.",
 		path: "/nominate",
 		noIndex: true,

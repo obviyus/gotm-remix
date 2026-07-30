@@ -5,9 +5,8 @@ import type { Route } from "./+types/jury";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
-		title: `Jury Members — ${SITE_NAME}`,
-		description:
-			"The members who set each month's theme and curate nominations down to the ballot the PatientGamers community votes on.",
+		title: `Jury Members | ${SITE_NAME}`,
+		description: "The members who set each month's theme and cut the nominations down to a ballot.",
 		path: "/jury",
 	});
 

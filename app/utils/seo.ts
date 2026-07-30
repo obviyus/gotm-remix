@@ -23,7 +23,7 @@ export function monthLabel(month: number, year: number): string {
 	return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
-/** Resolves site paths, protocol-relative IGDB covers, and absolute URLs alike. */
+/** Handles site paths, protocol-relative IGDB covers and already-absolute URLs. */
 export function absoluteUrl(path: string): string {
 	return new URL(path, SITE_URL).toString();
 }

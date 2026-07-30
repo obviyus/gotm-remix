@@ -39,7 +39,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	// Winners and shortlisted nominations are the same shape, so the card shows
 	// whichever set the month has reached without treating either as special.
 	const featured = winners.length
-		? { games: winners, footnote: `Won by ${winners.map((w) => w.gameName).join(" · ")}` }
+		? { games: winners, footnote: `Won by ${winners.map((w) => w.gameName).join(" and ")}` }
 		: await shortlist(monthId);
 
 	const covers = (

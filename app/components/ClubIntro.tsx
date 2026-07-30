@@ -7,14 +7,13 @@ export default function ClubIntro() {
 				PatientGamers Game of the Month
 			</h1>
 			<p className="mx-auto mt-4 max-w-2xl text-base text-zinc-300 sm:text-lg">
-				Every month the PatientGamers Discord plays two games together: one short, under 12 hours on
-				HowLongToBeat, and one long. Anyone can nominate a game that fits the month&apos;s theme,
-				the jury narrows the nominations down to a ballot, and members rank their favourites. The
-				winner is decided by instant-runoff voting.
+				Every month the PatientGamers Discord picks two games to play. One is under 12 hours on
+				HowLongToBeat and one is longer. The jury sets a theme, anyone can nominate a game that fits
+				it, then the jury cuts the nominations down to a ballot. Members rank that ballot and
+				instant-runoff voting decides the winners.
 			</p>
 			<p className="mx-auto mt-3 max-w-2xl text-base text-zinc-400">
-				No signups, no schedule to keep up with — play at your own pace and talk about it when you
-				get there.
+				Nothing is scheduled. Play the winners whenever you get to them.
 			</p>
 			<a
 				href={DISCORD_INVITE_URL}

@@ -25,7 +25,7 @@ import type { Route } from "./+types/admin.$monthId";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
-		title: `Manage Month — ${SITE_NAME}`,
+		title: `Manage Month | ${SITE_NAME}`,
 		description: "Jury tools.",
 		path: "/admin",
 		noIndex: true,

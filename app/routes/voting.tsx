@@ -18,7 +18,7 @@ import type { Route } from "./+types/voting";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
-		title: `Vote — ${SITE_NAME}`,
+		title: `Vote | ${SITE_NAME}`,
 		description: "Rank this month's ballot.",
 		path: "/voting",
 		noIndex: true,

@@ -1,7 +1,7 @@
 {
 	"name": "PG Game of the Month",
 	"short_name": "PG GOTM",
-	"description": "The PatientGamers Discord picks one short game and one long game to play together every month.",
+	"description": "The PatientGamers Discord picks two games to play every month, one short and one long.",
 	"start_url": "/",
 	"icons": [
 		{ "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },

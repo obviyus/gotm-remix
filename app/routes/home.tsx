@@ -172,8 +172,8 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 	const { month } = loaderData;
 
 	return pageMeta({
-		title: "PG Game of the Month — A PatientGamers Game Club",
-		description: `This month's theme is "${month.theme.name}". The PatientGamers Discord picks one short game and one long game to play together every month — nominate, vote, play along.`,
+		title: "PatientGamers Game of the Month",
+		description: `The PatientGamers Discord picks two games to play every month, one short and one long. This month's theme is "${month.theme.name}".`,
 		path: "/",
 		image: `/og/month/${month.id}`,
 	});

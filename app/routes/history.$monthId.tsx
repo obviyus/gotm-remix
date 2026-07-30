@@ -160,13 +160,13 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 	const winnerNames = [winners.long?.gameName, winners.short?.gameName].filter(Boolean);
 
 	const description = winnerNames.length
-		? `${winnerNames.join(" and ")} won the "${month.theme.name}" theme in ${label}. See all ${allNominations.length} nominated games, member pitches, and the full ranked-choice results.`
-		: `${allNominations.length} games nominated for the "${month.theme.name}" theme in ${label}, the PatientGamers monthly game club.`;
+		? `${winnerNames.join(" and ")} won the "${month.theme.name}" theme in ${label}, out of ${allNominations.length} games nominated by the PatientGamers Discord.`
+		: `${allNominations.length} games nominated by the PatientGamers Discord for the "${month.theme.name}" theme in ${label}.`;
 
 	const itemList = {
 		"@context": "https://schema.org",
 		"@type": "ItemList",
-		name: `${label} nominations — ${month.theme.name}`,
+		name: `${label} nominations for ${month.theme.name}`,
 		numberOfItems: allNominations.length,
 		itemListElement: allNominations.map((nomination, index) => ({
 			"@type": "ListItem",
@@ -182,7 +182,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 
 	return [
 		...pageMeta({
-			title: `${label}: ${month.theme.name} — ${SITE_NAME}`,
+			title: `${label}: ${month.theme.name} | ${SITE_NAME}`,
 			description,
 			path,
 			image: `/og/month/${month.id}`,

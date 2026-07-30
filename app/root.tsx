@@ -22,7 +22,7 @@ export const meta: Route.MetaFunction = () =>
 	pageMeta({
 		title: SITE_NAME,
 		description:
-			"The PatientGamers Discord plays one short game and one long game together every month. Nominate, vote, and play along.",
+			"The PatientGamers Discord picks two games to play every month, one short and one long.",
 		path: "/",
 	});
 
@@ -37,7 +37,7 @@ const siteSchema = {
 			url: SITE_URL,
 			name: SITE_NAME,
 			description:
-				"A monthly game club run by the PatientGamers Discord: one short game, one long game, chosen by ranked-choice vote.",
+				"The PatientGamers Discord picks two games to play every month, one short and one long. Winners are decided by instant-runoff voting.",
 			inLanguage: "en",
 			publisher: { "@id": `${SITE_URL}/#organization` },
 		},

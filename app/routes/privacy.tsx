@@ -4,9 +4,8 @@ import type { Route } from "./+types/privacy";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
-		title: `Privacy — ${SITE_NAME}`,
-		description:
-			"What this site stores when you sign in with Discord: your account ID, and only if you nominate or vote.",
+		title: `Privacy | ${SITE_NAME}`,
+		description: "This site stores your Discord account ID, and only if you nominate or vote.",
 		path: "/privacy",
 	});
 

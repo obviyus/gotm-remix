@@ -10,9 +10,8 @@ import type { Route } from "./+types/patience.$date.ts";
 // and live IGDB data. Useful to browse, not something to put in the index.
 export const meta: Route.MetaFunction = ({ loaderData }) =>
 	pageMeta({
-		title: `Patient on ${loaderData.displayPatienceDate} — ${SITE_NAME}`,
-		description:
-			"Games that just turned a year old, and are now fair game for patient gamers to pick up.",
+		title: `Patient on ${loaderData.displayPatienceDate} | ${SITE_NAME}`,
+		description: "Games that turned a year old on this date.",
 		path: `/patience/${loaderData.patienceDate}`,
 		noIndex: true,
 	});

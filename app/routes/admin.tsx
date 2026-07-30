@@ -7,7 +7,7 @@ import type { Route } from "./+types/admin";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
-		title: `Admin — ${SITE_NAME}`,
+		title: `Admin | ${SITE_NAME}`,
 		description: "Jury tools.",
 		path: "/admin",
 		noIndex: true,

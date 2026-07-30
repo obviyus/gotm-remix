@@ -6,8 +6,7 @@ export async function loader() {
 		<OgCard
 			eyebrow="PatientGamers"
 			title="Game of the Month"
-			subtitle="One short game and one long game, picked together every month."
-			footnote="Nominate · Vote · Play"
+			subtitle="Two games every month, one short and one long."
 		/>,
 	);
 

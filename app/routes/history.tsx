@@ -7,18 +7,16 @@ import { db } from "~/server/database.server";
 import { getMonths } from "~/server/month.server";
 import type { Month, Nomination } from "~/types";
 import { categoryWinnerLabel } from "~/utils/categoryLabels";
-import { pageMeta } from "~/utils/seo";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/history";
 
-export const meta: Route.MetaFunction = ({ loaderData }) => {
-	const count = loaderData.months.length;
-
-	return pageMeta({
-		title: "Every Past Winner — PG Game of the Month",
-		description: `All ${count} ${count === 1 ? "month" : "months"} of the PatientGamers game club: monthly themes, every nominated game, and the short and long winners the community voted for.`,
+export const meta: Route.MetaFunction = () =>
+	pageMeta({
+		title: `Past Winners | ${SITE_NAME}`,
+		description:
+			"Every month the PatientGamers Discord has played, with the theme and the winning games for each.",
 		path: "/history",
 	});
-};
 
 export async function loader() {
 	const [allMonths, winnersResult] = await Promise.all([
