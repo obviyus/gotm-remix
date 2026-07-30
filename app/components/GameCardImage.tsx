@@ -37,6 +37,8 @@ export function GameCardImage({ coverUrl, gameName, status }: GameCardImageProps
 						alt={gameName}
 						width={156}
 						height={208}
+						loading="lazy"
+						decoding="async"
 						className={cn(
 							"h-full w-full object-cover transition-all duration-500 group-hover:scale-105",
 							status === "winner"
