@@ -89,6 +89,10 @@ export default function handleRequest(
 	routerContext: EntryContext,
 	_loadContext: RouterContextProvider,
 ) {
+	// A HEAD response has to describe the document a GET would return, so the
+	// content type belongs here rather than only on the streaming path.
+	responseHeaders.set("Content-Type", "text/html");
+
 	if (request.method.toUpperCase() === "HEAD") {
 		return new Response(null, {
 			status: responseStatusCode,
@@ -121,8 +125,6 @@ export default function handleRequest(
 						},
 					});
 					const stream = createReadableStreamFromReadable(body);
-
-					responseHeaders.set("Content-Type", "text/html");
 
 					pipe(body);
 
