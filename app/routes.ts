@@ -47,4 +47,11 @@ export default [
 
 	// API routes
 	...prefix("api", [route("votes", "./routes/api.votes.ts")]),
+
+	// Crawler-facing resources, served outside the layout
+	route("robots.txt", "./routes/robots.ts"),
+	route("sitemap.xml", "./routes/sitemap.ts"),
+
+	// Social card images
+	...prefix("og", [index("./routes/og.tsx"), route("month/:monthId", "./routes/og.month.tsx")]),
 ] satisfies RouteConfig;

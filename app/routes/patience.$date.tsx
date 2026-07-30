@@ -3,7 +3,18 @@ import { ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-react";
 import { Await, Link, useNavigation } from "react-router";
 import GameCard from "~/components/GameCard";
 import { getReleasesForDate, isValidDate, type Release } from "~/server/releases.server";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/patience.$date.ts";
+
+// One page per calendar day over an unbounded date range, with prev/next links
+// and live IGDB data. Useful to browse, not something to put in the index.
+export const meta: Route.MetaFunction = ({ loaderData }) =>
+	pageMeta({
+		title: `Patient on ${loaderData.displayPatienceDate} | ${SITE_NAME}`,
+		description: "Games that turned a year old on this date.",
+		path: `/patience/${loaderData.patienceDate}`,
+		noIndex: true,
+	});
 
 // Convert a "patience date" (today) to the release date (1 year ago)
 function getReleaseDateFromPatienceDate(patienceDate: string): string {

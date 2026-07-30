@@ -30,7 +30,9 @@ export default defineConfig(({ command }) => ({
 		reactRouter(),
 		babel({
 			include: /\.[jt]sx?$/,
-			exclude: /node_modules/,
+			// app/server is never rendered by React. Satori invokes those components
+			// directly, so React Compiler's useMemoCache has no dispatcher to reach.
+			exclude: [/node_modules/, /app\/server\//],
 			babelConfig: {
 				presets: ["@babel/preset-typescript"],
 				plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],

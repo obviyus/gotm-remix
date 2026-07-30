@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import ClubIntro from "~/components/ClubIntro";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
@@ -18,6 +19,7 @@ import {
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
+import { pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/home";
 
 type NominationsByType = {
@@ -166,6 +168,17 @@ export async function loader({ context }: Route.LoaderArgs): Promise<LoaderData>
 	}
 }
 
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const { month } = loaderData;
+
+	return pageMeta({
+		title: "PatientGamers Game of the Month",
+		description: `The PatientGamers Discord picks two games to play every month, one short and one long. This month's theme is "${month.theme.name}".`,
+		path: "/",
+		image: `/og/month/${month.id}`,
+	});
+};
+
 export default function Index({ loaderData }: Route.ComponentProps) {
 	const { month, results, nominations, gameUrls, userDiscordId } = loaderData;
 	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
@@ -224,6 +237,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+			<ClubIntro />
 			<div className="text-center space-y-2 mb-8">{month.theme && <ThemeCard {...month} />}</div>
 
 			<div>

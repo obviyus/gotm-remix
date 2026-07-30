@@ -5,6 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/component
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "~/components/ui/popover";
 import { requestUserContext } from "~/route-context.server";
 import { getCurrentMonth } from "~/server/month.server";
+import { DISCORD_INVITE_URL } from "~/utils/seo";
 import type { Route } from "./+types/layout";
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -247,6 +248,15 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 						.
 					</p>
 					<p className="text-center text-sm text-zinc-400">
+						<a
+							href={DISCORD_INVITE_URL}
+							className="text-blue-400 hover:text-blue-300 hover:underline"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Join the Discord
+						</a>
+						{" · "}
 						<Link to="/jury" className="text-blue-400 hover:text-blue-300 hover:underline">
 							Jury
 						</Link>

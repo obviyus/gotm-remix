@@ -6,7 +6,8 @@
 	"ignoreDependencies": [
 		"@babel/preset-typescript",
 		"babel-plugin-react-compiler",
-		"tw-animate-css"
+		"tw-animate-css",
+		"@fontsource/inter"
 	],
 	"ignoreExportsUsedInFile": {
 		"interface": true,

@@ -1,4 +1,13 @@
 import React from "react";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
+import type { Route } from "./+types/privacy";
+
+export const meta: Route.MetaFunction = () =>
+	pageMeta({
+		title: `Privacy | ${SITE_NAME}`,
+		description: "This site stores your Discord account ID, and only if you nominate or vote.",
+		path: "/privacy",
+	});
 
 export default function Privacy() {
 	return (

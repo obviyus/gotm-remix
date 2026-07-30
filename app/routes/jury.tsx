@@ -1,6 +1,14 @@
 import React from "react";
 import { db } from "~/server/database.server";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/jury";
+
+export const meta: Route.MetaFunction = () =>
+	pageMeta({
+		title: `Jury Members | ${SITE_NAME}`,
+		description: "The members who set each month's theme and cut the nominations down to a ballot.",
+		path: "/jury",
+	});
 
 export async function loader() {
 	const result = await db.execute(
