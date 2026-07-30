@@ -18,6 +18,7 @@ import { getWinner } from "~/server/winner.server";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
+import { SITE_NAME, absoluteImageUrl, monthLabel, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/history.$monthId";
 
 type LoaderData = Route.ComponentProps["loaderData"];
@@ -151,6 +152,45 @@ export async function loader({ params }: Route.LoaderArgs) {
 	};
 }
 
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const { month, nominations, winners } = loaderData;
+	const label = monthLabel(month.month, month.year);
+	const path = `/history/${month.id}`;
+	const allNominations = [...nominations.long, ...nominations.short];
+	const winnerNames = [winners.long?.gameName, winners.short?.gameName].filter(Boolean);
+
+	const description = winnerNames.length
+		? `${winnerNames.join(" and ")} won the "${month.theme.name}" theme in ${label}. See all ${allNominations.length} nominated games, member pitches, and the full ranked-choice results.`
+		: `${allNominations.length} games nominated for the "${month.theme.name}" theme in ${label}, the PatientGamers monthly game club.`;
+
+	const itemList = {
+		"@context": "https://schema.org",
+		"@type": "ItemList",
+		name: `${label} nominations — ${month.theme.name}`,
+		numberOfItems: allNominations.length,
+		itemListElement: allNominations.map((nomination, index) => ({
+			"@type": "ListItem",
+			position: index + 1,
+			item: {
+				"@type": "VideoGame",
+				name: nomination.gameName,
+				...(nomination.gameUrl ? { sameAs: nomination.gameUrl } : {}),
+				...(nomination.gameCover ? { image: absoluteImageUrl(nomination.gameCover) } : {}),
+			},
+		})),
+	};
+
+	return [
+		...pageMeta({
+			title: `${label}: ${month.theme.name} — ${SITE_NAME}`,
+			description,
+			path,
+			image: `/og/month/${month.id}`,
+		}),
+		{ "script:ld+json": itemList },
+	];
+};
+
 export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	const { month, results, gameUrls, nominations, winners, totalVotes } = loaderData;
 	const timelapse = loaderData.timelapse;
@@ -208,7 +248,9 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center space-y-2 mb-8">{month.theme && <ThemeCard {...month} />}</div>
+			<div className="text-center space-y-2 mb-8">
+				{month.theme && <ThemeCard {...month} asPageHeading />}
+			</div>
 
 			{month.status === "voting" ? (
 				<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">

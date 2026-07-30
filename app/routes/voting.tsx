@@ -13,7 +13,16 @@ import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
 import { buildOrderFromRankings, resolveVotedStatus } from "~/utils/votingOrder";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/voting";
+
+export const meta: Route.MetaFunction = () =>
+	pageMeta({
+		title: `Vote — ${SITE_NAME}`,
+		description: "Rank this month's ballot.",
+		path: "/voting",
+		noIndex: true,
+	});
 
 type VoteActionResponse = {
 	success: boolean;

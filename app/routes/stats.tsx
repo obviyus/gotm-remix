@@ -13,7 +13,18 @@ import { useEffect, useId, useRef } from "react";
 import { Card } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/stats";
+
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	const { total_nominations, unique_games, total_votes } = loaderData.totalStats;
+
+	return pageMeta({
+		title: `Club Stats — ${SITE_NAME}`,
+		description: `${total_nominations} nominations, ${unique_games} unique games, and ${total_votes} votes cast since the PatientGamers game club began. Winners, jury picks, and voting trends.`,
+		path: "/stats",
+	});
+};
 
 const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 

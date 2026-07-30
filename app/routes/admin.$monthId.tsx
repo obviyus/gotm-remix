@@ -20,7 +20,16 @@ import {
 	DEFAULT_CATEGORY_LABELS,
 } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/admin.$monthId";
+
+export const meta: Route.MetaFunction = () =>
+	pageMeta({
+		title: `Manage Month — ${SITE_NAME}`,
+		description: "Jury tools.",
+		path: "/admin",
+		noIndex: true,
+	});
 
 const csvField = (value: string | number) => {
 	const text = String(value)

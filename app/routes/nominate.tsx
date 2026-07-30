@@ -26,7 +26,16 @@ import {
 	isDefaultCategoryLabels,
 } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
+import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/nominate";
+
+export const meta: Route.MetaFunction = () =>
+	pageMeta({
+		title: `Nominate a Game — ${SITE_NAME}`,
+		description: "Put a game forward for this month's theme.",
+		path: "/nominate",
+		noIndex: true,
+	});
 
 interface NominationResponse {
 	error?: string;
