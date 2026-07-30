@@ -18,6 +18,24 @@ export const streamTimeout = 30_000;
 const ROUTE_TIMING_LOG_MS = 250;
 const REQUEST_TIMING_LOG_MS = 500;
 
+// style-src allows inline because CSS is set through style attributes, which a
+// nonce cannot cover. Covers are served by IGDB and avatars by Discord; both are
+// listed without a scheme because cover URLs are stored protocol-relative, and a
+// bare host still resolves to https on an https page.
+const contentSecurityPolicy = (nonce: string) =>
+	[
+		"default-src 'self'",
+		`script-src 'self' 'nonce-${nonce}'`,
+		"style-src 'self' 'unsafe-inline'",
+		"img-src 'self' images.igdb.com cdn.discordapp.com",
+		"font-src 'self'",
+		"connect-src 'self'",
+		"form-action 'self'",
+		"frame-ancestors 'none'",
+		"base-uri 'self'",
+		"object-src 'none'",
+	].join("; ");
+
 function getPathname(requestUrl: string) {
 	return new URL(requestUrl).pathname;
 }
@@ -93,6 +111,10 @@ export default function handleRequest(
 	// content type belongs here rather than only on the streaming path.
 	responseHeaders.set("Content-Type", "text/html");
 
+	const nonce = crypto.randomUUID();
+
+	responseHeaders.set("Content-Security-Policy", contentSecurityPolicy(nonce));
+
 	if (request.method.toUpperCase() === "HEAD") {
 		return new Response(null, {
 			status: responseStatusCode,
@@ -113,8 +135,10 @@ export default function handleRequest(
 		);
 
 		const { pipe, abort } = renderToPipeableStream(
-			<ServerRouter context={routerContext} url={request.url} />,
+			// ServerRouter passes the nonce down to Scripts and ScrollRestoration.
+			<ServerRouter context={routerContext} url={request.url} nonce={nonce} />,
 			{
+				nonce,
 				[readyOption]() {
 					shellRendered = true;
 					const body = new PassThrough({
