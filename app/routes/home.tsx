@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import ClubIntro from "~/components/ClubIntro";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
 import ThemeCard from "~/components/ThemeCard";
@@ -237,8 +236,9 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-			<ClubIntro />
-			<div className="text-center space-y-2 mb-8">{month.theme && <ThemeCard {...month} />}</div>
+			<div className="text-center space-y-2 mb-8">
+				{month.theme && <ThemeCard {...month} asPageHeading />}
+			</div>
 
 			<div>
 				{month.status === "nominating" && nominations ? (
