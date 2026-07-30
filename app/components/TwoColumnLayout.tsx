@@ -57,8 +57,8 @@ export default function TwoColumnLayout({
 	return (
 		<div className="mx-auto">
 			<div className="text-center space-y-2 mb-8">
-				<h1 className="text-3xl font-bold">{title}</h1>
-				{subtitle && <h2 className="text-xl text-muted-foreground">{subtitle}</h2>}
+				<h2 className="text-3xl font-bold">{title}</h2>
+				{subtitle && <p className="text-xl text-muted-foreground">{subtitle}</p>}
 				{description && <p className="text-muted-foreground">{description}</p>}
 			</div>
 
