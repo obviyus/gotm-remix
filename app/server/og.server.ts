@@ -1,6 +1,7 @@
 import { Resvg, initWasm } from "@resvg/resvg-wasm";
 import satori from "satori";
 import type { ReactNode } from "react";
+import { absoluteUrl } from "~/utils/seo";
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
@@ -53,7 +54,7 @@ export function ogResponse(png: Uint8Array<ArrayBuffer>): Response {
 
 /** Satori cannot fetch remote images, so covers are inlined as data URIs. */
 export async function toDataUri(url: string): Promise<string | null> {
-	const response = await fetch(url.startsWith("//") ? `https:${url}` : url);
+	const response = await fetch(absoluteUrl(url));
 
 	if (!response.ok) {
 		return null;

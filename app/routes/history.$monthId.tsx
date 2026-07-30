@@ -18,7 +18,7 @@ import { getWinner } from "~/server/winner.server";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
-import { SITE_NAME, absoluteImageUrl, monthLabel, pageMeta } from "~/utils/seo";
+import { SITE_NAME, absoluteUrl, monthLabel, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/history.$monthId";
 
 type LoaderData = Route.ComponentProps["loaderData"];
@@ -175,7 +175,7 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 				"@type": "VideoGame",
 				name: nomination.gameName,
 				...(nomination.gameUrl ? { sameAs: nomination.gameUrl } : {}),
-				...(nomination.gameCover ? { image: absoluteImageUrl(nomination.gameCover) } : {}),
+				...(nomination.gameCover ? { image: absoluteUrl(nomination.gameCover) } : {}),
 			},
 		})),
 	};

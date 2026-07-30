@@ -23,13 +23,9 @@ export function monthLabel(month: number, year: number): string {
 	return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
+/** Resolves site paths, protocol-relative IGDB covers, and absolute URLs alike. */
 export function absoluteUrl(path: string): string {
 	return new URL(path, SITE_URL).toString();
-}
-
-/** IGDB cover URLs are stored protocol-relative; schema and OG tags need a scheme. */
-export function absoluteImageUrl(url: string): string {
-	return url.startsWith("//") ? `https:${url}` : url;
 }
 
 interface PageMetaOptions {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { absoluteImageUrl, monthLabel, pageMeta } from "~/utils/seo";
+import { absoluteUrl, monthLabel, pageMeta } from "~/utils/seo";
 
 function contentOf(descriptors: ReturnType<typeof pageMeta>, key: string): string | undefined {
 	for (const descriptor of descriptors) {
@@ -51,13 +51,17 @@ describe("pageMeta", () => {
 	});
 });
 
-describe("absoluteImageUrl", () => {
+describe("absoluteUrl", () => {
+	test("resolves site paths", () => {
+		expect(absoluteUrl("/history/12")).toBe("https://pg-gotm.com/history/12");
+	});
+
 	test("gives protocol-relative IGDB covers a scheme", () => {
-		expect(absoluteImageUrl("//images.igdb.com/a.jpg")).toBe("https://images.igdb.com/a.jpg");
+		expect(absoluteUrl("//images.igdb.com/a.jpg")).toBe("https://images.igdb.com/a.jpg");
 	});
 
 	test("leaves absolute urls alone", () => {
-		expect(absoluteImageUrl("https://images.igdb.com/a.jpg")).toBe("https://images.igdb.com/a.jpg");
+		expect(absoluteUrl("https://images.igdb.com/a.jpg")).toBe("https://images.igdb.com/a.jpg");
 	});
 });
 
