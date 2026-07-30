@@ -26,6 +26,15 @@ const staticDirectories = [
 	},
 ];
 
+const securityHeaders = {
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "DENY",
+	"Referrer-Policy": "strict-origin-when-cross-origin",
+	// Browsers ignore this over plain HTTP, so it costs nothing in development.
+	// No includeSubDomains: nothing here knows what runs on a subdomain.
+	"Strict-Transport-Security": "max-age=31536000",
+} as const;
+
 let runtimeStarted = false;
 
 export type ServerMode = keyof typeof defaultPortByMode;
@@ -67,12 +76,27 @@ export function createAppHandler(build: ServerBuildLoader, mode: ServerMode) {
 			const response = await respond(request);
 
 			if (response) {
-				return response;
+				return applyResponseDefaults(response);
 			}
 		}
 
-		return handler(request, createLoadContext());
+		return applyResponseDefaults(await handler(request, createLoadContext()));
 	};
+}
+
+export function applyResponseDefaults(response: Response) {
+	for (const [name, value] of Object.entries(securityHeaders)) {
+		response.headers.set(name, value);
+	}
+
+	// Pages render the signed-in member's name and avatar, so no shared cache may
+	// hold them. Routes that state their own policy, like the social cards and the
+	// static assets, keep it.
+	if (!response.headers.has("Cache-Control")) {
+		response.headers.set("Cache-Control", "private, no-cache");
+	}
+
+	return response;
 }
 
 export function startServerRuntime(mode: ServerMode = getServerMode()) {
