@@ -42,9 +42,6 @@ WORKDIR /app
 COPY --from=build /app/server.js /app/server.js
 COPY --from=build /app/build /app/build
 COPY --from=build /app/public /app/public
-COPY --from=production-deps /app/node_modules/@libsql /app/node_modules/@libsql
-# Social card rendering reads the resvg wasm binary and Inter woff files at runtime.
-COPY --from=production-deps /app/node_modules/@resvg /app/node_modules/@resvg
-COPY --from=production-deps /app/node_modules/@fontsource /app/node_modules/@fontsource
+COPY --from=production-deps /app/node_modules /app/node_modules
 
 CMD ["bun", "server.js"]
