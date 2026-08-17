@@ -1,51 +1,65 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
-import * as React from "react";
+import * as stylex from "@stylexjs/stylex";
 
-import { cn } from "~/lib/utils";
+import type { StyledProps } from "~/styles/style-props";
+import { motion, radius } from "~/styles/tokens.stylex";
 
-function ScrollArea({ className, children, ...props }: ScrollAreaPrimitive.Root.Props) {
+const styles = stylex.create({
+	root: {
+		position: "relative",
+	},
+	viewport: {
+		borderRadius: "inherit",
+		boxShadow: { default: null, ":focus-visible": "0 0 0 3px oklch(70.8% 0 0 / 0.5)" },
+		height: "100%",
+		outline: { default: "none", ":focus-visible": "1px solid" },
+		transitionDuration: motion.duration,
+		transitionProperty: "color, box-shadow",
+		transitionTimingFunction: motion.easing,
+		width: "100%",
+	},
+	scrollbar: {
+		display: "flex",
+		padding: 1,
+		touchAction: "none",
+		transitionDuration: motion.duration,
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+		userSelect: "none",
+		borderLeftColor: { default: null, ':is([data-orientation="vertical"])': "transparent" },
+		borderLeftWidth: { default: null, ':is([data-orientation="vertical"])': 1 },
+		borderTopColor: { default: null, ':is([data-orientation="horizontal"])': "transparent" },
+		borderTopWidth: { default: null, ':is([data-orientation="horizontal"])': 1 },
+		flexDirection: { default: null, ':is([data-orientation="horizontal"])': "column" },
+		height: {
+			default: null,
+			':is([data-orientation="vertical"])': "100%",
+			':is([data-orientation="horizontal"])': 10,
+		},
+		width: { default: null, ':is([data-orientation="vertical"])': 10 },
+	},
+	thumb: {
+		backgroundColor: "oklch(92.2% 0 0)",
+		borderRadius: radius.pill,
+		flex: 1,
+		position: "relative",
+	},
+});
+
+export function ScrollArea({
+	style,
+	children,
+	...props
+}: StyledProps<ScrollAreaPrimitive.Root.Props>) {
 	return (
-		<ScrollAreaPrimitive.Root
-			data-slot="scroll-area"
-			className={cn("relative", className)}
-			{...props}
-		>
-			<ScrollAreaPrimitive.Viewport
-				data-slot="scroll-area-viewport"
-				className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
-			>
+		<ScrollAreaPrimitive.Root {...props} {...stylex.props(styles.root, style)}>
+			<ScrollAreaPrimitive.Viewport {...stylex.props(styles.viewport)}>
 				{children}
 			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar />
+			<ScrollAreaPrimitive.Scrollbar orientation="vertical" {...stylex.props(styles.scrollbar)}>
+				<ScrollAreaPrimitive.Thumb {...stylex.props(styles.thumb)} />
+			</ScrollAreaPrimitive.Scrollbar>
 			<ScrollAreaPrimitive.Corner />
 		</ScrollAreaPrimitive.Root>
 	);
 }
-
-function ScrollBar({
-	className,
-	orientation = "vertical",
-	...props
-}: ScrollAreaPrimitive.Scrollbar.Props) {
-	return (
-		<ScrollAreaPrimitive.Scrollbar
-			data-slot="scroll-area-scrollbar"
-			data-orientation={orientation}
-			orientation={orientation}
-			className={cn(
-				"flex touch-none p-px transition-colors select-none",
-				"data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2.5 data-[orientation=vertical]:border-l data-[orientation=vertical]:border-l-transparent",
-				"data-[orientation=horizontal]:h-2.5 data-[orientation=horizontal]:flex-col data-[orientation=horizontal]:border-t data-[orientation=horizontal]:border-t-transparent",
-				className,
-			)}
-			{...props}
-		>
-			<ScrollAreaPrimitive.Thumb
-				data-slot="scroll-area-thumb"
-				className="bg-border relative flex-1 rounded-full"
-			/>
-		</ScrollAreaPrimitive.Scrollbar>
-	);
-}
-
-export { ScrollArea, ScrollBar };

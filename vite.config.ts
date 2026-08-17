@@ -1,6 +1,6 @@
 import { builtinModules } from "node:module";
 import { reactRouter } from "@react-router/dev/vite";
-import tailwindcss from "@tailwindcss/vite";
+import stylex from "@stylexjs/unplugin/vite";
 import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 
@@ -26,7 +26,20 @@ export default defineConfig(({ command }) => ({
 		external: bunExternalModules,
 	},
 	plugins: [
-		tailwindcss(),
+		// StyleX must run before framework plugins to preserve Fast Refresh.
+		stylex({
+			devMode: "css-only",
+			devPersistToDisk: true,
+			// The compiler resolves `.stylex.ts` imports itself, so it needs the
+			// same `~/` alias tsconfig gives the rest of the app.
+			aliases: {
+				"~/*": [`${import.meta.dirname}/app/*`],
+			},
+			unstable_moduleResolution: {
+				type: "commonJS",
+				rootDir: import.meta.dirname,
+			},
+		}),
 		reactRouter(),
 		babel({
 			include: /\.[jt]sx?$/,

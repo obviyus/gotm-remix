@@ -1,4 +1,6 @@
+import * as stylex from "@stylexjs/stylex";
 import React from "react";
+import { color, media } from "~/styles/tokens.stylex";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/privacy";
 
@@ -9,12 +11,41 @@ export const meta: Route.MetaFunction = () =>
 		path: "/privacy",
 	});
 
+const styles = stylex.create({
+	page: {
+		marginInline: "auto",
+		paddingBlock: 24,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	article: {
+		marginInline: "auto",
+	},
+	header: {
+		marginBottom: 24,
+	},
+	heading: {
+		color: color.heading,
+		fontSize: { default: "1.5rem", [media.sm]: "1.875rem" },
+		fontWeight: 700,
+		letterSpacing: "-0.025em",
+		lineHeight: { default: 1.3333, [media.sm]: 1.2 },
+	},
+	list: {
+		listStyleType: "disc",
+		marginLeft: 24,
+		marginTop: 8,
+	},
+	paragraph: {
+		marginTop: 16,
+	},
+});
+
 export default function Privacy() {
 	return (
-		<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
-			<article className="mx-auto">
-				<header className="mb-6">
-					<h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">Privacy</h1>
+		<div {...stylex.props(styles.page)}>
+			<article {...stylex.props(styles.article)}>
+				<header {...stylex.props(styles.header)}>
+					<h1 {...stylex.props(styles.heading)}>Privacy</h1>
 				</header>
 
 				<p>
@@ -22,21 +53,21 @@ export default function Privacy() {
 					authenticate:
 				</p>
 
-				<ul className="list-disc ml-6 mt-2">
+				<ul {...stylex.props(styles.list)}>
 					<li>Account ID</li>
 				</ul>
 
-				<p className="mt-4">
+				<p {...stylex.props(styles.paragraph)}>
 					All of these are publicly visible to anyone in every server you joined.
 				</p>
 
-				<p className="mt-4">
+				<p {...stylex.props(styles.paragraph)}>
 					The only data that is used and saved on this site, is the account id and ONLY if you
 					nominate or vote for a game. The sole purpose of this is to prevent multiple nominations
 					and votings by the same user in one month.
 				</p>
 
-				<p className="mt-4">No other data is made use of in any way.</p>
+				<p {...stylex.props(styles.paragraph)}>No other data is made use of in any way.</p>
 			</article>
 		</div>
 	);

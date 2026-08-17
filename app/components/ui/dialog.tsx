@@ -1,121 +1,146 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import * as stylex from "@stylexjs/stylex";
 import { XIcon } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 
-import { cn } from "~/lib/utils";
+import type { CenteredPopupStyle, StyledProps } from "~/styles/style-props";
+import { media, motion, radius } from "~/styles/tokens.stylex";
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
-}
+const fadeIn = stylex.keyframes({ from: { opacity: 0 } });
+const fadeOut = stylex.keyframes({ to: { opacity: 0 } });
+const popIn = stylex.keyframes({ from: { opacity: 0, transform: "scale(0.95)" } });
+const popOut = stylex.keyframes({ to: { opacity: 0, transform: "scale(0.95)" } });
 
-function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-	return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
-}
+const styles = stylex.create({
+	overlay: {
+		animationDuration: motion.duration,
+		animationName: {
+			default: null,
+			":is([data-open])": fadeIn,
+			":is([data-closed])": fadeOut,
+			[media.reducedMotion]: "none",
+		},
+		animationTimingFunction: "ease",
+		backgroundColor: "rgba(0, 0, 0, 0.5)",
+		inset: 0,
+		position: "fixed",
+		zIndex: 50,
+	},
+	popup: {
+		animationDuration: "0.2s",
+		animationName: {
+			default: null,
+			":is([data-open])": popIn,
+			":is([data-closed])": popOut,
+			[media.reducedMotion]: "none",
+		},
+		animationTimingFunction: "ease",
+		backgroundColor: "oklch(100% 0 0)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		display: "grid",
+		gap: 16,
+		left: "50%",
+		maxWidth: { default: "calc(100% - 2rem)", [media.sm]: "32rem" },
+		overscrollBehavior: "contain",
+		padding: 24,
+		position: "fixed",
+		top: "50%",
+		translate: "-50% -50%",
+		width: "100%",
+		zIndex: 50,
+	},
+	close: {
+		borderRadius: radius.xs,
+		opacity: { default: 0.7, ":hover": 1 },
+		position: "absolute",
+		right: 16,
+		top: 16,
+		transitionDuration: motion.duration,
+		transitionProperty: "opacity",
+		transitionTimingFunction: motion.easing,
+		backgroundColor: { default: null, ":is([data-open])": "oklch(97% 0 0)" },
+		color: { default: null, ":is([data-open])": "oklch(55.6% 0 0)" },
+		boxShadow: {
+			default: null,
+			":focus": "0 0 0 2px oklch(100% 0 0), 0 0 0 4px oklch(70.8% 0 0)",
+		},
+		outline: { default: null, ":focus": "2px solid transparent" },
+		pointerEvents: { default: null, ":disabled": "none" },
+	},
+	closeIcon: {
+		height: 16,
+		pointerEvents: "none",
+		flexShrink: 0,
+		width: 16,
+	},
+	srOnly: {
+		borderWidth: 0,
+		clipPath: "inset(50%)",
+		height: 1,
+		margin: -1,
+		overflow: "hidden",
+		padding: 0,
+		position: "absolute",
+		whiteSpace: "nowrap",
+		width: 1,
+	},
+	header: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		textAlign: { default: "center", [media.sm]: "left" },
+	},
+	footer: {
+		display: "flex",
+		flexDirection: { default: "column-reverse", [media.sm]: "row" },
+		gap: 8,
+		justifyContent: { default: null, [media.sm]: "flex-end" },
+	},
+	title: {
+		fontSize: "1.125rem",
+		fontWeight: 600,
+		lineHeight: 1,
+	},
+});
 
-function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-	return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
-}
+export const Dialog = DialogPrimitive.Root;
 
-function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
-	return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
-}
+type DialogContentProps = StyledProps<DialogPrimitive.Popup.Props, CenteredPopupStyle> & {
+	showCloseButton?: boolean;
+};
 
-function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
-	return (
-		<DialogPrimitive.Backdrop
-			data-slot="dialog-overlay"
-			className={cn(
-				"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 motion-reduce:animate-none fixed inset-0 z-50 bg-black/50",
-				className,
-			)}
-			{...props}
-		/>
-	);
-}
-
-function DialogContent({
-	className,
+export function DialogContent({
+	style,
 	children,
 	showCloseButton = true,
 	...props
-}: DialogPrimitive.Popup.Props & {
-	showCloseButton?: boolean;
-}) {
+}: DialogContentProps) {
 	return (
-		<DialogPortal data-slot="dialog-portal">
-			<DialogOverlay />
-			<DialogPrimitive.Popup
-				data-slot="dialog-content"
-				className={cn(
-					"bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 motion-reduce:animate-none fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg overscroll-contain",
-					className,
-				)}
-				{...props}
-			>
+		<DialogPrimitive.Portal>
+			<DialogPrimitive.Backdrop {...stylex.props(styles.overlay)} />
+			<DialogPrimitive.Popup {...props} {...stylex.props(styles.popup, style)}>
 				{children}
 				{showCloseButton && (
-					<DialogPrimitive.Close
-						data-slot="dialog-close"
-						className="ring-offset-background focus:ring-ring data-open:bg-accent data-open:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-					>
-						<XIcon />
-						<span className="sr-only">Close</span>
+					<DialogPrimitive.Close {...stylex.props(styles.close)}>
+						<XIcon {...stylex.props(styles.closeIcon)} />
+						<span {...stylex.props(styles.srOnly)}>Close</span>
 					</DialogPrimitive.Close>
 				)}
 			</DialogPrimitive.Popup>
-		</DialogPortal>
+		</DialogPrimitive.Portal>
 	);
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="dialog-header"
-			className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
-			{...props}
-		/>
-	);
+export function DialogHeader({ style, ...props }: StyledProps<React.ComponentProps<"div">>) {
+	return <div {...props} {...stylex.props(styles.header, style)} />;
 }
 
-function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
-	return (
-		<div
-			data-slot="dialog-footer"
-			className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
-			{...props}
-		/>
-	);
+export function DialogFooter({ style, ...props }: StyledProps<React.ComponentProps<"div">>) {
+	return <div {...props} {...stylex.props(styles.footer, style)} />;
 }
 
-function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
-	return (
-		<DialogPrimitive.Title
-			data-slot="dialog-title"
-			className={cn("text-lg leading-none font-semibold", className)}
-			{...props}
-		/>
-	);
+export function DialogTitle({ style, ...props }: StyledProps<DialogPrimitive.Title.Props>) {
+	return <DialogPrimitive.Title {...props} {...stylex.props(styles.title, style)} />;
 }
-
-function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
-	return (
-		<DialogPrimitive.Description
-			data-slot="dialog-description"
-			className={cn("text-muted-foreground text-sm", className)}
-			{...props}
-		/>
-	);
-}
-
-export {
-	Dialog,
-	DialogClose,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogOverlay,
-	DialogPortal,
-	DialogTitle,
-	DialogTrigger,
-};

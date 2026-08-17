@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import GameCard from "~/components/GameCard";
@@ -15,6 +16,7 @@ import {
 	getTotalVotesForMonth,
 	getVotingTimelapse,
 } from "~/server/voting.server";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
@@ -48,6 +50,93 @@ type LoaderData = {
 
 const EMPTY_RESULTS: Result[] = [];
 
+const styles = stylex.create({
+	page: {
+		marginInline: "auto",
+		maxWidth: "64rem",
+		paddingBlock: 24,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	themeBlock: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		marginBottom: 32,
+		textAlign: "center",
+	},
+	cardList: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+	},
+	notice: {
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		padding: 24,
+		textAlign: "center",
+	},
+	juryNotice: {
+		backgroundColor: "oklch(37.9% 0.146 265.522 / 0.3)",
+		borderColor: "oklch(48.8% 0.243 264.376 / 0.5)",
+		marginBottom: 32,
+	},
+	votingNotice: {
+		backgroundColor: "oklch(41.4% 0.112 45.904 / 0.3)",
+		borderColor: "oklch(55.5% 0.163 48.998 / 0.5)",
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+	},
+	noticeHeading: {
+		fontSize: "1.25rem",
+		fontWeight: 700,
+		lineHeight: 1.4,
+		marginBottom: 8,
+	},
+	juryHeading: {
+		color: "oklch(80.9% 0.105 251.813)",
+	},
+	votingHeading: {
+		color: "oklch(87.9% 0.169 91.605)",
+	},
+	noticeBody: {
+		color: color.body,
+	},
+	noticeAside: {
+		color: "oklch(87.1% 0.006 286.286)",
+		marginTop: 8,
+	},
+	tally: {
+		color: "oklch(87.1% 0.006 286.286)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	voteLink: {
+		alignItems: "center",
+		backgroundColor: { default: color.action, ":hover": color.actionHover },
+		borderRadius: radius.lg,
+		color: color.white,
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 600,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		paddingBlock: 10,
+		paddingInline: 20,
+		transitionDuration: motion.duration,
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+	ballotSection: {
+		marginTop: 32,
+	},
+	results: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 24,
+	},
+});
+
 interface NominationsListProps {
 	games: Nomination[];
 	onViewPitches: (nomination: Nomination) => void;
@@ -63,7 +152,7 @@ function NominationsList({ games, onViewPitches }: NominationsListProps) {
 	}, [games]);
 
 	return (
-		<div className="space-y-4">
+		<div {...stylex.props(styles.cardList)}>
 			{sortedGames.map((game) => {
 				return (
 					<GameCard
@@ -235,8 +324,8 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 			: undefined;
 
 	return (
-		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center space-y-2 mb-8">
+		<div {...stylex.props(styles.page)}>
+			<div {...stylex.props(styles.themeBlock)}>
 				{month.theme && <ThemeCard {...month} asPageHeading />}
 			</div>
 
@@ -256,13 +345,15 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 					</TwoColumnLayout>
 				) : month.status === "jury" && nominations ? (
 					<>
-						<div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-6 mb-8 text-center">
-							<h2 className="text-xl font-bold text-blue-300 mb-2">Jury Selection in Progress</h2>
-							<p className="text-zinc-200">
+						<div {...stylex.props(styles.notice, styles.juryNotice)}>
+							<h2 {...stylex.props(styles.noticeHeading, styles.juryHeading)}>
+								Jury Selection in Progress
+							</h2>
+							<p {...stylex.props(styles.noticeBody)}>
 								Our jury members are currently reviewing all nominations and will select a curated
 								list of games to be included in the voting phase.
 							</p>
-							<p className="text-zinc-300 mt-2">
+							<p {...stylex.props(styles.noticeAside)}>
 								Once the jury has made their selections, the voting phase will begin and you&apos;ll
 								be able to rank your favorites.
 							</p>
@@ -282,26 +373,24 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 					</>
 				) : month.status === "voting" && nominations ? (
 					<>
-						<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
+						<div {...stylex.props(styles.notice, styles.votingNotice)}>
 							<div>
-								<h2 className="text-xl font-bold text-amber-300 mb-2">Voting in Progress</h2>
-								<p className="text-zinc-200">
+								<h2 {...stylex.props(styles.noticeHeading, styles.votingHeading)}>
+									Voting in Progress
+								</h2>
+								<p {...stylex.props(styles.noticeBody)}>
 									Votes are being collected right now. Results will be revealed after the voting
 									phase ends.
 								</p>
 							</div>
-							<p className="text-sm text-zinc-300">
+							<p {...stylex.props(styles.tally)}>
 								{totalVotesLabel} {totalVotes === 1 ? "vote" : "votes"} cast so far.
 							</p>
-							<Link
-								to="/voting"
-								prefetch="viewport"
-								className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-							>
+							<Link to="/voting" prefetch="viewport" {...stylex.props(styles.voteLink)}>
 								Go Vote Now →
 							</Link>
 						</div>
-						<div className="mt-8">
+						<div {...stylex.props(styles.ballotSection)}>
 							<TwoColumnLayout
 								title="Games Up for Vote"
 								description="These games have been selected by the jury for this month's vote."
@@ -317,7 +406,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 						</div>
 					</>
 				) : showResults ? (
-					<div className="space-y-6">
+					<div {...stylex.props(styles.results)}>
 						<VotingResultsChart
 							title={labels.long}
 							results={longResults}

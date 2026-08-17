@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
 import { Badge } from "~/components/ui/badge";
@@ -10,6 +11,7 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import type { Nomination, Pitch } from "~/types";
 
 interface PitchesModalProps {
@@ -24,6 +26,185 @@ interface PitchMutationResponse {
 	error?: string;
 	success?: boolean;
 }
+
+const styles = stylex.create({
+	popup: {
+		backgroundColor: "oklch(21% 0.034 264.665)",
+		borderColor: "oklch(37.3% 0.034 259.733)",
+		boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+		maxWidth: { default: "48rem", [media.sm]: "32rem" },
+	},
+	header: {
+		paddingBottom: 16,
+	},
+	title: {
+		color: color.white,
+		fontSize: "1.25rem",
+		fontWeight: 700,
+	},
+	scroller: {
+		maxHeight: "65vh",
+		paddingRight: 8,
+	},
+	pitchList: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+	},
+	pitch: {
+		backdropFilter: "blur(8px)",
+		borderRadius: radius.xl,
+		borderWidth: 1,
+		padding: 20,
+		transitionDuration: "0.2s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+	},
+	ownPitch: {
+		backgroundColor: "oklch(69.6% 0.17 162.48 / 0.1)",
+		borderColor: "oklch(69.6% 0.17 162.48 / 0.5)",
+		boxShadow:
+			"0 10px 15px -3px oklch(26.2% 0.051 172.552 / 0.4), 0 4px 6px -4px oklch(26.2% 0.051 172.552 / 0.4)",
+	},
+	otherPitch: {
+		backgroundColor: {
+			default: "oklch(27.8% 0.033 256.848 / 0.3)",
+			":hover": "oklch(27.8% 0.033 256.848 / 0.6)",
+		},
+		borderColor: {
+			default: "oklch(37.3% 0.034 259.733 / 0.5)",
+			":hover": "oklch(44.6% 0.03 256.802 / 0.7)",
+		},
+	},
+	byline: {
+		alignItems: "center",
+		display: "flex",
+		gap: 8,
+		marginBottom: 12,
+	},
+	ownMark: {
+		backgroundColor: "oklch(69.6% 0.17 162.48 / 0.15)",
+		borderColor: "oklch(76.5% 0.177 163.223 / 0.3)",
+		borderRadius: radius.pill,
+		borderWidth: 1,
+		color: "oklch(90.5% 0.093 164.15)",
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		letterSpacing: "0.025em",
+		lineHeight: 1.3333,
+		paddingBlock: 4,
+		paddingInline: 10,
+		textTransform: "uppercase",
+	},
+	authorBadge: {
+		color: color.white,
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		paddingBlock: 4,
+		paddingInline: 12,
+	},
+	ownAuthor: {
+		backgroundColor: "oklch(59.6% 0.145 163.225)",
+	},
+	otherAuthor: {
+		backgroundColor: color.action,
+	},
+	pitchBody: {
+		fontSize: "0.875rem",
+		lineHeight: 1.625,
+		whiteSpace: "pre-wrap",
+	},
+	ownBody: { color: "oklch(97.9% 0.021 166.113)" },
+	otherBody: { color: "oklch(92.8% 0.006 264.531)" },
+	empty: {
+		backgroundColor: "oklch(27.8% 0.033 256.848 / 0.2)",
+		borderColor: "oklch(37.3% 0.034 259.733 / 0.5)",
+		borderRadius: radius.xl,
+		borderStyle: "dashed",
+		borderWidth: 1,
+		padding: 32,
+		textAlign: "center",
+	},
+	emptyText: {
+		color: "oklch(70.7% 0.022 261.325)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	editorPane: {
+		borderTopColor: "oklch(27.8% 0.033 256.848)",
+		borderTopWidth: 1,
+		paddingTop: 20,
+	},
+	form: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 12,
+	},
+	fieldLabel: {
+		color: "oklch(92.8% 0.006 264.531)",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		lineHeight: 1.4286,
+	},
+	draft: {
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.md,
+		borderWidth: 1,
+		color: color.body,
+		display: "flex",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		minHeight: 96,
+		paddingBlock: 8,
+		paddingInline: 12,
+		width: "100%",
+		"::placeholder": { color: color.muted },
+		boxShadow: { default: null, ":focus-visible": "0 0 0 2px oklch(62.3% 0.214 259.815)" },
+		opacity: { default: null, ":disabled": 0.6 },
+		outlineStyle: { default: null, ":focus-visible": "none" },
+	},
+	saveError: {
+		color: "oklch(70.4% 0.191 22.216)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	formActions: {
+		display: "flex",
+		gap: 8,
+		justifyContent: "flex-end",
+	},
+	footer: {
+		paddingTop: 24,
+		justifyContent: { default: null, [media.sm]: "space-between" },
+	},
+	footerRow: {
+		alignItems: "center",
+		display: "flex",
+		gap: 12,
+		justifyContent: "space-between",
+		width: "100%",
+	},
+	quietButton: {
+		backgroundColor: {
+			default: "oklch(27.8% 0.033 256.848 / 0.5)",
+			":hover": "oklch(37.3% 0.034 259.733 / 0.7)",
+		},
+		borderColor: {
+			default: "oklch(44.6% 0.03 256.802)",
+			":hover": "oklch(55.1% 0.027 264.364)",
+		},
+		color: { default: "oklch(92.8% 0.006 264.531)", ":hover": color.white },
+	},
+	closeButton: {
+		paddingInline: 24,
+		transitionDuration: "0.2s",
+	},
+	primaryButton: {
+		backgroundColor: { default: color.action, ":hover": color.actionHover },
+		color: color.white,
+	},
+});
 
 export default function PitchesModal({
 	isOpen,
@@ -119,14 +300,12 @@ function OpenPitchesModal({
 
 	return (
 		<Dialog open onOpenChange={handleOpenChange}>
-			<DialogContent className="max-w-3xl bg-gray-900 border-gray-700 shadow-2xl">
-				<DialogHeader className="pb-4">
-					<DialogTitle className="text-xl font-bold text-white">
-						Pitches for {nomination.gameName}
-					</DialogTitle>
+			<DialogContent style={styles.popup}>
+				<DialogHeader style={styles.header}>
+					<DialogTitle style={styles.title}>Pitches for {nomination.gameName}</DialogTitle>
 				</DialogHeader>
-				<ScrollArea className="max-h-[65vh] pr-2">
-					<div className="space-y-4">
+				<ScrollArea style={styles.scroller}>
+					<div {...stylex.props(styles.pitchList)}>
 						{pitches.length > 0 ? (
 							pitches.map((pitch) => {
 								const isCurrentUserPitch = pitch.discordId === userDiscordId;
@@ -134,33 +313,30 @@ function OpenPitchesModal({
 								return (
 									<div
 										key={pitch.id === -1 ? `pending-${pitch.discordId}` : pitch.id}
-										className={`rounded-xl border p-5 transition-all duration-200 backdrop-blur-sm ${
-											isCurrentUserPitch
-												? "border-emerald-500/50 bg-emerald-500/10 shadow-lg shadow-emerald-950/40"
-												: "border-gray-700/50 bg-gray-800/30 hover:bg-gray-800/60 hover:border-gray-600/70"
-										}`}
+										{...stylex.props(
+											styles.pitch,
+											isCurrentUserPitch ? styles.ownPitch : styles.otherPitch,
+										)}
 									>
-										<div className="mb-3 flex items-center gap-2">
+										<div {...stylex.props(styles.byline)}>
 											{isCurrentUserPitch && (
-												<span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
-													Your pitch
-												</span>
+												<span {...stylex.props(styles.ownMark)}>Your pitch</span>
 											)}
 											<Badge
 												variant="default"
-												className={`font-medium px-3 py-1 text-xs text-white ${
-													isCurrentUserPitch
-														? "bg-emerald-600 hover:bg-emerald-600"
-														: "bg-blue-600 hover:bg-blue-600"
-												}`}
+												style={[
+													styles.authorBadge,
+													isCurrentUserPitch ? styles.ownAuthor : styles.otherAuthor,
+												]}
 											>
 												{pitch.generatedName}
 											</Badge>
 										</div>
 										<div
-											className={`whitespace-pre-wrap text-sm leading-relaxed ${
-												isCurrentUserPitch ? "text-emerald-50" : "text-gray-200"
-											}`}
+											{...stylex.props(
+												styles.pitchBody,
+												isCurrentUserPitch ? styles.ownBody : styles.otherBody,
+											)}
 										>
 											{pitch.pitch}
 										</div>
@@ -168,19 +344,19 @@ function OpenPitchesModal({
 								);
 							})
 						) : (
-							<div className="rounded-xl border border-dashed border-gray-700/50 p-8 text-center bg-gray-800/20">
-								<p className="text-sm text-gray-400">No pitches available for this game</p>
+							<div {...stylex.props(styles.empty)}>
+								<p {...stylex.props(styles.emptyText)}>No pitches available for this game</p>
 							</div>
 						)}
 					</div>
 				</ScrollArea>
 				{canManagePitch && (
-					<div className="border-t border-gray-800 pt-5">
+					<div {...stylex.props(styles.editorPane)}>
 						{isEditorOpen ? (
 							<fetcher.Form
 								method="patch"
 								action="/nominate"
-								className="space-y-3"
+								{...stylex.props(styles.form)}
 								onSubmit={(event) => {
 									if (isSaveDisabled || isSubmitting) {
 										event.preventDefault();
@@ -189,7 +365,7 @@ function OpenPitchesModal({
 							>
 								<input type="hidden" name="intent" value="savePitch" />
 								<input type="hidden" name="nominationId" value={nomination.id} />
-								<label htmlFor="pitch-modal-input" className="text-sm font-medium text-gray-200">
+								<label htmlFor="pitch-modal-input" {...stylex.props(styles.fieldLabel)}>
 									{serverUserPitch ? "Edit your pitch" : "Add your pitch"}
 								</label>
 								<textarea
@@ -200,10 +376,10 @@ function OpenPitchesModal({
 									onChange={(event) => setDraftPitch(event.target.value)}
 									disabled={isSubmitting}
 									placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
-									className="flex min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-60"
+									{...stylex.props(styles.draft)}
 								/>
-								{saveError && <p className="text-sm text-red-400">{saveError}</p>}
-								<div className="flex justify-end gap-2">
+								{saveError && <p {...stylex.props(styles.saveError)}>{saveError}</p>}
+								<div {...stylex.props(styles.formActions)}>
 									<Button
 										type="button"
 										variant="outline"
@@ -212,14 +388,14 @@ function OpenPitchesModal({
 											setDraftPitch(currentUserPitch?.pitch ?? "");
 										}}
 										disabled={isSubmitting}
-										className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500"
+										style={styles.quietButton}
 									>
 										Cancel
 									</Button>
 									<Button
 										type="submit"
 										disabled={isSaveDisabled || isSubmitting}
-										className="bg-blue-600 text-white hover:bg-blue-700"
+										style={styles.primaryButton}
 									>
 										{isSubmitting
 											? serverUserPitch
@@ -234,8 +410,8 @@ function OpenPitchesModal({
 						) : null}
 					</div>
 				)}
-				<DialogFooter className="pt-6 sm:justify-between">
-					<div className="flex w-full items-center justify-between gap-3">
+				<DialogFooter style={styles.footer}>
+					<div {...stylex.props(styles.footerRow)}>
 						<div>
 							{canManagePitch && !isEditorOpen && (
 								<Button
@@ -244,7 +420,7 @@ function OpenPitchesModal({
 										setDraftPitch(currentUserPitch?.pitch ?? "");
 										setIsEditorOpen(true);
 									}}
-									className="bg-blue-600 text-white hover:bg-blue-700"
+									style={styles.primaryButton}
 								>
 									{currentUserPitch ? "Edit Pitch" : "Add Pitch"}
 								</Button>
@@ -254,7 +430,7 @@ function OpenPitchesModal({
 							type="button"
 							variant="outline"
 							onClick={onClose}
-							className="border-gray-600 bg-gray-800/50 text-gray-200 hover:text-white hover:bg-gray-700/70 hover:border-gray-500 transition-all duration-200 px-6"
+							style={[styles.quietButton, styles.closeButton]}
 						>
 							Close
 						</Button>

@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import type { ChangeEvent, FormEvent } from "react";
 import { useId, useState } from "react";
 import { Link, useFetcher } from "react-router";
@@ -19,6 +20,7 @@ import { db } from "~/server/database.server";
 import { searchGames } from "~/server/igdb.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsForMonth } from "~/server/nomination.server";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import type { Nomination, Pitch } from "~/types";
 import {
 	categoryGameLabel,
@@ -36,6 +38,588 @@ export const meta: Route.MetaFunction = () =>
 		path: "/nominate",
 		noIndex: true,
 	});
+
+const pulse = stylex.keyframes({ "50%": { opacity: 0.5 } });
+
+const styles = stylex.create({
+	page: {
+		marginInline: "auto",
+		maxWidth: "80rem",
+		paddingBlock: 24,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	pageHeading: {
+		fontSize: "1.875rem",
+		fontWeight: 700,
+		lineHeight: 1.2,
+		marginBottom: 32,
+	},
+	section: {
+		marginBottom: 32,
+	},
+	sectionHeading: {
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		lineHeight: 1.4,
+		marginBottom: 16,
+	},
+	pairGrid: {
+		display: "grid",
+		gap: 24,
+		gridTemplateColumns: { default: null, [media.sm]: "repeat(2, minmax(0, 1fr))" },
+	},
+	cardList: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+	},
+	banner: {
+		borderRadius: radius.lg,
+		marginBottom: 16,
+		padding: 16,
+	},
+	errorBanner: {
+		backgroundColor: "oklch(93.6% 0.032 17.717)",
+		color: "oklch(50.5% 0.213 27.518)",
+	},
+	successBanner: {
+		backgroundColor: "oklch(96.2% 0.044 156.743)",
+		color: "oklch(52.7% 0.154 150.069)",
+	},
+	statusBlock: {
+		marginBottom: 16,
+	},
+	statusHeading: {
+		color: color.body,
+		fontSize: "1.125rem",
+		fontWeight: 500,
+		lineHeight: 1.5556,
+	},
+	statusList: {
+		color: color.muted,
+		display: "flex",
+		flexDirection: "column",
+		fontSize: "0.875rem",
+		gap: 4,
+		lineHeight: 1.4286,
+		marginTop: 8,
+	},
+	statusItem: {
+		alignItems: "center",
+		display: "flex",
+	},
+	statusDone: { color: "oklch(76.5% 0.177 163.223)" },
+	statusOpen: { color: color.muted },
+	limitNotice: {
+		backgroundColor: "oklch(69.6% 0.17 162.48 / 0.1)",
+		borderColor: "oklch(76.5% 0.177 163.223 / 0.2)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		color: "oklch(90.5% 0.093 164.15)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		marginBottom: 24,
+		paddingBlock: 12,
+		paddingInline: 16,
+	},
+	searchForm: {
+		marginBottom: 32,
+	},
+	searchRow: {
+		display: "flex",
+		gap: 16,
+	},
+	searchInput: {
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: { default: "rgba(255, 255, 255, 0.1)", ":focus": color.focus },
+		boxShadow: { default: null, ":focus": "0 0 0 1px oklch(62.3% 0.214 259.815)" },
+		color: color.body,
+		flex: 1,
+		"::placeholder": { color: color.muted },
+	},
+	srOnly: {
+		borderWidth: 0,
+		clipPath: "inset(50%)",
+		height: 1,
+		margin: -1,
+		overflow: "hidden",
+		padding: 0,
+		position: "absolute",
+		whiteSpace: "nowrap",
+		width: 1,
+	},
+	searchButton: {
+		alignItems: "center",
+		backgroundColor: { default: "transparent", ":hover": "oklch(69.6% 0.17 162.48 / 0.1)" },
+		borderColor: {
+			default: "oklch(76.5% 0.177 163.223 / 0.2)",
+			":hover": "oklch(76.5% 0.177 163.223 / 0.3)",
+		},
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		color: "oklch(90.5% 0.093 164.15)",
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		gap: 8,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		paddingBlock: 8,
+		paddingInline: 16,
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+	},
+	searchButtonOff: {
+		backgroundColor: "transparent",
+		borderColor: "oklch(95% 0.052 163.051 / 0.2)",
+		color: "oklch(97.9% 0.021 166.113)",
+		cursor: "not-allowed",
+		opacity: 0.5,
+	},
+	resultGrid: {
+		display: "grid",
+		gap: 24,
+		gridTemplateColumns: { default: null, [media.sm]: "repeat(2, minmax(0, 1fr))" },
+	},
+	emptyPanel: {
+		backdropFilter: "blur(8px)",
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		paddingBlock: 48,
+		textAlign: "center",
+	},
+	emptyHeading: {
+		color: color.body,
+		fontSize: "1.125rem",
+		fontWeight: 600,
+		lineHeight: 1.5556,
+	},
+	emptyBody: {
+		color: color.muted,
+		marginTop: 8,
+	},
+	emphasis: {
+		color: "oklch(90.5% 0.093 164.15)",
+	},
+	closedPage: {
+		marginInline: "auto",
+		maxWidth: "42rem",
+		paddingBlock: { default: 64, [media.sm]: 96 },
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+		textAlign: "center",
+	},
+	closedHeading: {
+		color: color.body,
+		fontSize: "1.875rem",
+		fontWeight: 700,
+		letterSpacing: "-0.025em",
+		lineHeight: 1.2,
+		marginBottom: 16,
+	},
+	closedPanel: {
+		backdropFilter: "blur(8px)",
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		padding: 32,
+	},
+	closedBody: {
+		color: color.body,
+		fontSize: "1.125rem",
+		lineHeight: 1.5556,
+		marginBottom: 24,
+	},
+	closedAside: {
+		color: color.muted,
+	},
+	closedLink: {
+		backgroundColor: { default: color.action, ":hover": color.actionHover },
+		borderRadius: radius.lg,
+		color: color.white,
+		display: "inline-block",
+		paddingBlock: 12,
+		paddingInline: 24,
+		transitionDuration: motion.duration,
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+	pitchCard: {
+		backdropFilter: "blur(8px)",
+		backgroundColor: {
+			default: "oklch(21% 0.006 285.885 / 0.5)",
+			[media.backdropFilter]: "oklch(21% 0.006 285.885 / 0.2)",
+		},
+		borderColor: "oklch(27.4% 0.006 286.033 / 0.5)",
+		borderRadius: radius.xl,
+		borderWidth: 1,
+		display: "flex",
+		position: "relative",
+		transitionDuration: "0.2s",
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+	pitchCover: {
+		borderEndStartRadius: radius.xl,
+		borderStartStartRadius: radius.xl,
+		flexShrink: 0,
+		overflow: "hidden",
+		position: "relative",
+		width: { default: "6.5rem", [media.sm]: "7.5rem" },
+	},
+	pitchCoverBlank: {
+		backgroundColor: "oklch(27.4% 0.006 286.033 / 0.6)",
+	},
+	coverImage: {
+		height: "100%",
+		objectFit: "cover",
+		width: "100%",
+	},
+	pitchBody: {
+		display: "flex",
+		flex: 1,
+		flexDirection: "column",
+		gap: 12,
+		minWidth: 0,
+		overflow: "hidden",
+		padding: { default: 16, [media.sm]: 20 },
+	},
+	pitchHead: {
+		alignItems: "flex-start",
+		display: "flex",
+		gap: 16,
+		justifyContent: "space-between",
+	},
+	pitchIdentity: {
+		minWidth: 0,
+	},
+	fill: {
+		flex: 1,
+	},
+	pitchTitle: {
+		color: color.heading,
+		fontSize: "1rem",
+		fontWeight: 600,
+		lineHeight: 1.5,
+		overflow: "hidden",
+		textOverflow: "ellipsis",
+		whiteSpace: "nowrap",
+	},
+	pitchYear: {
+		color: color.dim,
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		lineHeight: 1.3333,
+		marginTop: 4,
+	},
+	pitchQuote: {
+		WebkitBoxOrient: "vertical",
+		WebkitLineClamp: 4,
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: "rgba(255, 255, 255, 0.05)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		color: color.body,
+		display: "-webkit-box",
+		fontSize: "0.875rem",
+		lineHeight: 1.625,
+		overflow: "hidden",
+		padding: 12,
+		whiteSpace: "pre-line",
+	},
+	pitchActions: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: 8,
+		justifyContent: "flex-end",
+	},
+	quietAction: {
+		alignItems: "center",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		gap: 8,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		paddingBlock: 8,
+		paddingInline: 12,
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+	},
+	informTone: {
+		backgroundColor: { default: null, ":hover": "oklch(62.3% 0.214 259.815 / 0.1)" },
+		borderColor: {
+			default: "oklch(70.7% 0.165 254.624 / 0.2)",
+			":hover": "oklch(70.7% 0.165 254.624 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(62.3% 0.214 259.815 / 0.2), 0 1px 2px -1px oklch(62.3% 0.214 259.815 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(62.3% 0.214 259.815 / 0.4), 0 1px 2px -1px oklch(62.3% 0.214 259.815 / 0.4)",
+		},
+		color: color.focus,
+	},
+	affirmTone: {
+		backgroundColor: { default: null, ":hover": "oklch(69.6% 0.17 162.48 / 0.1)" },
+		borderColor: {
+			default: "oklch(76.5% 0.177 163.223 / 0.2)",
+			":hover": "oklch(76.5% 0.177 163.223 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(69.6% 0.17 162.48 / 0.2), 0 1px 2px -1px oklch(69.6% 0.17 162.48 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(69.6% 0.17 162.48 / 0.4), 0 1px 2px -1px oklch(69.6% 0.17 162.48 / 0.4)",
+		},
+		color: color.affirm,
+	},
+	denyTone: {
+		backgroundColor: { default: null, ":hover": "oklch(63.7% 0.237 25.331 / 0.1)" },
+		borderColor: {
+			default: "oklch(70.4% 0.191 22.216 / 0.2)",
+			":hover": "oklch(70.4% 0.191 22.216 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(63.7% 0.237 25.331 / 0.2), 0 1px 2px -1px oklch(63.7% 0.237 25.331 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(63.7% 0.237 25.331 / 0.4), 0 1px 2px -1px oklch(63.7% 0.237 25.331 / 0.4)",
+		},
+		color: color.deny,
+	},
+	neutralTone: {
+		backgroundColor: { default: "transparent", ":hover": "rgba(255, 255, 255, 0.05)" },
+		borderColor: {
+			default: "rgba(255, 255, 255, 0.1)",
+			":hover": "rgba(255, 255, 255, 0.2)",
+		},
+		color: color.body,
+	},
+	shrink: {
+		flexShrink: 0,
+	},
+	wideAction: {
+		width: { default: "100%", [media.sm]: "auto" },
+	},
+	skeleton: {
+		backdropFilter: "blur(8px)",
+		backgroundColor: {
+			default: "oklch(21% 0.006 285.885 / 0.5)",
+			[media.backdropFilter]: "oklch(21% 0.006 285.885 / 0.2)",
+		},
+		borderColor: "oklch(27.4% 0.006 286.033 / 0.5)",
+		borderRadius: radius.xl,
+		borderWidth: 1,
+		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		display: "flex",
+		height: 208,
+		minWidth: 0,
+		position: "relative",
+	},
+	skeletonCover: {
+		borderEndStartRadius: radius.xl,
+		borderStartStartRadius: radius.xl,
+		flexShrink: 0,
+		overflow: "hidden",
+		position: "relative",
+		width: 156,
+	},
+	shimmer: {
+		animationDuration: "2s",
+		animationIterationCount: "infinite",
+		animationName: { default: pulse, [media.reducedMotion]: "none" },
+		animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+		backgroundColor: color.surface,
+	},
+	skeletonFill: {
+		inset: 0,
+		position: "absolute",
+	},
+	skeletonBody: {
+		display: "flex",
+		flex: 1,
+		flexDirection: "column",
+		gap: 12,
+		minWidth: 0,
+		overflow: "hidden",
+		padding: 16,
+	},
+	skeletonLines: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		minWidth: 0,
+	},
+	skeletonRow: {
+		alignItems: "flex-start",
+		display: "flex",
+		gap: 8,
+		justifyContent: "space-between",
+	},
+	skeletonTitle: {
+		borderRadius: radius.base,
+		height: 20,
+		width: "75%",
+	},
+	skeletonYear: {
+		borderRadius: radius.base,
+		flexShrink: 0,
+		height: 16,
+		width: 48,
+	},
+	skeletonFooter: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		marginTop: "auto",
+		minWidth: 0,
+	},
+	skeletonButton: {
+		borderRadius: radius.base,
+		height: 36,
+		width: "100%",
+	},
+	dialog: {
+		backgroundColor: color.canvas,
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		width: { default: "100%", [media.sm]: "32rem" },
+	},
+	confirmDialog: {
+		backgroundColor: color.canvas,
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		maxWidth: { default: "24rem", [media.sm]: "32rem" },
+		width: "100%",
+	},
+	dialogTitle: {
+		color: color.body,
+	},
+	gamePreview: {
+		display: "flex",
+		gap: 16,
+		marginBottom: 24,
+	},
+	previewCover: {
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		width: 128,
+	},
+	previewSummary: {
+		WebkitBoxOrient: "vertical",
+		WebkitLineClamp: 12,
+		color: color.muted,
+		display: "-webkit-box",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		overflow: "hidden",
+	},
+	field: {
+		marginBottom: 24,
+	},
+	fieldLabel: {
+		color: color.muted,
+	},
+	fieldInput: {
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: { default: "rgba(255, 255, 255, 0.1)", ":focus": color.focus },
+		boxShadow: { default: null, ":focus": "0 0 0 1px oklch(62.3% 0.214 259.815)" },
+		color: color.body,
+		marginTop: 8,
+		"::placeholder": { color: color.muted },
+	},
+	lengthGrid: {
+		display: "grid",
+		gap: 16,
+		gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+		width: "100%",
+	},
+	lengthButton: {
+		alignItems: "center",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		display: "inline-flex",
+		flexDirection: "column",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		gap: 4,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		paddingBlock: 16,
+		paddingInline: 16,
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: "100%",
+	},
+	lengthAvailable: {
+		backgroundColor: { default: "transparent", ":hover": "oklch(69.6% 0.17 162.48 / 0.1)" },
+		borderColor: {
+			default: "oklch(76.5% 0.177 163.223 / 0.2)",
+			":hover": "oklch(76.5% 0.177 163.223 / 0.3)",
+		},
+		color: color.affirm,
+	},
+	lengthTaken: {
+		backgroundColor: "transparent",
+		borderColor: "oklch(70.5% 0.015 286.067 / 0.2)",
+		color: color.muted,
+		cursor: "not-allowed",
+		opacity: 0.5,
+	},
+	lengthHint: {
+		fontSize: "0.75rem",
+		lineHeight: 1.3333,
+		opacity: 0.8,
+	},
+	lengthNote: {
+		fontSize: "0.75rem",
+		lineHeight: 1.3333,
+	},
+	editFooter: {
+		alignItems: { default: null, [media.sm]: "center" },
+		display: "flex",
+		flexDirection: { default: "column-reverse", [media.sm]: "row" },
+		gap: 8,
+		justifyContent: { default: null, [media.sm]: "space-between" },
+	},
+	footerActions: {
+		display: "flex",
+		gap: 8,
+		justifyContent: "flex-end",
+		width: { default: "100%", [media.sm]: "auto" },
+	},
+	quietButton: {
+		backgroundColor: { default: color.surface, ":hover": color.surfaceRaised },
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		color: { default: color.body, ":hover": color.body },
+	},
+	primaryButton: {
+		backgroundColor: { default: color.action, ":hover": color.actionHover },
+		color: color.white,
+	},
+	destructiveButton: {
+		backgroundColor: {
+			default: "oklch(57.7% 0.245 27.325)",
+			":hover": "oklch(50.5% 0.213 27.518)",
+		},
+		color: color.white,
+	},
+	confirmText: {
+		color: color.muted,
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		marginBottom: 24,
+	},
+});
 
 interface NominationResponse {
 	error?: string;
@@ -115,53 +699,49 @@ function PitchCard({
 	const year = nomination.gameYear;
 
 	return (
-		<div className="group relative bg-zinc-900/50 backdrop-blur supports-backdrop-filter:bg-zinc-900/20 rounded-xl border border-zinc-800/50 transition-colors duration-200 flex">
+		<div {...stylex.props(styles.pitchCard)}>
 			{coverUrl ? (
-				<div className="w-26 sm:w-30 shrink-0 overflow-hidden rounded-l-xl relative">
+				<div {...stylex.props(styles.pitchCover)}>
 					<img
 						src={coverUrl}
 						alt={nomination.gameName}
-						className="h-full w-full object-cover"
 						loading="lazy"
+						{...stylex.props(styles.coverImage)}
 					/>
 				</div>
 			) : (
-				<div className="w-26 sm:w-30 shrink-0 overflow-hidden rounded-l-xl bg-zinc-800/60" />
+				<div {...stylex.props(styles.pitchCover, styles.pitchCoverBlank)} />
 			)}
 
-			<div className="flex-1 p-4 sm:p-5 flex flex-col gap-3 overflow-hidden min-w-0">
-				<div className="flex items-start justify-between gap-4">
-					<div className="min-w-0">
-						<h3 className="text-base font-semibold text-zinc-100 truncate">
-							{nomination.gameName}
-						</h3>
-						{year && <p className="text-xs text-zinc-500 font-medium mt-1">{year}</p>}
+			<div {...stylex.props(styles.pitchBody)}>
+				<div {...stylex.props(styles.pitchHead)}>
+					<div {...stylex.props(styles.pitchIdentity)}>
+						<h3 {...stylex.props(styles.pitchTitle)}>{nomination.gameName}</h3>
+						{year && <p {...stylex.props(styles.pitchYear)}>{year}</p>}
 					</div>
 					<button
 						type="button"
 						onClick={() => onViewPitches(nomination)}
-						className="inline-flex shrink-0 items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40"
+						{...stylex.props(styles.quietAction, styles.informTone, styles.shrink)}
 					>
 						View pitches
 					</button>
 				</div>
 
-				<div className="text-sm text-zinc-200 bg-black/20 border border-white/5 rounded-lg p-3 whitespace-pre-line leading-relaxed line-clamp-4">
-					{pitch.pitch}
-				</div>
+				<div {...stylex.props(styles.pitchQuote)}>{pitch.pitch}</div>
 
-				<div className="flex flex-wrap justify-end gap-2">
+				<div {...stylex.props(styles.pitchActions)}>
 					<button
 						type="button"
 						onClick={() => onEditPitch(nomination)}
-						className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40"
+						{...stylex.props(styles.quietAction, styles.affirmTone)}
 					>
 						Edit pitch
 					</button>
 					<button
 						type="button"
 						onClick={() => onDeletePitch(nomination)}
-						className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
+						{...stylex.props(styles.quietAction, styles.denyTone)}
 					>
 						Delete pitch
 					</button>
@@ -406,19 +986,19 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 const GameSkeleton = () => (
-	<div className="group relative bg-zinc-900/50 backdrop-blur supports-backdrop-filter:bg-zinc-900/20 rounded-xl shadow-lg border border-zinc-800/50 flex h-52 min-w-0">
-		<div className="w-39 shrink-0 overflow-hidden rounded-l-xl relative">
-			<div className="absolute inset-0 bg-zinc-800 animate-pulse motion-reduce:animate-none" />
+	<div {...stylex.props(styles.skeleton)}>
+		<div {...stylex.props(styles.skeletonCover)}>
+			<div {...stylex.props(styles.skeletonFill, styles.shimmer)} />
 		</div>
-		<div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden min-w-0">
-			<div className="min-w-0 space-y-2">
-				<div className="flex justify-between items-start gap-2">
-					<div className="h-5 bg-zinc-800 rounded w-3/4 animate-pulse motion-reduce:animate-none" />
-					<div className="h-4 bg-zinc-800 rounded w-12 shrink-0 animate-pulse motion-reduce:animate-none" />
+		<div {...stylex.props(styles.skeletonBody)}>
+			<div {...stylex.props(styles.skeletonLines)}>
+				<div {...stylex.props(styles.skeletonRow)}>
+					<div {...stylex.props(styles.skeletonTitle, styles.shimmer)} />
+					<div {...stylex.props(styles.skeletonYear, styles.shimmer)} />
 				</div>
 			</div>
-			<div className="flex flex-col gap-2 mt-auto min-w-0">
-				<div className="h-9 bg-zinc-800 rounded w-full animate-pulse motion-reduce:animate-none" />
+			<div {...stylex.props(styles.skeletonFooter)}>
+				<div {...stylex.props(styles.skeletonButton, styles.shimmer)} />
 			</div>
 		</div>
 	</div>
@@ -515,6 +1095,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		? "Search existing nominations…"
 		: "Search for games…";
 	const searchButtonLabel = shouldUseLocalSearch ? "Filter" : isSearching ? "Searching…" : "Search";
+	const isSearchDisabled = !shouldUseLocalSearch && (isSearching || !searchTerm.trim());
 
 	const [selectedNominationId, setSelectedNominationId] = useState<number | null>(null);
 	const selectedNomination = findNominationById(
@@ -727,36 +1308,28 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 	if (!monthId || monthStatus !== "nominating") {
 		return (
-			<div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 text-center">
-				<h1 className="text-3xl font-bold tracking-tight text-zinc-200 mb-4">
+			<div {...stylex.props(styles.closedPage)}>
+				<h1 {...stylex.props(styles.closedHeading)}>
 					Nominations {monthStatus === "over" ? "haven't started" : "are closed"}
 				</h1>
 
-				<div className="bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 p-8 shadow-lg">
+				<div {...stylex.props(styles.closedPanel)}>
 					{monthStatus === "ready" && (
 						<>
-							<p className="text-lg mb-6 text-zinc-200">
+							<p {...stylex.props(styles.closedBody)}>
 								The month is being set up. Check back soon for nominations!
 							</p>
-							<Link
-								to="/history"
-								prefetch="viewport"
-								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-							>
+							<Link to="/history" prefetch="viewport" {...stylex.props(styles.closedLink)}>
 								Browse Past Months →
 							</Link>
 						</>
 					)}
 					{monthStatus === "voting" && (
 						<>
-							<p className="text-lg mb-6 text-zinc-200">
+							<p {...stylex.props(styles.closedBody)}>
 								The nomination phase is over, but you can now vote for your favorite games!
 							</p>
-							<Link
-								to="/voting"
-								prefetch="viewport"
-								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-							>
+							<Link to="/voting" prefetch="viewport" {...stylex.props(styles.closedLink)}>
 								Go Vote Now →
 							</Link>
 						</>
@@ -764,14 +1337,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 					{monthStatus === "playing" && (
 						<>
-							<p className="text-lg mb-6 text-zinc-200">
+							<p {...stylex.props(styles.closedBody)}>
 								Games have been selected! Check out what we&#39;re playing this month.
 							</p>
-							<Link
-								to="/"
-								prefetch="viewport"
-								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-							>
+							<Link to="/" prefetch="viewport" {...stylex.props(styles.closedLink)}>
 								See This Month&#39;s Games →
 							</Link>
 						</>
@@ -779,10 +1348,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 					{monthStatus === "jury" && (
 						<>
-							<p className="text-lg mb-6 text-zinc-200">
+							<p {...stylex.props(styles.closedBody)}>
 								The jury is currently selecting games from the nominations. Check back soon!
 							</p>
-							<p className="text-zinc-400">
+							<p {...stylex.props(styles.closedAside)}>
 								Once they&#39;re done, you&#39;ll be able to vote on the selected games.
 							</p>
 						</>
@@ -790,14 +1359,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 					{monthStatus === "over" && (
 						<>
-							<p className="text-lg mb-6 text-zinc-200">
+							<p {...stylex.props(styles.closedBody)}>
 								The next month&#39;s nominations haven&#39;t started yet. Check back soon!
 							</p>
-							<Link
-								to="/history"
-								prefetch="viewport"
-								className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-							>
+							<Link to="/history" prefetch="viewport" {...stylex.props(styles.closedLink)}>
 								Browse Past Months →
 							</Link>
 						</>
@@ -808,14 +1373,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	}
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-			<h1 className="text-3xl font-bold mb-8">Nominate Games</h1>
+		<div {...stylex.props(styles.page)}>
+			<h1 {...stylex.props(styles.pageHeading)}>Nominate Games</h1>
 
 			{/* User's nominations */}
 			{userNominations.length > 0 && (
-				<div className="mb-8">
-					<h2 className="text-xl font-semibold mb-4">Your Nominations</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+				<div {...stylex.props(styles.section)}>
+					<h2 {...stylex.props(styles.sectionHeading)}>Your Nominations</h2>
+					<div {...stylex.props(styles.pairGrid)}>
 						{userNominations.map((nomination) => (
 							<GameCard
 								game={nomination}
@@ -833,9 +1398,9 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{userPitchNominations.length > 0 && (
-				<div className="mb-8">
-					<h2 className="text-xl font-semibold mb-4">Your Pitches</h2>
-					<div className="space-y-4">
+				<div {...stylex.props(styles.section)}>
+					<h2 {...stylex.props(styles.sectionHeading)}>Your Pitches</h2>
+					<div {...stylex.props(styles.cardList)}>
 						{userPitchNominations.map((nomination) => {
 							const currentPitch = nomination.pitches.find(
 								(pitchEntry) => pitchEntry.discordId === userDiscordId,
@@ -860,27 +1425,27 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			)}
 
 			{nominate.data?.error && (
-				<div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">{nominate.data.error}</div>
+				<div {...stylex.props(styles.banner, styles.errorBanner)}>{nominate.data.error}</div>
 			)}
 
 			{nominate.data?.success && (
-				<div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+				<div {...stylex.props(styles.banner, styles.successBanner)}>
 					Game nominated successfully!
 				</div>
 			)}
 
 			<div>
-				<div className="mb-4">
-					<h3 className="text-lg font-medium text-zinc-200">Nomination Status:</h3>
-					<ul className="mt-2 space-y-1 text-sm text-zinc-400">
-						<li className="flex items-center">
-							<span className={shortNomination ? "text-emerald-400" : "text-zinc-400"}>
+				<div {...stylex.props(styles.statusBlock)}>
+					<h3 {...stylex.props(styles.statusHeading)}>Nomination Status:</h3>
+					<ul {...stylex.props(styles.statusList)}>
+						<li {...stylex.props(styles.statusItem)}>
+							<span {...stylex.props(shortNomination ? styles.statusDone : styles.statusOpen)}>
 								{shortNomination ? "✓" : "○"} {categoryGameLabel(labels.short)} (
 								{shortNomination ? "Nominated" : "Available"})
 							</span>
 						</li>
-						<li className="flex items-center">
-							<span className={longNomination ? "text-emerald-400" : "text-zinc-400"}>
+						<li {...stylex.props(styles.statusItem)}>
+							<span {...stylex.props(longNomination ? styles.statusDone : styles.statusOpen)}>
 								{longNomination ? "✓" : "○"} {categoryGameLabel(labels.long)} (
 								{longNomination ? "Nominated" : "Available"})
 							</span>
@@ -889,15 +1454,15 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 				</div>
 
 				{hasReachedNominationLimit && (
-					<div className="mb-6 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+					<div {...stylex.props(styles.limitNotice)}>
 						You have nominated a {labels.short} game and a {labels.long} game. You can still add
 						pitches to existing nominations using the search below.
 					</div>
 				)}
 
-				<search.Form method="post" onSubmit={handleSearch} className="mb-8">
-					<div className="flex gap-4">
-						<Label htmlFor={searchInputId} className="sr-only">
+				<search.Form method="post" onSubmit={handleSearch} {...stylex.props(styles.searchForm)}>
+					<div {...stylex.props(styles.searchRow)}>
+						<Label htmlFor={searchInputId} style={styles.srOnly}>
 							Search games
 						</Label>
 						<Input
@@ -908,26 +1473,26 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							value={searchTerm}
 							onChange={handleSearchTermChange}
 							placeholder={searchPlaceholder}
-							className="flex-1 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500"
+							style={styles.searchInput}
 						/>
 						<input type="hidden" name="intent" value="search" />
 						<button
 							type="submit"
-							disabled={!shouldUseLocalSearch && (isSearching || !searchTerm.trim())}
-							className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-emerald-200 border border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-emerald-50 disabled:border-emerald-100/20 disabled:hover:bg-transparent"
+							disabled={isSearchDisabled}
+							{...stylex.props(styles.searchButton, isSearchDisabled && styles.searchButtonOff)}
 						>
 							{searchButtonLabel}
 						</button>
 					</div>
 				</search.Form>
 				{isSearching ? (
-					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+					<div {...stylex.props(styles.resultGrid)}>
 						{Array.from({ length: 10 }).map((_, i) => (
 							<GameSkeleton key={`skeleton-${i}`} />
 						))}
 					</div>
 				) : filteredDisplayedGames.length > 0 ? (
-					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+					<div {...stylex.props(styles.resultGrid)}>
 						{filteredDisplayedGames.map((game: Nomination) => {
 							const rawGameId = game.gameId ?? game.id;
 							const igdbId = rawGameId ? String(rawGameId) : "";
@@ -969,25 +1534,25 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					</div>
 				) : shouldUseLocalSearch ? (
 					allNominations.length === 0 ? (
-						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-							<h3 className="text-lg font-semibold text-zinc-200">No nominations yet</h3>
-							<p className="mt-2 text-zinc-400">
+						<div {...stylex.props(styles.emptyPanel)}>
+							<h3 {...stylex.props(styles.emptyHeading)}>No nominations yet</h3>
+							<p {...stylex.props(styles.emptyBody)}>
 								Once nominations start rolling in, you can add pitches to them here.
 							</p>
 						</div>
 					) : (
-						<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-							<h3 className="text-lg font-semibold text-zinc-200">
+						<div {...stylex.props(styles.emptyPanel)}>
+							<h3 {...stylex.props(styles.emptyHeading)}>
 								{normalizedSearchTerm.length > 0 ? (
 									<>
 										No nominations match{" "}
-										<span className="text-emerald-200">&quot;{searchTerm}&quot;</span>
+										<span {...stylex.props(styles.emphasis)}>&quot;{searchTerm}&quot;</span>
 									</>
 								) : (
 									"You're all caught up"
 								)}
 							</h3>
-							<p className="mt-2 text-zinc-400">
+							<p {...stylex.props(styles.emptyBody)}>
 								{normalizedSearchTerm.length > 0
 									? "Try a different name or browse the full list to find a game to pitch."
 									: "You've already added pitches to every nomination currently available."}
@@ -995,16 +1560,16 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						</div>
 					)
 				) : hasSearched ? (
-					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-						<h3 className="text-lg font-semibold text-zinc-200">No results found</h3>
-						<p className="mt-2 text-zinc-400">
+					<div {...stylex.props(styles.emptyPanel)}>
+						<h3 {...stylex.props(styles.emptyHeading)}>No results found</h3>
+						<p {...stylex.props(styles.emptyBody)}>
 							No games found matching &quot;{searchTerm}&quot;. Try a different search term.
 						</p>
 					</div>
 				) : (
-					<div className="text-center py-12 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-						<h3 className="text-lg font-semibold text-zinc-200">Search for games to nominate</h3>
-						<p className="mt-2 text-zinc-400">
+					<div {...stylex.props(styles.emptyPanel)}>
+						<h3 {...stylex.props(styles.emptyHeading)}>Search for games to nominate</h3>
+						<p {...stylex.props(styles.emptyBody)}>
 							Type in the search box above to find games. You can nominate one {labels.short} game
 							and one {labels.long} game.
 						</p>
@@ -1014,34 +1579,34 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Game Length Selection Modal */}
 			<Dialog open={isOpen} onOpenChange={handleNominationDialogOpenChange}>
-				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
+				<DialogContent style={styles.dialog}>
 					<DialogHeader>
-						<DialogTitle className="text-zinc-200">
+						<DialogTitle style={styles.dialogTitle}>
 							Nominate {selectedGame?.gameName} ({selectedGame?.gameYear})
 						</DialogTitle>
 					</DialogHeader>
 
 					{/* Game Cover and Summary */}
-					<div className="mb-6 flex gap-4">
+					<div {...stylex.props(styles.gamePreview)}>
 						{selectedGame?.gameCover && (
-							<div className="shrink-0">
+							<div {...stylex.props(styles.shrink)}>
 								<img
 									src={selectedGame.gameCover.replace("/t_thumb/", "/t_cover_big/")}
 									alt={selectedGame.gameName}
-									className="w-32 rounded-lg shadow-lg border border-white/10"
+									{...stylex.props(styles.previewCover)}
 								/>
 							</div>
 						)}
 						{selectedGame?.summary && (
-							<div className="flex-1">
-								<p className="text-sm text-zinc-400 line-clamp-12">{selectedGame.summary}</p>
+							<div {...stylex.props(styles.fill)}>
+								<p {...stylex.props(styles.previewSummary)}>{selectedGame.summary}</p>
 							</div>
 						)}
 					</div>
 
 					{/* Pitch Input */}
-					<div className="mb-6">
-						<Label htmlFor={pitchId} className="text-zinc-400">
+					<div {...stylex.props(styles.field)}>
+						<Label htmlFor={pitchId} style={styles.fieldLabel}>
 							Pitch (Optional)
 						</Label>
 						<Textarea
@@ -1049,41 +1614,47 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							name="pitch"
 							autoComplete="off"
 							rows={3}
-							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
+							style={styles.fieldInput}
 							value={pitch}
 							onChange={handlePitchChange}
 						/>
 					</div>
 
 					<DialogFooter>
-						<div className="grid grid-cols-2 gap-4 w-full">
+						<div {...stylex.props(styles.lengthGrid)}>
 							<button
 								type="button"
 								onClick={selectShortGame}
 								disabled={Boolean(shortNomination)}
-								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
-									shortNomination
-										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
-										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
-								}`}
+								{...stylex.props(
+									styles.lengthButton,
+									shortNomination ? styles.lengthTaken : styles.lengthAvailable,
+								)}
 							>
 								<span>{categoryGameLabel(labels.short)}</span>
-								{showDurationHints && <span className="text-xs opacity-80">(&lt; 12 hours)</span>}
-								{shortNomination && <span className="text-xs">Already nominated</span>}
+								{showDurationHints && (
+									<span {...stylex.props(styles.lengthHint)}>(&lt; 12 hours)</span>
+								)}
+								{shortNomination && (
+									<span {...stylex.props(styles.lengthNote)}>Already nominated</span>
+								)}
 							</button>
 							<button
 								type="button"
 								onClick={selectLongGame}
 								disabled={Boolean(longNomination)}
-								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
-									longNomination
-										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
-										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
-								}`}
+								{...stylex.props(
+									styles.lengthButton,
+									longNomination ? styles.lengthTaken : styles.lengthAvailable,
+								)}
 							>
 								<span>{categoryGameLabel(labels.long)}</span>
-								{showDurationHints && <span className="text-xs opacity-80">(&gt; 12 hours)</span>}
-								{longNomination && <span className="text-xs">Already nominated</span>}
+								{showDurationHints && (
+									<span {...stylex.props(styles.lengthHint)}>(&gt; 12 hours)</span>
+								)}
+								{longNomination && (
+									<span {...stylex.props(styles.lengthNote)}>Already nominated</span>
+								)}
 							</button>
 						</div>
 					</DialogFooter>
@@ -1092,15 +1663,15 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Edit Modal */}
 			<Dialog open={isEditOpen} onOpenChange={handleEditDialogOpenChange}>
-				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
+				<DialogContent style={styles.dialog}>
 					<DialogHeader>
-						<DialogTitle className="text-zinc-200">
+						<DialogTitle style={styles.dialogTitle}>
 							{hasExistingEditingPitch ? "Edit" : "Add"} Pitch: {editingNomination?.gameName}
 						</DialogTitle>
 					</DialogHeader>
 
-					<div className="mb-6">
-						<Label htmlFor={editPitchId} className="text-zinc-400">
+					<div {...stylex.props(styles.field)}>
+						<Label htmlFor={editPitchId} style={styles.fieldLabel}>
 							Pitch
 						</Label>
 						<Textarea
@@ -1108,36 +1679,36 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							name="pitch"
 							autoComplete="off"
 							rows={3}
-							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
+							style={styles.fieldInput}
 							value={editPitch}
 							onChange={handleEditPitchChange}
 							placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
 						/>
 					</div>
 
-					<DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<DialogFooter style={styles.editFooter}>
 						{hasExistingEditingPitch && editingNomination && (
 							<button
 								type="button"
 								onClick={() => openDeletePitchDialog(editingNomination)}
-								className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
+								{...stylex.props(styles.quietAction, styles.denyTone, styles.wideAction)}
 							>
 								Delete pitch
 							</button>
 						)}
-						<div className="flex w-full justify-end gap-2 sm:w-auto">
+						<div {...stylex.props(styles.footerActions)}>
 							<Button
 								type="button"
 								onClick={closeEditModal}
 								variant="outline"
-								className="bg-zinc-800 border-white/10 text-zinc-200 hover:bg-zinc-700"
+								style={styles.quietButton}
 							>
 								Cancel
 							</Button>
 							<Button
 								type="button"
 								onClick={handleEditSubmit}
-								className="bg-blue-600 hover:bg-blue-700 text-white"
+								style={styles.primaryButton}
 								disabled={isSaveDisabled}
 							>
 								{hasExistingEditingPitch ? "Save Changes" : "Add Pitch"}
@@ -1148,12 +1719,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			</Dialog>
 
 			<Dialog open={isDeletePitchOpen} onOpenChange={handleDeletePitchDialogOpenChange}>
-				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
+				<DialogContent style={styles.confirmDialog}>
 					<DialogHeader>
-						<DialogTitle className="text-zinc-200">Delete Pitch</DialogTitle>
+						<DialogTitle style={styles.dialogTitle}>Delete Pitch</DialogTitle>
 					</DialogHeader>
 
-					<p className="text-sm text-zinc-400 mb-6">
+					<p {...stylex.props(styles.confirmText)}>
 						Are you sure you want to remove your pitch for {pitchToDelete?.gameName}? You can always
 						add a new pitch later.
 					</p>
@@ -1162,14 +1733,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						<button
 							type="button"
 							onClick={() => handleDeletePitchDialogOpenChange(false)}
-							className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-zinc-200 border border-white/10 bg-transparent hover:bg-white/5 hover:border-white/20"
+							{...stylex.props(styles.quietAction, styles.neutralTone)}
 						>
 							Cancel
 						</button>
 						<button
 							type="button"
 							onClick={handleDeletePitchConfirm}
-							className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
+							{...stylex.props(styles.quietAction, styles.denyTone)}
 						>
 							Delete pitch
 						</button>
@@ -1179,12 +1750,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Delete Confirmation Modal */}
 			<Dialog open={isDeleteOpen} onOpenChange={handleDeleteDialogOpenChange}>
-				<DialogContent className="w-full max-w-sm bg-zinc-900 border-white/10">
+				<DialogContent style={styles.confirmDialog}>
 					<DialogHeader>
-						<DialogTitle className="text-zinc-200">Delete Nomination</DialogTitle>
+						<DialogTitle style={styles.dialogTitle}>Delete Nomination</DialogTitle>
 					</DialogHeader>
 
-					<p className="text-sm text-zinc-400 mb-6">
+					<p {...stylex.props(styles.confirmText)}>
 						Are you sure you want to delete your nomination for {deletingNomination?.gameName}? This
 						action cannot be undone.
 					</p>
@@ -1194,7 +1765,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							type="button"
 							onClick={closeDeleteModal}
 							variant="outline"
-							className="bg-zinc-800 border-white/10 text-zinc-200 hover:bg-zinc-700"
+							style={styles.quietButton}
 						>
 							Cancel
 						</Button>
@@ -1202,7 +1773,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							type="button"
 							onClick={handleDeleteConfirm}
 							variant="destructive"
-							className="bg-red-600 hover:bg-red-700 text-white"
+							style={styles.destructiveButton}
 						>
 							Delete
 						</Button>

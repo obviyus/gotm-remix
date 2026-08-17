@@ -1,4 +1,5 @@
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
+import * as stylex from "@stylexjs/stylex";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFetcher } from "react-router";
@@ -9,6 +10,8 @@ import { authenticatedUserContext, requireAuthenticatedUser } from "~/route-cont
 import { db } from "~/server/database.server";
 import { getCurrentMonth } from "~/server/month.server";
 import { getNominationsByIds } from "~/server/nomination.server";
+import { control } from "~/styles/markers.stylex";
+import { color, motion, radius } from "~/styles/tokens.stylex";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
@@ -149,6 +152,113 @@ export async function loader({ context }: Route.LoaderArgs) {
 	};
 }
 
+const styles = stylex.create({
+	cardList: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+	},
+	emptySlot: {
+		borderColor: "oklch(87.2% 0.01 258.338)",
+		borderRadius: radius.lg,
+		borderStyle: "dashed",
+		borderWidth: 1,
+		padding: 32,
+		textAlign: "center",
+	},
+	emptyText: {
+		color: "oklch(55.1% 0.027 264.364)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	divider: {
+		borderTopColor: "oklch(44.6% 0.03 256.802 / 0.6)",
+		borderTopWidth: 2,
+		marginBlock: 32,
+		marginInline: "auto",
+		maxWidth: "48rem",
+		position: "relative",
+		width: "100%",
+	},
+	dividerLabel: {
+		backgroundColor: "oklch(21% 0.034 264.665)",
+		borderColor: "oklch(44.6% 0.03 256.802 / 0.6)",
+		borderRadius: radius.pill,
+		borderWidth: 1,
+		color: "oklch(92.8% 0.006 264.531)",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		left: "50%",
+		lineHeight: 1.4286,
+		paddingBlock: 6,
+		paddingInline: 24,
+		position: "absolute",
+		top: "50%",
+		translate: "-50% -50%",
+		userSelect: "none",
+	},
+	clearVote: {
+		alignItems: "center",
+		backgroundColor: { default: null, ":hover": "oklch(63.7% 0.237 25.331 / 0.1)" },
+		borderColor: {
+			default: "oklch(70.4% 0.191 22.216 / 0.2)",
+			":hover": "oklch(70.4% 0.191 22.216 / 0.3)",
+		},
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(63.7% 0.237 25.331 / 0.2), 0 1px 2px -1px oklch(63.7% 0.237 25.331 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(63.7% 0.237 25.331 / 0.4), 0 1px 2px -1px oklch(63.7% 0.237 25.331 / 0.4)",
+		},
+		color: color.deny,
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		gap: 8,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		overflow: "hidden",
+		paddingBlock: 8,
+		paddingInline: 16,
+		position: "relative",
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: "100%",
+		"::after": {
+			backgroundColor: { default: "transparent", ":hover": "oklch(70.4% 0.191 22.216 / 0.05)" },
+			content: "''",
+			inset: 0,
+			position: "absolute",
+			transitionDuration: motion.duration,
+			transitionProperty: "color, background-color, border-color",
+			transitionTimingFunction: motion.easing,
+		},
+	},
+	clearLabel: {
+		alignItems: "center",
+		display: "flex",
+		gap: 8,
+		justifyContent: "center",
+		position: "relative",
+		transform: { default: null, [stylex.when.ancestor(":hover", control)]: "scale(1.05)" },
+		transitionDuration: motion.duration,
+		transitionProperty: "transform, translate, scale, rotate",
+		transitionTimingFunction: motion.easing,
+		zIndex: 10,
+	},
+	clearIcon: {
+		height: 16,
+		transitionDuration: motion.duration,
+		transitionProperty: "transform, translate, scale, rotate",
+		transitionTimingFunction: motion.easing,
+		translate: { default: null, [stylex.when.ancestor(":hover", control)]: "2px -2px" },
+		width: 16,
+	},
+});
+
 interface VotingGamesListProps {
 	droppableId: "long" | "short";
 	games: Nomination[];
@@ -185,10 +295,10 @@ function VotingGamesList({
 		<Droppable droppableId={droppableId}>
 			{(provided) => (
 				<div {...provided.droppableProps} ref={provided.innerRef}>
-					<div className="space-y-4">
+					<div {...stylex.props(styles.cardList)}>
 						{rankedGames.length === 0 && order.length === 0 ? (
-							<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-								<p className="text-sm text-gray-500">
+							<div {...stylex.props(styles.emptySlot)}>
+								<p {...stylex.props(styles.emptyText)}>
 									Drag games here to rank them in order of preference
 								</p>
 							</div>
@@ -217,21 +327,19 @@ function VotingGamesList({
 						{(draggableProvided) => (
 							<div
 								ref={draggableProvided.innerRef}
+								{...stylex.props(styles.divider)}
 								{...draggableProvided.draggableProps}
 								{...draggableProvided.dragHandleProps}
-								className="border-t-2 border-gray-600/60 my-8 relative max-w-3xl mx-auto w-full"
 							>
-								<span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-6 py-1.5 text-sm font-medium text-gray-200 select-none rounded-full border border-gray-600/60">
-									Drag above to rank
-								</span>
+								<span {...stylex.props(styles.dividerLabel)}>Drag above to rank</span>
 							</div>
 						)}
 					</Draggable>
 
-					<div className="space-y-4">
+					<div {...stylex.props(styles.cardList)}>
 						{unrankedGames.length === 0 ? (
-							<div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
-								<p className="text-sm text-gray-500">No unranked games</p>
+							<div {...stylex.props(styles.emptySlot)}>
+								<p {...stylex.props(styles.emptyText)}>No unranked games</p>
 							</div>
 						) : (
 							unrankedGames.map((game, index) => (
@@ -424,11 +532,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const longAction = votedLong ? (
 		<button
 			type="button"
-			className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
 			onClick={handleClearLongVote}
+			{...stylex.props(control, styles.clearVote)}
 		>
-			<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-				<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+			<span {...stylex.props(styles.clearLabel)}>
+				<Trash2 {...stylex.props(styles.clearIcon)} />
 				Clear Vote
 			</span>
 		</button>
@@ -437,11 +545,11 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	const shortAction = votedShort ? (
 		<button
 			type="button"
-			className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
 			onClick={handleClearShortVote}
+			{...stylex.props(control, styles.clearVote)}
 		>
-			<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-				<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+			<span {...stylex.props(styles.clearLabel)}>
+				<Trash2 {...stylex.props(styles.clearIcon)} />
 				Clear Vote
 			</span>
 		</button>

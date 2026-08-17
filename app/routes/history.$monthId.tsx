@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import { useState } from "react";
 import { Link } from "react-router";
 import GameCard from "~/components/GameCard";
@@ -15,6 +16,7 @@ import {
 	type Result,
 } from "~/server/voting.server";
 import { getWinner } from "~/server/winner.server";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
@@ -23,6 +25,77 @@ import type { Route } from "./+types/history.$monthId";
 
 type LoaderData = Route.ComponentProps["loaderData"];
 type WinnersByLength = LoaderData["winners"];
+
+const styles = stylex.create({
+	page: {
+		marginInline: "auto",
+		maxWidth: "64rem",
+		paddingBlock: 24,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	themeBlock: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		marginBottom: 32,
+		textAlign: "center",
+	},
+	cardList: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+	},
+	votingNotice: {
+		backgroundColor: "oklch(41.4% 0.112 45.904 / 0.3)",
+		borderColor: "oklch(55.5% 0.163 48.998 / 0.5)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		display: "flex",
+		flexDirection: "column",
+		gap: 16,
+		padding: 24,
+		textAlign: "center",
+	},
+	noticeHeading: {
+		color: "oklch(87.9% 0.169 91.605)",
+		fontSize: "1.25rem",
+		fontWeight: 700,
+		lineHeight: 1.4,
+		marginBottom: 8,
+	},
+	noticeBody: {
+		color: color.body,
+	},
+	tally: {
+		color: "oklch(87.1% 0.006 286.286)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	voteLink: {
+		alignItems: "center",
+		backgroundColor: { default: color.action, ":hover": color.actionHover },
+		borderRadius: radius.lg,
+		color: color.white,
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 600,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		paddingBlock: 10,
+		paddingInline: 20,
+		transitionDuration: motion.duration,
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+	results: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 24,
+	},
+	nominations: {
+		marginTop: 48,
+	},
+});
 
 interface SortedNominationsListProps {
 	games: Nomination[];
@@ -62,7 +135,7 @@ function SortedNominationsList({
 	});
 
 	return (
-		<div className="space-y-4">
+		<div {...stylex.props(styles.cardList)}>
 			{sortedGames.map((game) => {
 				const isWinner = showWinner && winnerForLength?.id === game.id;
 
@@ -247,33 +320,29 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 	}
 
 	return (
-		<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-			<div className="text-center space-y-2 mb-8">
+		<div {...stylex.props(styles.page)}>
+			<div {...stylex.props(styles.themeBlock)}>
 				{month.theme && <ThemeCard {...month} asPageHeading />}
 			</div>
 
 			{month.status === "voting" ? (
-				<div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-6 text-center space-y-4">
+				<div {...stylex.props(styles.votingNotice)}>
 					<div>
-						<h2 className="text-xl font-bold text-amber-300 mb-2">Voting in Progress</h2>
-						<p className="text-zinc-200">
+						<h2 {...stylex.props(styles.noticeHeading)}>Voting in Progress</h2>
+						<p {...stylex.props(styles.noticeBody)}>
 							Votes are being collected right now. Results will be revealed after the voting phase
 							ends.
 						</p>
 					</div>
-					<p className="text-sm text-zinc-300">
+					<p {...stylex.props(styles.tally)}>
 						{totalVotesLabel} {totalVotes === 1 ? "vote" : "votes"} cast so far.
 					</p>
-					<Link
-						to="/voting"
-						prefetch="viewport"
-						className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-					>
+					<Link to="/voting" prefetch="viewport" {...stylex.props(styles.voteLink)}>
 						Go Vote Now →
 					</Link>
 				</div>
 			) : showResults ? (
-				<div className="space-y-6">
+				<div {...stylex.props(styles.results)}>
 					<VotingResultsChart
 						title={labels.long}
 						results={results.long}
@@ -291,7 +360,7 @@ export default function HistoryMonth({ loaderData }: Route.ComponentProps) {
 				</div>
 			) : null}
 
-			<div className="mt-12">
+			<div {...stylex.props(styles.nominations)}>
 				<TwoColumnLayout
 					title="All Nominations"
 					description="These games were nominated for this month's Game of the Month."

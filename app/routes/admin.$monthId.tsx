@@ -1,9 +1,10 @@
 import type { Row, Value } from "@libsql/client";
+import * as stylex from "@stylexjs/stylex";
 import type { ChangeEvent } from "react";
 import { useId, useState } from "react";
 import { Link, redirect, useFetcher } from "react-router";
 import PitchesModal from "~/components/PitchesModal";
-import { Button, buttonVariants } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -13,6 +14,7 @@ import { db } from "~/server/database.server";
 import { getMonths, getThemeCategories } from "~/server/month.server";
 import { getNominationsForMonth, updateNominationCategory } from "~/server/nomination.server";
 import { recalculateWinnersForMonth } from "~/server/winner.server";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import type { Month, Nomination } from "~/types";
 import {
 	categoryGameLabel,
@@ -43,6 +45,362 @@ const csvField = (value: string | number) => {
 const submitContainingForm = (event: ChangeEvent<HTMLSelectElement>) => {
 	event.target.form?.requestSubmit();
 };
+
+const pulse = stylex.keyframes({ "50%": { opacity: 0.5 } });
+
+const styles = stylex.create({
+	page: {
+		marginInline: "auto",
+		maxWidth: "80rem",
+		paddingBlock: 24,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	monthHeader: {
+		marginBottom: 32,
+	},
+	headerRow: {
+		alignItems: "center",
+		display: "flex",
+		flexDirection: { default: "column", [media.sm]: "row" },
+		gap: 16,
+		justifyContent: "space-between",
+	},
+	monthIdentity: {
+		alignItems: { default: null, [media.sm]: "center" },
+		display: "flex",
+		flexDirection: { default: "column", [media.sm]: "row" },
+		gap: 12,
+	},
+	monthName: {
+		color: color.body,
+		fontSize: "1.5rem",
+		fontWeight: 700,
+		lineHeight: 1.3333,
+	},
+	activePill: {
+		alignItems: "center",
+		backgroundColor: "oklch(76.5% 0.177 163.223 / 0.1)",
+		borderRadius: radius.pill,
+		boxShadow: "inset 0 0 0 1px oklch(76.5% 0.177 163.223 / 0.2)",
+		color: "oklch(76.5% 0.177 163.223)",
+		display: "inline-flex",
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		lineHeight: 1.3333,
+		paddingBlock: 4,
+		paddingInline: 12,
+	},
+	statusForm: {
+		alignItems: "center",
+		display: "flex",
+		gap: 8,
+		width: { default: "100%", [media.sm]: "auto" },
+	},
+	statusLabel: {
+		borderWidth: { default: 0, [media.sm]: null },
+		clipPath: { default: "inset(50%)", [media.sm]: "none" },
+		color: color.muted,
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		height: { default: 1, [media.sm]: "auto" },
+		lineHeight: 1.4286,
+		margin: { default: -1, [media.sm]: 0 },
+		overflow: { default: "hidden", [media.sm]: "visible" },
+		padding: 0,
+		position: { default: "absolute", [media.sm]: "static" },
+		whiteSpace: { default: "nowrap", [media.sm]: "normal" },
+		width: { default: 1, [media.sm]: "auto" },
+	},
+	// Shared by every text input, textarea, and select on this screen.
+	field: {
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: { default: "rgba(255, 255, 255, 0.1)", ":focus": color.focus },
+		boxShadow: {
+			default: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+			":focus": "0 0 0 1px oklch(62.3% 0.214 259.815)",
+		},
+		color: color.body,
+	},
+	select: {
+		borderRadius: radius.md,
+		borderWidth: 1,
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		paddingBlock: 8,
+		paddingInline: 12,
+	},
+	statusSelect: {
+		width: { default: "100%", [media.sm]: "auto" },
+	},
+	blockSelect: {
+		display: "block",
+		width: "100%",
+	},
+	option: {
+		paddingBlock: 4,
+	},
+	pending: {
+		color: color.muted,
+		fontSize: "0.75rem",
+		lineHeight: 1.3333,
+	},
+	monthNav: {
+		alignItems: "center",
+		display: "flex",
+		justifyContent: "space-between",
+		marginTop: 16,
+	},
+	navButton: {
+		backgroundColor: { default: "transparent", ":hover": "oklch(27.4% 0.006 286.033 / 0.4)" },
+		borderColor: color.surfaceRaised,
+		color: { default: color.body, ":hover": color.body },
+		paddingBlock: 6,
+		paddingInline: 12,
+	},
+	navButtonOff: {
+		color: color.muted,
+		opacity: 0.5,
+		paddingBlock: 6,
+		paddingInline: 12,
+	},
+	navActions: {
+		display: "flex",
+		gap: 8,
+	},
+	createButton: {
+		backgroundColor: { default: "transparent", ":hover": "oklch(69.6% 0.17 162.48 / 0.1)" },
+		borderColor: "oklch(69.6% 0.17 162.48 / 0.3)",
+		color: { default: "oklch(76.5% 0.177 163.223)", ":hover": "oklch(76.5% 0.177 163.223)" },
+	},
+	exportButton: {
+		backgroundColor: { default: "transparent", ":hover": "oklch(37% 0.013 285.805 / 0.2)" },
+		borderColor: "oklch(44.2% 0.017 285.786 / 0.3)",
+		color: { default: color.body, ":hover": color.body },
+	},
+	formError: {
+		color: "oklch(70.4% 0.191 22.216)",
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		marginTop: 8,
+	},
+	labelForm: {
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		display: "grid",
+		gap: 12,
+		gridTemplateColumns: { default: null, [media.sm]: "1fr 1fr auto" },
+		marginTop: 16,
+		padding: 16,
+	},
+	fieldLabel: {
+		color: color.muted,
+		fontSize: "0.875rem",
+		fontWeight: 500,
+	},
+	fieldLabelSpaced: {
+		marginBottom: 4,
+	},
+	fieldSpaced: {
+		marginTop: 4,
+	},
+	saveCell: {
+		alignItems: "flex-end",
+		display: "flex",
+	},
+	saveButton: {
+		backgroundColor: { default: null, ":hover": "oklch(69.6% 0.17 162.48 / 0.1)" },
+		borderColor: "oklch(76.5% 0.177 163.223 / 0.2)",
+		color: { default: color.affirm, ":hover": color.affirm },
+		width: { default: "100%", [media.sm]: "auto" },
+	},
+	createCard: {
+		backgroundColor: "rgba(0, 0, 0, 0.2)",
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		marginBottom: 32,
+	},
+	createTitle: {
+		color: color.body,
+	},
+	createGrid: {
+		display: "grid",
+		gap: 16,
+		gridTemplateColumns: { default: null, [media.md]: "repeat(2, minmax(0, 1fr))" },
+		marginBottom: 16,
+	},
+	wideCell: {
+		gridColumn: { default: null, [media.md]: "span 2 / span 2" },
+	},
+	submitRow: {
+		display: "flex",
+		justifyContent: "flex-end",
+	},
+	sectionHeading: {
+		color: color.body,
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		lineHeight: 1.4,
+		marginBottom: 16,
+	},
+	tablePanel: {
+		backdropFilter: "blur(8px)",
+		backgroundColor: "rgba(0, 0, 0, 0.1)",
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+		overflow: "hidden",
+	},
+	tableScroller: {
+		overflowX: "auto",
+	},
+	table: {
+		minWidth: "100%",
+	},
+	tableBody: {
+		borderTopColor: "rgba(255, 255, 255, 0.1)",
+		borderTopWidth: 1,
+	},
+	rowRule: {
+		borderTopColor: "rgba(255, 255, 255, 0.1)",
+		borderTopWidth: 1,
+	},
+	row: {
+		backgroundColor: { default: null, ":hover": "rgba(255, 255, 255, 0.05)" },
+		transitionDuration: motion.duration,
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+	columnHead: {
+		color: color.muted,
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		letterSpacing: "0.05em",
+		lineHeight: 1.3333,
+		paddingBlock: 12,
+		paddingInline: 16,
+		textAlign: "left",
+		textTransform: "uppercase",
+	},
+	centered: {
+		textAlign: "center",
+	},
+	cell: {
+		paddingBlock: 12,
+		paddingInline: 16,
+		whiteSpace: "nowrap",
+	},
+	metaCell: {
+		color: color.muted,
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	gameCell: {
+		alignItems: "center",
+		display: "flex",
+	},
+	thumbnail: {
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: radius.sm,
+		borderWidth: 1,
+		height: 40,
+		marginRight: 12,
+		objectFit: "cover",
+		width: 40,
+	},
+	gameName: {
+		color: color.body,
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		lineHeight: 1.4286,
+		maxWidth: 200,
+		overflow: "hidden",
+		textOverflow: "ellipsis",
+		whiteSpace: "nowrap",
+	},
+	categorySelect: {
+		borderRadius: radius.md,
+		borderWidth: 1,
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		lineHeight: 1.3333,
+		opacity: { default: null, ":disabled": 0.7 },
+		paddingBlock: 4,
+		paddingInline: 8,
+	},
+	pitchesButton: {
+		backgroundColor: { default: "transparent", ":hover": "oklch(27.4% 0.006 286.033 / 0.4)" },
+		borderColor: color.surfaceRaised,
+		color: { default: "oklch(87.1% 0.006 286.286)", ":hover": "oklch(87.1% 0.006 286.286)" },
+		fontSize: "0.75rem",
+		paddingBlock: 4,
+		paddingInline: 8,
+	},
+	toggle: {
+		borderColor: "transparent",
+		borderRadius: radius.pill,
+		borderWidth: 2,
+		cursor: "pointer",
+		display: "inline-flex",
+		height: 24,
+		position: "relative",
+		transitionDuration: "0.2s",
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+		width: 44,
+		boxShadow: {
+			default: null,
+			":focus": "0 0 0 2px #fff, 0 0 0 4px oklch(62.3% 0.214 259.815)",
+		},
+		outlineStyle: { default: null, ":focus": "none" },
+	},
+	toggleOn: { backgroundColor: color.focus },
+	toggleOff: { backgroundColor: color.surfaceRaised },
+	toggleBusy: { opacity: 0.7 },
+	knob: {
+		backgroundColor: "#fff",
+		borderRadius: radius.pill,
+		boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+		display: "inline-block",
+		height: 20,
+		pointerEvents: "none",
+		transitionDuration: "0.2s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: 20,
+	},
+	knobOn: { translate: "20px 0" },
+	knobOff: { translate: "0 0" },
+	busyOverlay: {
+		alignItems: "center",
+		display: "flex",
+		inset: 0,
+		justifyContent: "center",
+		position: "absolute",
+	},
+	busyDot: {
+		animationDuration: "2s",
+		animationIterationCount: "infinite",
+		animationName: { default: pulse, [media.reducedMotion]: "none" },
+		animationTimingFunction: "cubic-bezier(0.4, 0, 0.6, 1)",
+		backgroundColor: "oklch(85.2% 0.199 91.936)",
+		borderRadius: radius.pill,
+		height: 8,
+		width: 8,
+	},
+	srOnly: {
+		borderWidth: 0,
+		clipPath: "inset(50%)",
+		height: 1,
+		margin: -1,
+		overflow: "hidden",
+		padding: 0,
+		position: "absolute",
+		whiteSpace: "nowrap",
+		width: 1,
+	},
+});
 
 interface ActionResponse {
 	success?: boolean;
@@ -421,14 +779,14 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 	const monthStatuses = ["ready", "nominating", "jury", "voting", "playing", "over"] as const;
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+		<div {...stylex.props(styles.page)}>
 			{/* Header with Month Navigation and Status */}
 			{selectedMonth && (
-				<div className="mb-8">
-					<div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+				<div {...stylex.props(styles.monthHeader)}>
+					<div {...stylex.props(styles.headerRow)}>
 						{/* Month title and status */}
-						<div className="flex flex-col sm:flex-row sm:items-center gap-3">
-							<h1 className="text-2xl font-bold text-zinc-200">
+						<div {...stylex.props(styles.monthIdentity)}>
+							<h1 {...stylex.props(styles.monthName)}>
 								{new Date(Date.UTC(selectedMonth.year, selectedMonth.month - 1)).toLocaleString(
 									"en-US",
 									{
@@ -440,23 +798,15 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							</h1>
 
 							{["nominating", "jury", "voting"].includes(selectedMonth.status) && (
-								<span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 ring-1 ring-inset ring-emerald-400/20">
-									Active Month
-								</span>
+								<span {...stylex.props(styles.activePill)}>Active Month</span>
 							)}
 						</div>
 
 						{/* Quick status update */}
-						<statusUpdateFetcher.Form
-							method="POST"
-							className="flex items-center gap-2 w-full sm:w-auto"
-						>
+						<statusUpdateFetcher.Form method="POST" {...stylex.props(styles.statusForm)}>
 							<input type="hidden" name="monthId" value={selectedMonth.id} />
 							<input type="hidden" name="intent" value="updateStatus" />
-							<label
-								htmlFor={statusSelectId}
-								className="text-sm font-medium text-zinc-400 sr-only sm:not-sr-only"
-							>
+							<label htmlFor={statusSelectId} {...stylex.props(styles.statusLabel)}>
 								Status:
 							</label>
 							<select
@@ -464,58 +814,55 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								name="status"
 								value={selectedMonth.status}
 								onChange={submitContainingForm}
-								className="w-full sm:w-auto rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+								{...stylex.props(styles.field, styles.select, styles.statusSelect)}
 							>
 								{monthStatuses.map((status) => (
-									<option key={status} value={status} className="py-1">
+									<option key={status} value={status} {...stylex.props(styles.option)}>
 										{status.charAt(0).toUpperCase() + status.slice(1)}
 									</option>
 								))}
 							</select>
 							{statusUpdateFetcher.state !== "idle" && (
-								<span className="text-xs text-zinc-400">Updating…</span>
+								<span {...stylex.props(styles.pending)}>Updating…</span>
 							)}
 						</statusUpdateFetcher.Form>
 					</div>
 
 					{/* Month Navigation */}
-					<div className="flex items-center justify-between mt-4">
+					<div {...stylex.props(styles.monthNav)}>
 						{(() => {
 							const currentIndex = months.findIndex((m) => m.id === selectedMonth.id);
 							const prev = months[currentIndex + 1];
 							return prev ? (
-								<Link
-									to={`/admin/${prev.id}`}
-									prefetch="viewport"
-									className={buttonVariants({
-										variant: "outline",
-										size: "sm",
-										className:
-											"px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40",
-									})}
+								<Button
+									render={<Link to={`/admin/${prev.id}`} prefetch="viewport" />}
+									nativeButton={false}
+									variant="outline"
+									size="sm"
+									style={styles.navButton}
 								>
 									← Previous Month
-								</Link>
+								</Button>
 							) : (
 								<Button
 									type="button"
 									variant="outline"
 									size="sm"
 									disabled
-									className="px-3 py-1.5 text-zinc-400 opacity-50"
+									style={styles.navButtonOff}
 								>
 									← Previous Month
 								</Button>
 							);
 						})()}
 
-						<div className="flex gap-2">
+						<div {...stylex.props(styles.navActions)}>
 							<Button
 								type="button"
 								onClick={toggleCreateForm}
 								variant="outline"
 								size="sm"
-								className="bg-transparent text-emerald-400 hover:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10"
+								style={styles.createButton}
 							>
 								{showCreateForm ? "Cancel" : "Create New Month"}
 							</Button>
@@ -526,7 +873,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 									onClick={handleCopyAsCSV}
 									variant="outline"
 									size="sm"
-									className="bg-transparent text-zinc-200 hover:text-zinc-200 border border-zinc-600/30 hover:bg-zinc-700/20"
+									style={styles.exportButton}
 								>
 									{csvCopied ? "Copied!" : "Export CSV"}
 								</Button>
@@ -537,25 +884,22 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 							const currentIndex = months.findIndex((m) => m.id === selectedMonth.id);
 							const next = months[currentIndex - 1];
 							return next ? (
-								<Link
-									to={`/admin/${next.id}`}
-									prefetch="viewport"
-									className={buttonVariants({
-										variant: "outline",
-										size: "sm",
-										className:
-											"px-3 py-1.5 bg-transparent text-zinc-200 hover:text-zinc-200 border-zinc-700 hover:bg-zinc-800/40",
-									})}
+								<Button
+									render={<Link to={`/admin/${next.id}`} prefetch="viewport" />}
+									nativeButton={false}
+									variant="outline"
+									size="sm"
+									style={styles.navButton}
 								>
 									Next Month →
-								</Link>
+								</Button>
 							) : (
 								<Button
 									type="button"
 									variant="outline"
 									size="sm"
 									disabled
-									className="px-3 py-1.5 text-zinc-400 opacity-50"
+									style={styles.navButtonOff}
 								>
 									Next Month →
 								</Button>
@@ -564,17 +908,17 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					{statusUpdateFetcher.data?.error && (
-						<p className="mt-2 text-sm text-red-400">{statusUpdateFetcher.data.error}</p>
+						<p {...stylex.props(styles.formError)}>{statusUpdateFetcher.data.error}</p>
 					)}
 					<labelUpdateFetcher.Form
 						key={selectedMonth.id}
 						method="POST"
-						className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-4 sm:grid-cols-[1fr_1fr_auto]"
+						{...stylex.props(styles.labelForm)}
 					>
 						<input type="hidden" name="intent" value="updateLabels" />
 						<input type="hidden" name="monthId" value={selectedMonth.id} />
 						<div>
-							<Label htmlFor={longLabelInputId} className="text-sm font-medium text-zinc-400">
+							<Label htmlFor={longLabelInputId} style={styles.fieldLabel}>
 								Long label
 							</Label>
 							<Input
@@ -583,11 +927,11 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								autoComplete="off"
 								required
 								defaultValue={labels.long}
-								className="mt-1 bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+								style={[styles.field, styles.fieldSpaced]}
 							/>
 						</div>
 						<div>
-							<Label htmlFor={shortLabelInputId} className="text-sm font-medium text-zinc-400">
+							<Label htmlFor={shortLabelInputId} style={styles.fieldLabel}>
 								Short label
 							</Label>
 							<Input
@@ -596,38 +940,38 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								autoComplete="off"
 								required
 								defaultValue={labels.short}
-								className="mt-1 bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+								style={[styles.field, styles.fieldSpaced]}
 							/>
 						</div>
-						<div className="flex items-end">
+						<div {...stylex.props(styles.saveCell)}>
 							<Button
 								type="submit"
 								disabled={labelUpdateFetcher.state !== "idle"}
 								variant="outline"
-								className="w-full text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10 sm:w-auto"
+								style={styles.saveButton}
 							>
 								{labelUpdateFetcher.state !== "idle" ? "Saving…" : "Save Labels"}
 							</Button>
 						</div>
 					</labelUpdateFetcher.Form>
 					{labelUpdateFetcher.data?.error && (
-						<p className="mt-2 text-sm text-red-400">{labelUpdateFetcher.data.error}</p>
+						<p {...stylex.props(styles.formError)}>{labelUpdateFetcher.data.error}</p>
 					)}
 				</div>
 			)}
 
 			{/* Create New Month Form (Collapsible) */}
 			{showCreateForm && (
-				<Card className="mb-8 bg-black/20 border-white/10">
+				<Card style={styles.createCard}>
 					<CardHeader>
-						<CardTitle className="text-zinc-200">Create New Month</CardTitle>
+						<CardTitle style={styles.createTitle}>Create New Month</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<createMonthFetcher.Form method="POST">
 							<input type="hidden" name="intent" value="createMonth" />
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+							<div {...stylex.props(styles.createGrid)}>
 								<div>
-									<Label htmlFor={yearInputId} className="text-sm font-medium text-zinc-400 mb-1">
+									<Label htmlFor={yearInputId} style={[styles.fieldLabel, styles.fieldLabelSpaced]}>
 										Year
 									</Label>
 									<Input
@@ -638,11 +982,14 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										min="2000"
 										max="2100"
 										required
-										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										style={styles.field}
 									/>
 								</div>
 								<div>
-									<Label htmlFor={monthInputId} className="text-sm font-medium text-zinc-400 mb-1">
+									<Label
+										htmlFor={monthInputId}
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
+									>
 										Month (1-12)
 									</Label>
 									<Input
@@ -653,13 +1000,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										min="1"
 										max="12"
 										required
-										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										style={styles.field}
 									/>
 								</div>
 								<div>
 									<Label
 										htmlFor={createStatusSelectId}
-										className="text-sm font-medium text-zinc-400 mb-1"
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
 									>
 										Initial Status
 									</Label>
@@ -667,10 +1014,10 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										id={createStatusSelectId}
 										name="status"
 										required
-										className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+										{...stylex.props(styles.field, styles.select, styles.blockSelect)}
 									>
 										{monthStatuses.map((status) => (
-											<option key={status} value={status} className="py-1">
+											<option key={status} value={status} {...stylex.props(styles.option)}>
 												{status.charAt(0).toUpperCase() + status.slice(1)}
 											</option>
 										))}
@@ -679,7 +1026,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								<div>
 									<Label
 										htmlFor={themeCategorySelectId}
-										className="text-sm font-medium text-zinc-400 mb-1"
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
 									>
 										Theme Category
 									</Label>
@@ -687,7 +1034,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										id={themeCategorySelectId}
 										name="themeCategoryId"
 										required
-										className="block w-full rounded-md border-white/10 bg-black/20 text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 text-sm"
+										{...stylex.props(styles.field, styles.select, styles.blockSelect)}
 									>
 										<option value="">Select a category</option>
 										{themeCategories.map((category) => (
@@ -700,7 +1047,7 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 								<div>
 									<Label
 										htmlFor={themeNameInputId}
-										className="text-sm font-medium text-zinc-400 mb-1"
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
 									>
 										Theme Name
 									</Label>
@@ -710,14 +1057,14 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										name="themeName"
 										autoComplete="off"
 										required
-										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										style={styles.field}
 										placeholder="Enter theme name"
 									/>
 								</div>
 								<div>
 									<Label
 										htmlFor={createLongLabelInputId}
-										className="text-sm font-medium text-zinc-400 mb-1"
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
 									>
 										Long label
 									</Label>
@@ -728,13 +1075,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										autoComplete="off"
 										required
 										defaultValue={DEFAULT_CATEGORY_LABELS.long}
-										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										style={styles.field}
 									/>
 								</div>
 								<div>
 									<Label
 										htmlFor={createShortLabelInputId}
-										className="text-sm font-medium text-zinc-400 mb-1"
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
 									>
 										Short label
 									</Label>
@@ -745,13 +1092,13 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										autoComplete="off"
 										required
 										defaultValue={DEFAULT_CATEGORY_LABELS.short}
-										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										style={styles.field}
 									/>
 								</div>
-								<div className="md:col-span-2">
+								<div {...stylex.props(styles.wideCell)}>
 									<Label
 										htmlFor={themeDescriptionTextareaId}
-										className="text-sm font-medium text-zinc-400 mb-1"
+										style={[styles.fieldLabel, styles.fieldLabelSpaced]}
 									>
 										Theme Description
 									</Label>
@@ -760,22 +1107,22 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 										name="themeDescription"
 										autoComplete="off"
 										rows={2}
-										className="bg-black/20 text-zinc-200 border-white/10 focus:border-blue-500 focus:ring-blue-500"
+										style={styles.field}
 										placeholder="Enter theme description (optional)"
 									/>
 								</div>
 							</div>
-							<div className="flex justify-end">
+							<div {...stylex.props(styles.submitRow)}>
 								<Button
 									type="submit"
 									disabled={createMonthFetcher.state !== "idle"}
 									variant="outline"
-									className="text-emerald-500 border border-emerald-400/20 hover:bg-emerald-500/10"
+									style={styles.saveButton}
 								>
 									{createMonthFetcher.state !== "idle" ? "Creating…" : "Create Month"}
 								</Button>
 							</div>
-							{createMonthError && <p className="mt-2 text-sm text-red-400">{createMonthError}</p>}
+							{createMonthError && <p {...stylex.props(styles.formError)}>{createMonthError}</p>}
 						</createMonthFetcher.Form>
 					</CardContent>
 				</Card>
@@ -784,52 +1131,40 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 			{/* Jury Selection Section */}
 			{selectedMonth && nominations.length > 0 && (
 				<section>
-					<h2 className="text-xl font-semibold mb-4 text-zinc-200">
+					<h2 {...stylex.props(styles.sectionHeading)}>
 						{nominations.length} Game{nominations.length !== 1 ? "s" : ""} Nominated
 					</h2>
 
-					<div className="bg-black/10 backdrop-blur-sm rounded-lg shadow overflow-hidden border border-white/10">
-						<div className="overflow-x-auto">
-							<table className="min-w-full divide-y divide-white/10">
+					<div {...stylex.props(styles.tablePanel)}>
+						<div {...stylex.props(styles.tableScroller)}>
+							<table {...stylex.props(styles.table)}>
 								<thead>
 									<tr>
-										<th
-											scope="col"
-											className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
-										>
+										<th scope="col" {...stylex.props(styles.columnHead)}>
 											Game
 										</th>
-										<th
-											scope="col"
-											className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
-										>
+										<th scope="col" {...stylex.props(styles.columnHead)}>
 											Year
 										</th>
-										<th
-											scope="col"
-											className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider"
-										>
+										<th scope="col" {...stylex.props(styles.columnHead)}>
 											Type
 										</th>
-										<th
-											scope="col"
-											className="px-4 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider"
-										>
+										<th scope="col" {...stylex.props(styles.columnHead, styles.centered)}>
 											Pitches
 										</th>
-										<th
-											scope="col"
-											className="px-4 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider"
-										>
+										<th scope="col" {...stylex.props(styles.columnHead, styles.centered)}>
 											Select
 										</th>
 									</tr>
 								</thead>
-								<tbody className="divide-y divide-white/10">
-									{nominations.map((nomination) => (
-										<tr key={nomination.id} className="hover:bg-white/5 transition-colors">
-											<td className="px-4 py-3 whitespace-nowrap">
-												<div className="flex items-center">
+								<tbody {...stylex.props(styles.tableBody)}>
+									{nominations.map((nomination, index) => (
+										<tr
+											key={nomination.id}
+											{...stylex.props(styles.row, index > 0 && styles.rowRule)}
+										>
+											<td {...stylex.props(styles.cell)}>
+												<div {...stylex.props(styles.gameCell)}>
 													{nomination.gameCover && (
 														<img
 															src={nomination.gameCover}
@@ -837,65 +1172,64 @@ export default function Admin({ loaderData }: Route.ComponentProps) {
 															width={40}
 															height={40}
 															loading="lazy"
-															className="h-10 w-10 object-cover rounded-sm mr-3 border border-white/10"
+															{...stylex.props(styles.thumbnail)}
 														/>
 													)}
-													<div className="text-sm font-medium text-zinc-200 truncate max-w-50">
-														{nomination.gameName}
-													</div>
+													<div {...stylex.props(styles.gameName)}>{nomination.gameName}</div>
 												</div>
 											</td>
-											<td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400">
-												{nomination.gameYear}
-											</td>
-											<td className="px-4 py-3 whitespace-nowrap">
+											<td {...stylex.props(styles.cell, styles.metaCell)}>{nomination.gameYear}</td>
+											<td {...stylex.props(styles.cell)}>
 												<select
 													value={getNominationCategory(nomination)}
 													onChange={(event) => handleNominationCategoryChange(nomination, event)}
 													disabled={isProcessingNominationCategory(nomination.id)}
-													className="rounded-md border-white/10 bg-black/20 px-2 py-1 text-xs font-medium text-zinc-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-70"
 													aria-label={`Category for ${nomination.gameName}`}
+													{...stylex.props(styles.field, styles.categorySelect)}
 												>
 													<option value="long">{categoryGameLabel(labels.long)}</option>
 													<option value="short">{categoryGameLabel(labels.short)}</option>
 												</select>
 											</td>
-											<td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+											<td {...stylex.props(styles.cell, styles.centered)}>
 												<Button
 													type="button"
 													onClick={() => openPitchesModal(nomination)}
 													variant="outline"
 													size="sm"
-													className="px-2 py-1 text-xs bg-transparent text-zinc-300 hover:text-zinc-300 border-zinc-700 hover:bg-zinc-800/40"
+													style={styles.pitchesButton}
 												>
 													{nomination.pitches?.length ?? 0}
 												</Button>
 											</td>
-											<td className="px-4 py-3 whitespace-nowrap text-center">
+											<td {...stylex.props(styles.cell, styles.centered)}>
 												<button
 													type="button"
 													onClick={() => handleToggleJurySelected(nomination)}
 													disabled={isProcessingNomination(nomination.id)}
-													className={`relative inline-flex h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-														isProcessingNomination(nomination.id) ? "opacity-70" : ""
-													} ${
-														getNominationSelectedState(nomination) ? "bg-blue-500" : "bg-zinc-700"
-													}`}
 													aria-pressed={getNominationSelectedState(nomination)}
+													{...stylex.props(
+														styles.toggle,
+														getNominationSelectedState(nomination)
+															? styles.toggleOn
+															: styles.toggleOff,
+														isProcessingNomination(nomination.id) && styles.toggleBusy,
+													)}
 												>
-													<span className="sr-only">
+													<span {...stylex.props(styles.srOnly)}>
 														{getNominationSelectedState(nomination) ? "Selected" : "Not selected"}
 													</span>
 													<span
-														className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ${
+														{...stylex.props(
+															styles.knob,
 															getNominationSelectedState(nomination)
-																? "translate-x-5"
-																: "translate-x-0"
-														}`}
+																? styles.knobOn
+																: styles.knobOff,
+														)}
 													>
 														{isProcessingNomination(nomination.id) && (
-															<span className="absolute inset-0 flex items-center justify-center">
-																<span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse motion-reduce:animate-none" />
+															<span {...stylex.props(styles.busyOverlay)}>
+																<span {...stylex.props(styles.busyDot)} />
 															</span>
 														)}
 													</span>

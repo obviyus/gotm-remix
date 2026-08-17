@@ -1,5 +1,7 @@
+import * as stylex from "@stylexjs/stylex";
 import React from "react";
-import { cn } from "~/lib/utils";
+import { color, motion, radius } from "~/styles/tokens.stylex";
+import { gameCard } from "./game-card.stylex";
 
 interface GameCardImageProps {
 	coverUrl: string | null;
@@ -7,20 +9,86 @@ interface GameCardImageProps {
 	status: "winner" | "jury" | "regular";
 }
 
+const styles = stylex.create({
+	frame: {
+		borderEndStartRadius: radius.xl,
+		borderStartStartRadius: radius.xl,
+		flexShrink: 0,
+		overflow: "hidden",
+		position: "relative",
+		width: 156,
+	},
+	scrim: {
+		backgroundImage: "linear-gradient(to top, oklch(21% 0.006 285.885 / 0.4), transparent)",
+		inset: 0,
+		position: "absolute",
+		zIndex: 10,
+	},
+	cover: {
+		height: "100%",
+		objectFit: "cover",
+		transform: { default: null, [stylex.when.ancestor(":hover", gameCard)]: "scale(1.05)" },
+		transitionDuration: "0.5s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: "100%",
+	},
+	badgeSlot: {
+		left: 8,
+		position: "absolute",
+		top: 8,
+		zIndex: 20,
+	},
+	placeholder: {
+		alignItems: "center",
+		backdropFilter: "blur(8px)",
+		backgroundColor: "oklch(27.4% 0.006 286.033 / 0.5)",
+		color: color.dim,
+		display: "flex",
+		height: "100%",
+		justifyContent: "center",
+		position: "relative",
+		width: "100%",
+	},
+	badge: {
+		borderRadius: radius.md,
+		borderWidth: 1,
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		lineHeight: 1.3333,
+		paddingBlock: 4,
+		paddingInline: 10,
+	},
+	winnerBadge: {
+		backgroundColor: "oklch(66.6% 0.179 58.318)",
+		borderColor: "oklch(82.8% 0.189 84.429 / 0.5)",
+		color: "oklch(96.2% 0.059 95.617)",
+	},
+	juryBadge: {
+		backgroundColor: "oklch(54.6% 0.245 262.881)",
+		borderColor: "oklch(70.7% 0.165 254.624 / 0.5)",
+		color: "oklch(93.2% 0.032 255.585)",
+	},
+});
+
+const brightnessStyles = stylex.create({
+	winner: {
+		filter: { default: null, [stylex.when.ancestor(":hover", gameCard)]: "brightness(1.25)" },
+	},
+	jury: {
+		filter: { default: null, [stylex.when.ancestor(":hover", gameCard)]: "brightness(1.1)" },
+	},
+	regular: {
+		filter: { default: null, [stylex.when.ancestor(":hover", gameCard)]: "brightness(1.1)" },
+	},
+});
+
 function StatusBadge({ status }: { status: "winner" | "jury" | "regular" }) {
 	switch (status) {
 		case "winner":
-			return (
-				<span className="px-2.5 py-1 bg-amber-600 text-amber-100 text-xs font-medium rounded-md border border-amber-400/50">
-					Winner
-				</span>
-			);
+			return <span {...stylex.props(styles.badge, styles.winnerBadge)}>Winner</span>;
 		case "jury":
-			return (
-				<span className="px-2.5 py-1 bg-blue-600 text-blue-100 text-xs font-medium rounded-md border border-blue-400/50">
-					Jury Selected
-				</span>
-			);
+			return <span {...stylex.props(styles.badge, styles.juryBadge)}>Jury Selected</span>;
 		default:
 			return null;
 	}
@@ -28,10 +96,10 @@ function StatusBadge({ status }: { status: "winner" | "jury" | "regular" }) {
 
 export function GameCardImage({ coverUrl, gameName, status }: GameCardImageProps) {
 	return (
-		<div className="w-39 shrink-0 overflow-hidden rounded-l-xl relative">
+		<div {...stylex.props(styles.frame)}>
 			{coverUrl ? (
 				<>
-					<div className="absolute inset-0 bg-linear-to-t from-zinc-900/40 to-transparent z-10" />
+					<div {...stylex.props(styles.scrim)} />
 					<img
 						src={coverUrl}
 						alt={gameName}
@@ -39,23 +107,16 @@ export function GameCardImage({ coverUrl, gameName, status }: GameCardImageProps
 						height={208}
 						loading="lazy"
 						decoding="async"
-						className={cn(
-							"h-full w-full object-cover transition-all duration-500 group-hover:scale-105",
-							status === "winner"
-								? "group-hover:brightness-125 filter-none"
-								: status === "jury"
-									? "group-hover:brightness-110 filter-none"
-									: "group-hover:brightness-110",
-						)}
+						{...stylex.props(styles.cover, brightnessStyles[status])}
 					/>
-					<div className="absolute top-2 left-2 z-20">
+					<div {...stylex.props(styles.badgeSlot)}>
 						<StatusBadge status={status} />
 					</div>
 				</>
 			) : (
-				<div className="h-full w-full bg-zinc-800/50 flex items-center justify-center backdrop-blur-sm relative">
-					<span className="text-zinc-500">No cover</span>
-					<div className="absolute top-2 left-2 z-20">
+				<div {...stylex.props(styles.placeholder)}>
+					<span>No cover</span>
+					<div {...stylex.props(styles.badgeSlot)}>
 						<StatusBadge status={status} />
 					</div>
 				</div>

@@ -20,7 +20,7 @@ Votes are tallied with ranked choice and rendered as an animated **Sankey diagra
 
 ## Stack
 
-React 19 + React Router 8 (SSR) on Bun · Vite 8 · Tailwind CSS v4 · Base UI · ECharts (the Sankey) · libSQL/Turso. Discord OAuth for login; IGDB/Twitch for game data.
+React 19 + React Router 8 (SSR) on Bun · Vite 8 · StyleX · Base UI · ECharts (the Sankey) · libSQL/Turso. Discord OAuth for login; IGDB/Twitch for game data.
 
 ## Develop
 

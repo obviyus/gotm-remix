@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
 	DatasetComponent,
@@ -13,6 +14,7 @@ import { useEffect, useId, useRef } from "react";
 import { Card } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/stats";
 
@@ -26,7 +28,151 @@ export const meta: Route.MetaFunction = ({ loaderData }) => {
 	});
 };
 
-const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
+const styles = stylex.create({
+	page: {
+		color: color.white,
+		display: "flex",
+		flexDirection: "column",
+		gap: 48,
+		marginInline: "auto",
+		maxWidth: "80rem",
+		paddingBlock: 32,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	sectionHeading: {
+		color: color.white,
+		fontSize: "1.5rem",
+		fontWeight: 600,
+		lineHeight: 1.3333,
+		marginBottom: 24,
+	},
+	panel: {
+		backgroundColor: "oklch(27.4% 0.006 286.033 / 0.7)",
+		borderColor: color.surfaceRaised,
+		borderRadius: radius.xl,
+		borderWidth: 1,
+		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		padding: 24,
+	},
+	interactive: {
+		borderColor: { default: color.surfaceRaised, ":hover": "oklch(68.5% 0.169 237.323)" },
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+	},
+	// ECharts sizes itself from the laid-out host, so the panel fixes the height
+	// before the canvas mounts.
+	chartPanel: {
+		height: "24rem",
+	},
+	roomyPanel: {
+		padding: 32,
+	},
+	statLabel: {
+		color: color.muted,
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		lineHeight: 1.4286,
+		marginBottom: 6,
+	},
+	statValue: {
+		color: color.white,
+		fontSize: "1.875rem",
+		fontWeight: 700,
+		lineHeight: 1.2,
+	},
+	chartHeading: {
+		color: color.body,
+		fontSize: "1.125rem",
+		fontWeight: 600,
+		lineHeight: 1.5556,
+		marginBottom: 16,
+	},
+	chartSlot: {
+		height: "100%",
+	},
+	chartFill: {
+		height: "100%",
+		width: "100%",
+	},
+	statGrid: {
+		display: "grid",
+		gap: 24,
+		gridTemplateColumns: {
+			default: null,
+			[media.sm]: "repeat(2, minmax(0, 1fr))",
+			[media.lg]: "repeat(5, minmax(0, 1fr))",
+		},
+		marginBottom: 32,
+	},
+	participationGrid: {
+		display: "grid",
+		gap: 24,
+		gridTemplateColumns: {
+			default: null,
+			[media.sm]: "repeat(2, minmax(0, 1fr))",
+			[media.lg]: "repeat(3, minmax(0, 1fr))",
+		},
+		marginBottom: 32,
+	},
+	pairGrid: {
+		display: "grid",
+		gap: 32,
+		gridTemplateColumns: { default: null, [media.lg]: "repeat(2, minmax(0, 1fr))" },
+	},
+	singleGrid: {
+		display: "grid",
+		gap: 32,
+	},
+	block: {
+		marginBottom: 32,
+	},
+	fullWidth: {
+		width: "100%",
+	},
+	leaderboard: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 12,
+	},
+	leaderboardNote: {
+		color: color.muted,
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+		marginBottom: 16,
+	},
+	leaderboardRow: {
+		alignItems: "center",
+		backgroundColor: "oklch(37% 0.013 285.805 / 0.5)",
+		borderRadius: radius.lg,
+		display: "flex",
+		justifyContent: "space-between",
+		padding: 12,
+	},
+	rowMain: {
+		flex: 1,
+	},
+	rowTitle: {
+		color: color.white,
+		fontWeight: 500,
+	},
+	rowMeta: {
+		color: color.muted,
+		fontSize: "0.875rem",
+		lineHeight: 1.4286,
+	},
+	rowTrailing: {
+		textAlign: "right",
+	},
+	rowValue: {
+		color: "oklch(74.6% 0.16 232.661)",
+		fontWeight: 500,
+	},
+	noData: {
+		color: "oklch(70.7% 0.022 261.325)",
+		textAlign: "center",
+	},
+});
 
 // Register ECharts components once globally for better performance
 echarts.use([
@@ -551,65 +697,61 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 	} = loaderData;
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-12 text-white">
+		<div {...stylex.props(styles.page)}>
 			{/* Overview Section */}
 			<section aria-labelledby={overviewId}>
-				<h2 id={overviewId} className="text-2xl font-semibold text-white mb-6">
+				<h2 id={overviewId} {...stylex.props(styles.sectionHeading)}>
 					Overall Stats
 				</h2>
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Nominations</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_nominations}</p>
+				<div {...stylex.props(styles.statGrid)}>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Total Nominations</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_nominations}</p>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Unique Nominations</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.unique_games}</p>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Unique Nominations</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.unique_games}</p>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Votes Cast</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_votes}</p>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Total Votes Cast</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_votes}</p>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Pitches Submitted</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_pitches}</p>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Total Pitches Submitted</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_pitches}</p>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Total Winners Selected</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_winners}</p>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Total Winners Selected</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_winners}</p>
 					</Card>
 				</div>
 			</section>
 
 			{/* Games Section */}
 			<section aria-labelledby={gamesId}>
-				<h2 id={gamesId} className="text-2xl font-semibold text-white mb-6">
+				<h2 id={gamesId} {...stylex.props(styles.sectionHeading)}>
 					Game Insights
 				</h2>
-				<div className="mb-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-8 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+				<div {...stylex.props(styles.block)}>
+					<Card style={[styles.panel, styles.roomyPanel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>
 							Top Nominated Games (Jury Selected vs Not Selected)
 						</h3>
-						<div className="h-full">
+						<div {...stylex.props(styles.chartSlot)}>
 							<TopGamesFinalistChart data={topGamesFinalist} />
 						</div>
 					</Card>
 				</div>
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Nominations by Game Release Year
-						</h3>
-						<div className="h-full">
+				<div {...stylex.props(styles.pairGrid)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Nominations by Game Release Year</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<YearlyNominationsChart data={yearStats} />
 						</div>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Short vs. Long Game Nominations
-						</h3>
-						<div className="h-full">
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Short vs. Long Game Nominations</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<ShortVsLongChart data={shortVsLong} />
 						</div>
 					</Card>
@@ -618,29 +760,29 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* Participation Section */}
 			<section aria-labelledby={participationId}>
-				<h2 id={participationId} className="text-2xl font-semibold text-white mb-6">
+				<h2 id={participationId} {...stylex.props(styles.sectionHeading)}>
 					Community Participation
 				</h2>
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Unique Nominators</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_nominators}</p>
+				<div {...stylex.props(styles.participationGrid)}>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Unique Nominators</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_nominators}</p>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Unique Voters</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_voters}</p>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Unique Voters</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_voters}</p>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 hover:border-sky-500 transition-all duration-300">
-						<h3 className="text-zinc-400 text-sm font-medium mb-1.5">Active Jury Members</h3>
-						<p className="text-3xl font-bold text-white">{totalStats.total_jury_members}</p>
+					<Card style={[styles.panel, styles.interactive]}>
+						<h3 {...stylex.props(styles.statLabel)}>Active Jury Members</h3>
+						<p {...stylex.props(styles.statValue)}>{totalStats.total_jury_members}</p>
 					</Card>
 				</div>
-				<div className="w-full">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
+				<div {...stylex.props(styles.fullWidth)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>
 							Monthly Participation (Nominators vs Voters)
 						</h3>
-						<div className="h-full">
+						<div {...stylex.props(styles.chartSlot)}>
 							<ParticipationChart data={monthlyStats} />
 						</div>
 					</Card>
@@ -649,23 +791,19 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* Jury Section */}
 			<section aria-labelledby={juryId}>
-				<h2 id={juryId} className="text-2xl font-semibold text-white mb-6">
+				<h2 id={juryId} {...stylex.props(styles.sectionHeading)}>
 					Jury Insights
 				</h2>
-				<div className="grid grid-cols-1 gap-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Monthly Jury Selection Counts
-						</h3>
-						<div className="h-full">
+				<div {...stylex.props(styles.singleGrid)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Monthly Jury Selection Counts</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<JurySelectionChart data={jurySelectionStats} />
 						</div>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Monthly Jury Selection Percentage
-						</h3>
-						<div className="h-full">
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Monthly Jury Selection Percentage</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<JurySelectionPercentageChart data={jurySelectionStats} />
 						</div>
 					</Card>
@@ -674,29 +812,27 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* Winners Section */}
 			<section aria-labelledby={winnersId}>
-				<h2 id={winnersId} className="text-2xl font-semibold text-white mb-6">
+				<h2 id={winnersId} {...stylex.props(styles.sectionHeading)}>
 					Winners Insights
 				</h2>
-				<div className="grid grid-cols-1 gap-8 mb-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Games with Most First Place Votes
-						</h3>
-						<div className="h-full">
+				<div {...stylex.props(styles.singleGrid, styles.block)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Games with Most First Place Votes</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<TopScoringNominationsChart data={topScoringNominations} />
 						</div>
 					</Card>
 				</div>
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Winners by Release Year</h3>
-						<div className="h-full">
+				<div {...stylex.props(styles.pairGrid)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Winners by Release Year</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<WinnersByYearChart data={winnersByYear} />
 						</div>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Victory Margins</h3>
-						<div className="h-full">
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Victory Margins</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<VotingMarginsChart data={votingMargins} />
 						</div>
 					</Card>
@@ -705,35 +841,30 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 
 			{/* Fun Stats Section */}
 			<section aria-labelledby={funStatsId}>
-				<h2 id={funStatsId} className="text-2xl font-semibold text-white mb-6">
+				<h2 id={funStatsId} {...stylex.props(styles.sectionHeading)}>
 					Fun Stats
 				</h2>
 
 				{/* Speed Runs */}
 				{speedRuns.length > 0 && (
-					<div className="mb-8">
-						<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700">
-							<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-								Fastest time from Release to Win
-							</h3>
-							<div className="space-y-3">
-								<p className="text-zinc-400 text-sm mb-4">
+					<div {...stylex.props(styles.block)}>
+						<Card style={styles.panel}>
+							<h3 {...stylex.props(styles.chartHeading)}>Fastest time from Release to Win</h3>
+							<div {...stylex.props(styles.leaderboard)}>
+								<p {...stylex.props(styles.leaderboardNote)}>
 									Games that won GOTM shortly after release
 								</p>
 								{speedRuns.slice(0, 5).map((game) => (
-									<div
-										key={game.game_name}
-										className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg"
-									>
-										<div className="flex-1">
-											<p className="text-white font-medium">{game.game_name}</p>
-											<p className="text-zinc-400 text-sm">Released: {game.game_year}</p>
+									<div key={game.game_name} {...stylex.props(styles.leaderboardRow)}>
+										<div {...stylex.props(styles.rowMain)}>
+											<p {...stylex.props(styles.rowTitle)}>{game.game_name}</p>
+											<p {...stylex.props(styles.rowMeta)}>Released: {game.game_year}</p>
 										</div>
-										<div className="text-right">
-											<p className="text-sky-400 font-medium">
+										<div {...stylex.props(styles.rowTrailing)}>
+											<p {...stylex.props(styles.rowValue)}>
 												{Math.round(game.days_to_win / 365)} years
 											</p>
-											<p className="text-zinc-400 text-sm">({game.days_to_win} days)</p>
+											<p {...stylex.props(styles.rowMeta)}>({game.days_to_win} days)</p>
 										</div>
 									</div>
 								))}
@@ -742,48 +873,43 @@ export default function StatsPage({ loaderData }: Route.ComponentProps) {
 					</div>
 				)}
 
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Nominators with Most Wins</h3>
-						<div className="h-full">
+				<div {...stylex.props(styles.pairGrid, styles.block)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Nominators with Most Wins</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<PowerNominatorsChart data={powerNominators} />
 						</div>
 					</Card>
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Pitch Success Rate</h3>
-						<div className="h-full">
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Pitch Success Rate</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<PitchSuccessRateChart data={pitchSuccessRate} />
 						</div>
 					</Card>
 				</div>
 
 				{/* Discord Dynasties */}
-				<div className="mb-8">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">
-							Longest Participation Streaks
-						</h3>
-						<div className="space-y-3">
-							<p className="text-zinc-400 text-sm mb-4">
+				<div {...stylex.props(styles.block)}>
+					<Card style={styles.panel}>
+						<h3 {...stylex.props(styles.chartHeading)}>Longest Participation Streaks</h3>
+						<div {...stylex.props(styles.leaderboard)}>
+							<p {...stylex.props(styles.leaderboardNote)}>
 								Users with the longest consecutive months of participation
 							</p>
 							{discordDynasties.slice(0, 5).map((user) => (
-								<div
-									key={user.discord_id}
-									className="flex items-center justify-between p-3 bg-zinc-700/50 rounded-lg"
-								>
-									<p className="text-white font-medium">{user.display_name}</p>
-									<p className="text-sky-400 font-medium">{user.consecutive_months} months</p>
+								<div key={user.discord_id} {...stylex.props(styles.leaderboardRow)}>
+									<p {...stylex.props(styles.rowTitle)}>{user.display_name}</p>
+									<p {...stylex.props(styles.rowValue)}>{user.consecutive_months} months</p>
 								</div>
 							))}
 						</div>
 					</Card>
 				</div>
 
-				<div className="w-full">
-					<Card className="bg-zinc-800/70 rounded-xl p-6 shadow-lg border border-zinc-700 h-96">
-						<h3 className="text-zinc-200 text-lg font-semibold mb-4">Monthly Nominations Trend</h3>
-						<div className="h-full">
+				<div {...stylex.props(styles.fullWidth)}>
+					<Card style={[styles.panel, styles.chartPanel]}>
+						<h3 {...stylex.props(styles.chartHeading)}>Monthly Nominations Trend</h3>
+						<div {...stylex.props(styles.chartSlot)}>
 							<MonthlyNominationCountsChart data={monthlyNominationCounts} />
 						</div>
 					</Card>
@@ -884,7 +1010,7 @@ function YearlyNominationsChart({ data }: { data: YearStats[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
@@ -1002,7 +1128,7 @@ function ParticipationChart({ data }: { data: MonthlyParticipationStats[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
@@ -1102,7 +1228,7 @@ function JurySelectionChart({ data }: { data: JurySelectionStatsType[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function JurySelectionPercentageChart({ data }: { data: JurySelectionStatsType[] }) {
@@ -1207,7 +1333,7 @@ function JurySelectionPercentageChart({ data }: { data: JurySelectionStatsType[]
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function ShortVsLongChart({ data }: { data: ShortVsLongStatsType[] }) {
@@ -1266,7 +1392,7 @@ function ShortVsLongChart({ data }: { data: ShortVsLongStatsType[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function WinnersByYearChart({ data }: { data: WinnerByYearStats[] }) {
@@ -1337,7 +1463,7 @@ function WinnersByYearChart({ data }: { data: WinnerByYearStats[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function TopScoringNominationsChart({ data }: { data: TopScoringNominationStats[] }) {
@@ -1417,7 +1543,7 @@ function TopScoringNominationsChart({ data }: { data: TopScoringNominationStats[
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
@@ -1535,10 +1661,10 @@ function TopGamesFinalistChart({ data }: { data: TopGamesFinalistStats[] }) {
 	}, [data]);
 
 	if (data.length === 0) {
-		return <p className="text-center text-gray-400">No data available for this chart.</p>;
+		return <p {...stylex.props(styles.noData)}>No data available for this chart.</p>;
 	}
 
-	return <div ref={chartRef} style={FULL_SIZE_STYLE} />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 // Power Nominators Chart
@@ -1602,7 +1728,7 @@ function PowerNominatorsChart({ data }: { data: PowerNominatorStats[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 // Pitch Success Rate Chart
@@ -1678,7 +1804,7 @@ function PitchSuccessRateChart({ data }: { data: PitchSuccessRateStats[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 // Voting Margins Chart
@@ -1760,7 +1886,7 @@ function VotingMarginsChart({ data }: { data: VotingMarginStats[] }) {
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }
 
 // Monthly Nomination Counts Chart
@@ -1867,5 +1993,5 @@ function MonthlyNominationCountsChart({ data }: { data: MonthlyNominationCountSt
 		});
 	}, [data]);
 
-	return <div ref={chartRef} className="w-full h-full" />;
+	return <div ref={chartRef} {...stylex.props(styles.chartFill)} />;
 }

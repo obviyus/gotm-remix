@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import type { SankeySeriesOption } from "echarts/charts";
 import type { TooltipComponentOption } from "echarts/components";
 import type { ComposeOption, ECharts } from "echarts/core";
@@ -5,6 +6,7 @@ import type { CallbackDataParams } from "echarts/types/dist/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import type { VotingTimelapseFrame } from "~/server/voting.server";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import { getBaseGameName, getNodeVoteCount, getWinnerName } from "~/utils/votingResults";
 
 type ECOption = ComposeOption<SankeySeriesOption | TooltipComponentOption>;
@@ -60,10 +62,84 @@ const COLOR_PALETTE = [
 	"#2dd4bf", // teal-400
 ];
 
-const FULL_SIZE_STYLE = { width: "100%", height: "100%" } as const;
 const FRAME_DURATION_MS = 700;
 const EMPTY_GAME_URLS: Record<string, string> = {};
 const EMPTY_TIMELAPSE_FRAMES: VotingTimelapseFrame[] = [];
+
+const styles = stylex.create({
+	panel: {
+		backgroundColor: color.surface,
+		borderRadius: radius.xl,
+		boxShadow: {
+			default:
+				"0 0 0 1px oklch(37% 0.013 285.805), 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+			":hover":
+				"0 0 0 1px oklch(37% 0.013 285.805), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+		},
+		padding: { default: 16, [media.sm]: 24 },
+		transitionDuration: motion.duration,
+		transitionProperty: "box-shadow",
+		transitionTimingFunction: motion.easing,
+	},
+	header: {
+		alignItems: { default: null, [media.sm]: "center" },
+		display: "flex",
+		flexDirection: { default: "column", [media.sm]: "row" },
+		gap: 12,
+		justifyContent: { default: null, [media.sm]: "space-between" },
+		marginBottom: { default: 16, [media.sm]: 24 },
+	},
+	title: {
+		color: color.heading,
+		fontSize: { default: "1.25rem", [media.sm]: "1.5rem" },
+		fontWeight: 700,
+		letterSpacing: "-0.025em",
+		lineHeight: { default: 1.4, [media.sm]: 1.3333 },
+	},
+	winnerLink: {
+		color: { default: color.link, ":hover": "oklch(82.7% 0.119 306.383)" },
+		transitionDuration: motion.duration,
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+	progress: {
+		color: color.muted,
+		fontSize: "0.75rem",
+		lineHeight: 1.3333,
+		marginTop: 4,
+	},
+	// ECharts measures its host after layout, so the scroll container fixes the
+	// height and the inner track fixes a minimum width before the canvas mounts.
+	scroller: {
+		height: { default: "24rem", [media.sm]: "28rem" },
+		overflowX: "auto",
+		position: "relative",
+		width: "100%",
+	},
+	track: {
+		height: "100%",
+		minWidth: "37.5rem",
+	},
+	chartFill: {
+		height: "100%",
+		width: "100%",
+	},
+	placeholder: {
+		alignItems: "center",
+		display: "flex",
+		height: "100%",
+		inset: 0,
+		justifyContent: "center",
+		pointerEvents: "none",
+		position: "absolute",
+	},
+	placeholderText: {
+		color: color.muted,
+		fontSize: { default: "1rem", [media.sm]: "1.125rem" },
+		fontWeight: 500,
+		lineHeight: { default: 1.5, [media.sm]: 1.5556 },
+	},
+});
 
 // AIDEV-NOTE: Lazy-load ECharts to keep base bundle smaller; cache promise to avoid re-import churn.
 let echartsPromise: Promise<typeof import("echarts/core")> | null = null;
@@ -379,10 +455,10 @@ export function VotingResultsChart({
 	};
 
 	return (
-		<div className="rounded-xl bg-zinc-800 p-4 shadow-lg transition-shadow hover:shadow-xl sm:p-6 ring-1 ring-zinc-700">
-			<div className="flex flex-col gap-3 mb-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+		<div {...stylex.props(styles.panel)}>
+			<div {...stylex.props(styles.header)}>
 				<div>
-					<h2 className="text-xl font-bold tracking-tight text-zinc-100 sm:text-2xl">
+					<h2 {...stylex.props(styles.title)}>
 						{title}
 						{showWinner && winner ? (
 							<>
@@ -392,7 +468,7 @@ export function VotingResultsChart({
 										href={winnerUrl}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="text-blue-400 hover:text-purple-300 transition-colors"
+										{...stylex.props(styles.winnerLink)}
 									>
 										{winner}
 									</a>
@@ -403,7 +479,7 @@ export function VotingResultsChart({
 						) : null}
 					</h2>
 					{timelapseProgress ? (
-						<p className="text-xs text-zinc-400 mt-1">Timelapse {timelapseProgress}</p>
+						<p {...stylex.props(styles.progress)}>Timelapse {timelapseProgress}</p>
 					) : null}
 				</div>
 				{hasTimelapse ? (
@@ -417,12 +493,12 @@ export function VotingResultsChart({
 					</Button>
 				) : null}
 			</div>
-			<div className="relative h-96 w-full sm:h-112 overflow-x-auto">
-				<div className="min-w-150 h-full">
-					<div ref={chartRef} style={FULL_SIZE_STYLE} />
+			<div {...stylex.props(styles.scroller)}>
+				<div {...stylex.props(styles.track)}>
+					<div ref={chartRef} {...stylex.props(styles.chartFill)} />
 					{!processedData && (
-						<div className="absolute inset-0 flex h-full items-center justify-center pointer-events-none">
-							<p className="text-base font-medium text-zinc-400 sm:text-lg">
+						<div {...stylex.props(styles.placeholder)}>
+							<p {...stylex.props(styles.placeholderText)}>
 								{results.length === 0 ? "No voting results available yet" : "Processing results…"}
 							</p>
 						</div>

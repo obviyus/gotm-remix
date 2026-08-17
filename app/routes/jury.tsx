@@ -1,5 +1,7 @@
+import * as stylex from "@stylexjs/stylex";
 import React from "react";
 import { db } from "~/server/database.server";
+import { color, media } from "~/styles/tokens.stylex";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/jury";
 
@@ -21,19 +23,45 @@ export async function loader() {
 	return { juryMembers: result.rows.map((row) => row.name as string) };
 }
 
+const styles = stylex.create({
+	page: {
+		height: "100%",
+		marginInline: "auto",
+		paddingBlock: 24,
+		paddingInline: { default: 16, [media.sm]: 24, [media.lg]: 32 },
+	},
+	article: {
+		height: "100%",
+		marginInline: "auto",
+	},
+	header: {
+		marginBottom: 24,
+	},
+	heading: {
+		color: color.heading,
+		fontSize: { default: "1.5rem", [media.sm]: "1.875rem" },
+		fontWeight: 700,
+		letterSpacing: "-0.025em",
+		lineHeight: { default: 1.3333, [media.sm]: 1.2 },
+	},
+	list: {
+		listStyleType: "disc",
+		marginLeft: 24,
+		marginTop: 8,
+	},
+});
+
 export default function Jury({ loaderData }: Route.ComponentProps) {
 	const { juryMembers } = loaderData;
 
 	return (
-		<div className="mx-auto h-full px-4 py-6 sm:px-6 lg:px-8">
-			<article className="mx-auto h-full">
-				<header className="mb-6">
-					<h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
-						Jury Members
-					</h1>
+		<div {...stylex.props(styles.page)}>
+			<article {...stylex.props(styles.article)}>
+				<header {...stylex.props(styles.header)}>
+					<h1 {...stylex.props(styles.heading)}>Jury Members</h1>
 				</header>
 
-				<ul className="list-disc ml-6 mt-2">
+				<ul {...stylex.props(styles.list)}>
 					{juryMembers.map((member) => (
 						<li key={member}>{member}</li>
 					))}

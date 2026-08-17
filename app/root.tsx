@@ -1,9 +1,11 @@
+import * as stylex from "@stylexjs/stylex";
 import React from "react";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 import { loadRequestUser } from "~/route-context.server";
+import { color } from "~/styles/tokens.stylex";
 import { DISCORD_INVITE_URL, SITE_NAME, SITE_URL, absoluteUrl, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/root";
-import "./tailwind.css";
+import "./global.css";
 
 export const middleware: Route.MiddlewareFunction[] = [loadRequestUser];
 
@@ -53,22 +55,49 @@ const siteSchema = {
 	],
 };
 
+const styles = stylex.create({
+	document: {
+		backgroundColor: color.canvas,
+		color: color.heading,
+		colorScheme: "dark",
+	},
+	body: {
+		backgroundColor: color.canvas,
+		color: color.heading,
+		position: "relative",
+	},
+	isolation: {
+		isolation: "isolate",
+	},
+});
+
+function DevStyleX() {
+	React.useEffect(() => {
+		if (import.meta.env.DEV) {
+			void import("virtual:stylex:css-only");
+		}
+	}, []);
+
+	return import.meta.env.DEV ? <link rel="stylesheet" href="/virtual:stylex.css" /> : null;
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" className="bg-zinc-900 text-zinc-100" style={{ colorScheme: "dark" }}>
+		<html lang="en" {...stylex.props(styles.document)}>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<meta name="theme-color" content="#18181B" />
 				<Meta />
 				<Links />
+				<DevStyleX />
 				<script
 					type="application/ld+json"
 					dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
 				/>
 			</head>
-			<body className="relative prose lg:prose-xl bg-zinc-900 text-zinc-100">
-				<div className="isolate">{children}</div>
+			<body {...stylex.props(styles.body)}>
+				<div {...stylex.props(styles.isolation)}>{children}</div>
 				<ScrollRestoration />
 				<Scripts />
 			</body>

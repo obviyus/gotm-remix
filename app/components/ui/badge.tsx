@@ -1,48 +1,65 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
+import * as stylex from "@stylexjs/stylex";
 
-import { cn } from "~/lib/utils";
+import type { StyledProps } from "~/styles/style-props";
+import { color, motion, radius } from "~/styles/tokens.stylex";
 
-const badgeVariants = cva(
-	"inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
-	{
-		variants: {
-			variant: {
-				default: "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
-				secondary:
-					"border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
-				destructive:
-					"border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-				outline: "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-			},
-		},
-		defaultVariants: {
-			variant: "default",
-		},
+type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
+
+const styles = stylex.create({
+	root: {
+		alignItems: "center",
+		borderRadius: radius.md,
+		borderWidth: 1,
+		display: "inline-flex",
+		flexShrink: 0,
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		gap: 4,
+		justifyContent: "center",
+		overflow: "hidden",
+		paddingBlock: 2,
+		paddingInline: 8,
+		transitionDuration: motion.duration,
+		transitionProperty: "color, box-shadow",
+		transitionTimingFunction: motion.easing,
+		whiteSpace: "nowrap",
+		width: "fit-content",
+		borderColor: { default: null, ":focus-visible": "oklch(70.8% 0 0)" },
+		boxShadow: { default: null, ":focus-visible": "0 0 0 3px oklch(70.8% 0 0 / 0.5)" },
 	},
-);
+});
 
-function Badge({
-	className,
-	variant = "default",
-	render,
-	...props
-}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+const variantStyles = stylex.create({
+	default: {
+		backgroundColor: "oklch(20.5% 0 0)",
+		borderColor: "transparent",
+		color: "oklch(98.5% 0 0)",
+	},
+	secondary: {
+		backgroundColor: "oklch(97% 0 0)",
+		borderColor: "transparent",
+		color: "oklch(20.5% 0 0)",
+	},
+	destructive: {
+		backgroundColor: "oklch(57.7% 0.245 27.325)",
+		borderColor: "transparent",
+		color: color.white,
+	},
+	outline: {
+		color: "oklch(14.5% 0 0)",
+	},
+});
+
+export type BadgeProps = StyledProps<useRender.ComponentProps<"span">> & {
+	variant?: BadgeVariant;
+};
+
+export function Badge({ style, variant = "default", render, ...props }: BadgeProps) {
 	return useRender({
 		defaultTagName: "span",
-		props: mergeProps<"span">(
-			{
-				className: cn(badgeVariants({ variant }), className),
-			},
-			props,
-		),
+		props: mergeProps<"span">(stylex.props(styles.root, variantStyles[variant], style), props),
 		render,
-		state: {
-			slot: "badge",
-			variant,
-		},
 	});
 }
-
-export { Badge, badgeVariants };

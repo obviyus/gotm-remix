@@ -1,4 +1,7 @@
+import * as stylex from "@stylexjs/stylex";
 import { ArrowDown, ArrowUp, Edit, ExternalLink, MessageCircle, Trash2 } from "lucide-react";
+import { control } from "~/styles/markers.stylex";
+import { color, motion, radius } from "~/styles/tokens.stylex";
 import type { Nomination } from "~/types";
 
 interface GameCardActionsProps {
@@ -20,6 +23,218 @@ interface GameCardActionsProps {
 	onEdit?: (game: Nomination) => void;
 	onDelete?: (game: Nomination) => void;
 }
+
+const styles = stylex.create({
+	stack: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		marginTop: "auto",
+		minWidth: 0,
+	},
+	votingStack: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 8,
+		width: "100%",
+	},
+	linkColumn: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 6,
+	},
+	fullWidth: {
+		width: "100%",
+	},
+	action: {
+		alignItems: "center",
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		gap: 8,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		overflow: "hidden",
+		paddingBlock: 8,
+		position: "relative",
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: "100%",
+		"::after": {
+			content: "''",
+			inset: 0,
+			position: "absolute",
+			transitionDuration: motion.duration,
+			transitionProperty: "color, background-color, border-color",
+			transitionTimingFunction: motion.easing,
+		},
+	},
+	roomy: { paddingInline: 16 },
+	snug: { paddingInline: 12 },
+	label: {
+		alignItems: "center",
+		display: "flex",
+		gap: 8,
+		justifyContent: "center",
+		position: "relative",
+		transform: { default: null, [stylex.when.ancestor(":hover", control)]: "scale(1.05)" },
+		transitionDuration: motion.duration,
+		transitionProperty: "transform, translate, scale, rotate",
+		transitionTimingFunction: motion.easing,
+		zIndex: 10,
+	},
+	icon: {
+		height: 16,
+		width: 16,
+	},
+	leadingIcon: {
+		height: 16,
+		transitionDuration: motion.duration,
+		transitionProperty: "transform, translate, scale, rotate",
+		transitionTimingFunction: motion.easing,
+		translate: { default: null, [stylex.when.ancestor(":hover", control)]: "2px -2px" },
+		width: 16,
+	},
+	neutral: {
+		alignItems: "center",
+		backdropFilter: "blur(8px)",
+		backgroundColor: {
+			default: "oklch(55.2% 0.016 285.938 / 0.1)",
+			":hover": "oklch(55.2% 0.016 285.938 / 0.2)",
+		},
+		borderColor: {
+			default: "oklch(55.2% 0.016 285.938 / 0.2)",
+			":hover": "oklch(55.2% 0.016 285.938 / 0.3)",
+		},
+		borderRadius: radius.lg,
+		borderWidth: 1,
+		color: color.body,
+		display: "inline-flex",
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		gap: 8,
+		justifyContent: "center",
+		lineHeight: 1.4286,
+		paddingBlock: 8,
+		paddingInline: 16,
+		transitionDuration: "0.3s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: "100%",
+	},
+	// Replaces the tone entirely rather than layering on top of it, because a
+	// disabled control should not keep the tone's hover response.
+	unavailable: {
+		backgroundColor: "transparent",
+		borderColor: "oklch(70.5% 0.015 286.067 / 0.2)",
+		color: color.muted,
+		cursor: "not-allowed",
+		opacity: 0.5,
+	},
+});
+
+/**
+ * Each action reads as a colour: green adds, red removes, amber warns, blue
+ * informs, purple leaves the site.
+ */
+const toneStyles = stylex.create({
+	affirm: {
+		backgroundColor: { default: null, ":hover": "oklch(69.6% 0.17 162.48 / 0.1)" },
+		borderColor: {
+			default: "oklch(76.5% 0.177 163.223 / 0.2)",
+			":hover": "oklch(76.5% 0.177 163.223 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(69.6% 0.17 162.48 / 0.2), 0 1px 2px -1px oklch(69.6% 0.17 162.48 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(69.6% 0.17 162.48 / 0.4), 0 1px 2px -1px oklch(69.6% 0.17 162.48 / 0.4)",
+		},
+		color: color.affirm,
+		"::after": {
+			backgroundColor: {
+				default: "transparent",
+				":hover": "oklch(76.5% 0.177 163.223 / 0.05)",
+			},
+		},
+	},
+	deny: {
+		backgroundColor: { default: null, ":hover": "oklch(63.7% 0.237 25.331 / 0.1)" },
+		borderColor: {
+			default: "oklch(70.4% 0.191 22.216 / 0.2)",
+			":hover": "oklch(70.4% 0.191 22.216 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(63.7% 0.237 25.331 / 0.2), 0 1px 2px -1px oklch(63.7% 0.237 25.331 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(63.7% 0.237 25.331 / 0.4), 0 1px 2px -1px oklch(63.7% 0.237 25.331 / 0.4)",
+		},
+		color: color.deny,
+		"::after": {
+			backgroundColor: { default: "transparent", ":hover": "oklch(70.4% 0.191 22.216 / 0.05)" },
+		},
+	},
+	award: {
+		backgroundColor: { default: null, ":hover": "oklch(76.9% 0.188 70.08 / 0.1)" },
+		borderColor: {
+			default: "oklch(82.8% 0.189 84.429 / 0.2)",
+			":hover": "oklch(82.8% 0.189 84.429 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(76.9% 0.188 70.08 / 0.2), 0 1px 2px -1px oklch(76.9% 0.188 70.08 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(76.9% 0.188 70.08 / 0.4), 0 1px 2px -1px oklch(76.9% 0.188 70.08 / 0.4)",
+		},
+		color: color.award,
+		"::after": {
+			backgroundColor: { default: "transparent", ":hover": "oklch(82.8% 0.189 84.429 / 0.05)" },
+		},
+	},
+	inform: {
+		backgroundColor: { default: null, ":hover": "oklch(62.3% 0.214 259.815 / 0.1)" },
+		borderColor: {
+			default: "oklch(70.7% 0.165 254.624 / 0.2)",
+			":hover": "oklch(70.7% 0.165 254.624 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(62.3% 0.214 259.815 / 0.2), 0 1px 2px -1px oklch(62.3% 0.214 259.815 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(62.3% 0.214 259.815 / 0.4), 0 1px 2px -1px oklch(62.3% 0.214 259.815 / 0.4)",
+		},
+		color: color.focus,
+		"::after": {
+			backgroundColor: { default: "transparent", ":hover": "oklch(70.7% 0.165 254.624 / 0.05)" },
+		},
+	},
+	offsite: {
+		backgroundColor: { default: null, ":hover": "oklch(62.7% 0.265 303.9 / 0.1)" },
+		borderColor: {
+			default: "oklch(71.4% 0.203 305.504 / 0.2)",
+			":hover": "oklch(71.4% 0.203 305.504 / 0.3)",
+		},
+		boxShadow: {
+			default:
+				"0 1px 3px 0 oklch(62.7% 0.265 303.9 / 0.2), 0 1px 2px -1px oklch(62.7% 0.265 303.9 / 0.2)",
+			":hover":
+				"0 1px 3px 0 oklch(62.7% 0.265 303.9 / 0.4), 0 1px 2px -1px oklch(62.7% 0.265 303.9 / 0.4)",
+		},
+		color: "oklch(62.7% 0.265 303.9)",
+		"::after": {
+			backgroundColor: { default: "transparent", ":hover": "oklch(71.4% 0.203 305.504 / 0.05)" },
+		},
+	},
+});
+
+const pitchLabel = (pitchCount: number) =>
+	pitchCount === 0
+		? "No Pitches Yet"
+		: `View ${pitchCount} ${pitchCount === 1 ? "Pitch" : "Pitches"}`;
 
 export function GameCardActions({
 	game,
@@ -58,28 +273,38 @@ export function GameCardActions({
 		}
 	};
 
+	const nominateDisabled = Boolean(
+		buttonDisabled || (alreadyNominated && isCurrentUserNomination) || isPreviousWinner,
+	);
+	const nominateTone = isPreviousWinner
+		? toneStyles.award
+		: alreadyNominated && !isCurrentUserNomination
+			? toneStyles.inform
+			: toneStyles.affirm;
+
 	return (
-		<div className="flex flex-col gap-2 mt-auto min-w-0">
+		<div {...stylex.props(styles.stack)}>
 			{showVotingButtons && (
-				<div className="flex flex-col w-full gap-2">
+				<div {...stylex.props(styles.votingStack)}>
 					<button
 						type="button"
 						onClick={isRanked ? onUnrank : onRank}
-						className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-							isRanked
-								? "text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors"
-								: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-						}`}
+						{...stylex.props(
+							control,
+							styles.action,
+							styles.roomy,
+							isRanked ? toneStyles.deny : toneStyles.affirm,
+						)}
 					>
-						<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
+						<span {...stylex.props(styles.label)}>
 							{isRanked ? (
 								<>
-									<ArrowDown className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+									<ArrowDown {...stylex.props(styles.leadingIcon)} />
 									Remove from Ranking
 								</>
 							) : (
 								<>
-									<ArrowUp className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+									<ArrowUp {...stylex.props(styles.leadingIcon)} />
 									Add to Ranking
 								</>
 							)}
@@ -87,38 +312,18 @@ export function GameCardActions({
 					</button>
 
 					{onViewPitches && (
-						<button
-							type="button"
-							onClick={onViewPitches}
-							className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-zinc-200 bg-zinc-500/10 hover:bg-zinc-500/20 transition-all duration-300 backdrop-blur-sm border border-zinc-500/20 hover:border-zinc-500/30"
-						>
-							<MessageCircle className="w-4 h-4" />
-							{pitchCount > 0 ? (
-								<>
-									View {pitchCount} {pitchCount === 1 ? "Pitch" : "Pitches"}
-								</>
-							) : (
-								"No Pitches Yet"
-							)}
+						<button type="button" onClick={onViewPitches} {...stylex.props(styles.neutral)}>
+							<MessageCircle {...stylex.props(styles.icon)} />
+							{pitchLabel(pitchCount)}
 						</button>
 					)}
 				</div>
 			)}
 
 			{showPitchesButton && onViewPitches && (
-				<button
-					type="button"
-					onClick={onViewPitches}
-					className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-zinc-200 bg-zinc-500/10 hover:bg-zinc-500/20 transition-all duration-300 backdrop-blur-sm border border-zinc-500/20 hover:border-zinc-500/30"
-				>
-					<MessageCircle className="w-4 h-4" />
-					{pitchCount > 0 ? (
-						<>
-							View {pitchCount} {pitchCount === 1 ? "Pitch" : "Pitches"}
-						</>
-					) : (
-						"No Pitches Yet"
-					)}
+				<button type="button" onClick={onViewPitches} {...stylex.props(styles.neutral)}>
+					<MessageCircle {...stylex.props(styles.icon)} />
+					{pitchLabel(pitchCount)}
 				</button>
 			)}
 
@@ -126,18 +331,15 @@ export function GameCardActions({
 				<button
 					type="button"
 					onClick={handleNominateClick}
-					disabled={
-						buttonDisabled || (alreadyNominated && isCurrentUserNomination) || isPreviousWinner
-					}
-					className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden ${
-						isPreviousWinner
-							? "text-amber-500 shadow-sm shadow-amber-500/20 border border-amber-400/20 hover:bg-amber-500/10 hover:border-amber-400/30 hover:shadow-amber-500/40 after:absolute after:inset-0 after:bg-amber-400/0 hover:after:bg-amber-400/5 after:transition-colors"
-							: alreadyNominated && !isCurrentUserNomination
-								? "text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors"
-								: "text-emerald-500 shadow-sm shadow-emerald-500/20 border border-emerald-400/20 hover:bg-emerald-500/10 hover:border-emerald-400/30 hover:shadow-emerald-500/40 after:absolute after:inset-0 after:bg-emerald-400/0 hover:after:bg-emerald-400/5 after:transition-colors"
-					} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:text-zinc-400 disabled:border-zinc-400/20`}
+					disabled={nominateDisabled}
+					{...stylex.props(
+						control,
+						styles.action,
+						styles.roomy,
+						nominateDisabled ? styles.unavailable : nominateTone,
+					)}
 				>
-					<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105 group-disabled:transform-none">
+					<span {...stylex.props(styles.label)}>
 						{buttonText ||
 							(alreadyNominated
 								? isCurrentUserNomination
@@ -149,17 +351,17 @@ export function GameCardActions({
 			)}
 
 			{(onEdit || onDelete || game.gameUrl) && (
-				<div className={variant === "nomination" ? "flex flex-col gap-1.5" : "w-full"}>
+				<div {...stylex.props(variant === "nomination" ? styles.linkColumn : styles.fullWidth)}>
 					{game.gameUrl && (
 						<a
 							href={game.gameUrl}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-purple-500 shadow-sm shadow-purple-500/20 border border-purple-400/20 hover:bg-purple-500/10 hover:border-purple-400/30 hover:shadow-purple-500/40 after:absolute after:inset-0 after:bg-purple-400/0 hover:after:bg-purple-400/5 after:transition-colors w-full"
 							title="View on IGDB"
+							{...stylex.props(control, styles.action, styles.snug, toneStyles.offsite)}
 						>
-							<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-								<ExternalLink className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+							<span {...stylex.props(styles.label)}>
+								<ExternalLink {...stylex.props(styles.leadingIcon)} />
 								{variant === "nomination" ? "View on IGDB" : "IGDB"}
 							</span>
 						</a>
@@ -170,11 +372,11 @@ export function GameCardActions({
 								<button
 									type="button"
 									onClick={handleEditClick}
-									className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-blue-500 shadow-sm shadow-blue-500/20 border border-blue-400/20 hover:bg-blue-500/10 hover:border-blue-400/30 hover:shadow-blue-500/40 after:absolute after:inset-0 after:bg-blue-400/0 hover:after:bg-blue-400/5 after:transition-colors w-full"
 									title={game.pitches.length > 0 ? "Edit pitch" : "Add pitch"}
+									{...stylex.props(control, styles.action, styles.snug, toneStyles.inform)}
 								>
-									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-										<Edit className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+									<span {...stylex.props(styles.label)}>
+										<Edit {...stylex.props(styles.leadingIcon)} />
 										{game.pitches.length > 0 ? "Edit pitch" : "Add pitch"}
 									</span>
 								</button>
@@ -183,11 +385,11 @@ export function GameCardActions({
 								<button
 									type="button"
 									onClick={handleDeleteClick}
-									className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 group/btn relative overflow-hidden text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40 after:absolute after:inset-0 after:bg-red-400/0 hover:after:bg-red-400/5 after:transition-colors w-full"
 									title="Delete nomination"
+									{...stylex.props(control, styles.action, styles.snug, toneStyles.deny)}
 								>
-									<span className="relative z-10 flex items-center justify-center gap-2 transition-transform group-hover/btn:scale-105">
-										<Trash2 className="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+									<span {...stylex.props(styles.label)}>
+										<Trash2 {...stylex.props(styles.leadingIcon)} />
 										Delete
 									</span>
 								</button>

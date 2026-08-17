@@ -1,3 +1,4 @@
+import * as stylex from "@stylexjs/stylex";
 import React from "react";
 import { CalendarDays, Trophy } from "lucide-react";
 import { Link } from "react-router";
@@ -5,10 +6,12 @@ import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { getMonths } from "~/server/month.server";
+import { color, media, motion, radius } from "~/styles/tokens.stylex";
 import type { Month, Nomination } from "~/types";
 import { categoryWinnerLabel } from "~/utils/categoryLabels";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/history";
+import { monthTile } from "./history-card.stylex";
 
 export const meta: Route.MetaFunction = () =>
 	pageMeta({
@@ -65,6 +68,164 @@ export async function loader() {
 	return { months };
 }
 
+const styles = stylex.create({
+	page: {
+		marginInline: "auto",
+		marginTop: 32,
+		maxWidth: "80rem",
+		paddingInline: { default: 8, [media.sm]: 16, [media.lg]: 24 },
+	},
+	year: {
+		marginBottom: 40,
+	},
+	yearRule: {
+		marginBottom: 24,
+		position: "relative",
+	},
+	ruleLine: {
+		alignItems: "center",
+		display: "flex",
+		inset: 0,
+		position: "absolute",
+	},
+	rule: {
+		borderTopColor: color.surfaceRaised,
+		borderTopWidth: 1,
+		width: "100%",
+	},
+	yearLabelRow: {
+		display: "flex",
+		justifyContent: "center",
+		position: "relative",
+	},
+	yearLabel: {
+		alignItems: "center",
+		backgroundColor: color.canvas,
+		color: "oklch(87.1% 0.006 286.286)",
+		display: "flex",
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		gap: 6,
+		lineHeight: 1.4,
+		paddingInline: 16,
+	},
+	yearIcon: {
+		color: color.muted,
+		height: 20,
+		width: 20,
+	},
+	grid: {
+		display: "grid",
+		gap: 16,
+		gridTemplateColumns: {
+			default: null,
+			[media.sm]: "repeat(2, minmax(0, 1fr))",
+			[media.lg]: "repeat(3, minmax(0, 1fr))",
+			[media.xl]: "repeat(4, minmax(0, 1fr))",
+		},
+	},
+	monthLink: {
+		borderRadius: radius.lg,
+		display: "block",
+		outlineStyle: { default: null, ":focus-visible": "none" },
+		boxShadow: {
+			default: null,
+			":focus-visible":
+				"0 0 0 2px oklch(21% 0.006 285.885), 0 0 0 4px oklch(62.3% 0.214 259.815 / 0.7)",
+		},
+		transform: { default: null, ":hover": "scale(1.02)" },
+		transitionDuration: "0.2s",
+		transitionProperty: "all",
+		transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+	},
+	card: {
+		backdropFilter: "blur(8px)",
+		backgroundColor: "oklch(21% 0.006 285.885 / 0.6)",
+		borderColor: { default: color.surface, ":hover": "oklch(62.3% 0.214 259.815 / 0.6)" },
+		boxShadow: {
+			default: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+			":hover":
+				"0 10px 15px -3px oklch(62.3% 0.214 259.815 / 0.15), 0 4px 6px -4px oklch(62.3% 0.214 259.815 / 0.15)",
+		},
+		height: "100%",
+		transitionDuration: "0.2s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+	},
+	cardHeader: {
+		paddingBottom: 12,
+	},
+	cardTitle: {
+		color: color.heading,
+		fontSize: "1.25rem",
+		lineHeight: 1.4,
+	},
+	themeBadge: {
+		backgroundColor: {
+			default: "oklch(48.8% 0.243 264.376 / 0.3)",
+			":hover": "oklch(48.8% 0.243 264.376 / 0.4)",
+		},
+		color: "oklch(80.9% 0.105 251.813)",
+		width: "fit-content",
+	},
+	cardContent: {
+		paddingTop: 0,
+	},
+	winnerList: {
+		display: "flex",
+		flexDirection: "column",
+		gap: 12,
+	},
+	winner: {
+		alignItems: "flex-start",
+		display: "flex",
+		gap: 12,
+	},
+	cover: {
+		borderRadius: radius.base,
+		boxShadow: {
+			default: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+			[stylex.when.ancestor(":hover", monthTile)]:
+				"0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+		},
+		height: 64,
+		objectFit: "cover",
+		transform: { default: null, [stylex.when.ancestor(":hover", monthTile)]: "scale(1.05)" },
+		transitionDuration: "0.2s",
+		transitionProperty: "all",
+		transitionTimingFunction: motion.easing,
+		width: 48,
+	},
+	winnerKind: {
+		alignItems: "center",
+		display: "flex",
+		fontSize: "0.75rem",
+		fontWeight: 500,
+		lineHeight: 1.3333,
+		marginBottom: 2,
+	},
+	longKind: {
+		color: color.link,
+	},
+	shortKind: {
+		color: "oklch(76.5% 0.177 163.223)",
+	},
+	trophy: {
+		height: 14,
+		marginRight: 4,
+		width: 14,
+	},
+	winnerName: {
+		color: { default: color.body, [stylex.when.ancestor(":hover", monthTile)]: color.white },
+		fontSize: "0.875rem",
+		fontWeight: 500,
+		lineHeight: 1.4286,
+		transitionDuration: "0.2s",
+		transitionProperty: "color, background-color, border-color",
+		transitionTimingFunction: motion.easing,
+	},
+});
+
 export default function History({ loaderData }: Route.ComponentProps) {
 	const { months } = loaderData;
 
@@ -81,53 +242,50 @@ export default function History({ loaderData }: Route.ComponentProps) {
 	);
 
 	return (
-		<div className="mx-auto max-w-7xl mt-8 px-2 sm:px-4 lg:px-6">
+		<div {...stylex.props(styles.page)}>
 			{Object.entries(monthsByYear)
 				.sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
 				.map(([year, yearMonths]) => (
-					<div key={year} className="mb-10">
-						<div className="relative mb-6">
-							<div className="absolute inset-0 flex items-center" aria-hidden="true">
-								<div className="w-full border-t border-zinc-700" />
+					<div key={year} {...stylex.props(styles.year)}>
+						<div {...stylex.props(styles.yearRule)}>
+							<div {...stylex.props(styles.ruleLine)} aria-hidden="true">
+								<div {...stylex.props(styles.rule)} />
 							</div>
-							<div className="relative flex justify-center">
-								<span className="bg-zinc-900 px-4 text-xl font-semibold text-zinc-300 flex items-center gap-1.5">
-									<CalendarDays className="h-5 w-5 text-zinc-400" />
+							<div {...stylex.props(styles.yearLabelRow)}>
+								<span {...stylex.props(styles.yearLabel)}>
+									<CalendarDays {...stylex.props(styles.yearIcon)} />
 									{year}
 								</span>
 							</div>
 						</div>
-						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+						<div {...stylex.props(styles.grid)}>
 							{yearMonths.map((month) => (
 								<Link
 									key={month.id}
 									to={`/history/${month.id}`}
 									prefetch="viewport"
-									className="group block transition-all duration-200 ease-in-out hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 rounded-lg"
+									{...stylex.props(monthTile, styles.monthLink)}
 								>
-									<Card className="h-full border-zinc-800 bg-zinc-900/60 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/15 hover:border-blue-500/60 backdrop-blur-sm">
-										<CardHeader className="pb-3">
-											<CardTitle className="text-xl text-zinc-100">
+									<Card style={styles.card}>
+										<CardHeader style={styles.cardHeader}>
+											<CardTitle style={styles.cardTitle}>
 												{new Date(month.year, month.month - 1).toLocaleString("default", {
 													month: "long",
 												})}
 											</CardTitle>
 											{month.theme && (
-												<Badge
-													variant="secondary"
-													className="w-fit bg-blue-700/30 text-blue-300 hover:bg-blue-700/40"
-												>
+												<Badge variant="secondary" style={styles.themeBadge}>
 													{month.theme.name}
 												</Badge>
 											)}
 										</CardHeader>
-										<CardContent className="pt-0">
+										<CardContent style={styles.cardContent}>
 											{month.winners && month.winners.length > 0 && month.status !== "voting" && (
-												<div className="space-y-3">
+												<div {...stylex.props(styles.winnerList)}>
 													{month.winners
 														.filter((w) => !w.short)
 														.map((winner) => (
-															<div key={winner.gameId} className="flex items-start space-x-3">
+															<div key={winner.gameId} {...stylex.props(styles.winner)}>
 																{winner.gameCover && (
 																	<img
 																		src={winner.gameCover.replace("/t_thumb/", "/t_cover_big/")}
@@ -135,24 +293,22 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																		width={48}
 																		height={64}
 																		loading="lazy"
-																		className="w-12 h-16 object-cover rounded shadow-sm group-hover:shadow-md transition-all duration-200 transform group-hover:scale-105"
+																		{...stylex.props(styles.cover)}
 																	/>
 																)}
 																<div>
-																	<div className="flex items-center text-xs font-medium text-blue-400 mb-0.5">
-																		<Trophy className="h-3.5 w-3.5 mr-1" />
+																	<div {...stylex.props(styles.winnerKind, styles.longKind)}>
+																		<Trophy {...stylex.props(styles.trophy)} />
 																		{categoryWinnerLabel(month.longLabel)}
 																	</div>
-																	<div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors duration-200">
-																		{winner.gameName}
-																	</div>
+																	<div {...stylex.props(styles.winnerName)}>{winner.gameName}</div>
 																</div>
 															</div>
 														))}
 													{month.winners
 														.filter((w) => w.short)
 														.map((winner) => (
-															<div key={winner.gameId} className="flex items-start space-x-3">
+															<div key={winner.gameId} {...stylex.props(styles.winner)}>
 																{winner.gameCover && (
 																	<img
 																		src={winner.gameCover}
@@ -160,17 +316,15 @@ export default function History({ loaderData }: Route.ComponentProps) {
 																		width={48}
 																		height={64}
 																		loading="lazy"
-																		className="w-12 h-16 object-cover rounded shadow-sm group-hover:shadow-md transition-all duration-200 transform group-hover:scale-105"
+																		{...stylex.props(styles.cover)}
 																	/>
 																)}
 																<div>
-																	<div className="flex items-center text-xs font-medium text-emerald-400 mb-0.5">
-																		<Trophy className="h-3.5 w-3.5 mr-1" />
+																	<div {...stylex.props(styles.winnerKind, styles.shortKind)}>
+																		<Trophy {...stylex.props(styles.trophy)} />
 																		{categoryWinnerLabel(month.shortLabel)}
 																	</div>
-																	<div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors duration-200">
-																		{winner.gameName}
-																	</div>
+																	<div {...stylex.props(styles.winnerName)}>{winner.gameName}</div>
 																</div>
 															</div>
 														))}
