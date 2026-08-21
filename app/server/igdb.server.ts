@@ -1,6 +1,29 @@
-import stringSimilarity from "string-similarity";
 import { getEnv } from "~/env.server";
 import type { Nomination } from "~/types";
+
+/** Dice coefficient over character bigrams, same as string-similarity's compareTwoStrings. */
+function nameSimilarity(a: string, b: string): number {
+	if (a === b) return 1;
+	if (a.length < 2 || b.length < 2) return 0;
+
+	const bigrams = new Map<string, number>();
+	for (let i = 0; i < a.length - 1; i++) {
+		const bigram = a.slice(i, i + 2);
+		bigrams.set(bigram, (bigrams.get(bigram) ?? 0) + 1);
+	}
+
+	let matches = 0;
+	for (let i = 0; i < b.length - 1; i++) {
+		const bigram = b.slice(i, i + 2);
+		const count = bigrams.get(bigram) ?? 0;
+		if (count > 0) {
+			bigrams.set(bigram, count - 1);
+			matches++;
+		}
+	}
+
+	return (2 * matches) / (a.length - 1 + b.length - 1);
+}
 
 type TwitchAuth = {
 	access_token: string;
@@ -89,18 +112,9 @@ export async function searchGames(query: string): Promise<Nomination[]> {
 	}
 
 	// Sort games by name similarity to the search query and return top 10
+	const q = query.toLowerCase();
 	return games
-		.sort((a, b) => {
-			const similarityA = stringSimilarity.compareTwoStrings(
-				query.toLowerCase(),
-				a.name.toLowerCase(),
-			);
-			const similarityB = stringSimilarity.compareTwoStrings(
-				query.toLowerCase(),
-				b.name.toLowerCase(),
-			);
-			return similarityB - similarityA;
-		})
+		.sort((a, b) => nameSimilarity(q, b.name.toLowerCase()) - nameSimilarity(q, a.name.toLowerCase()))
 		.slice(0, 10)
 		.map((game) => ({
 			id: game.id,
