@@ -39,6 +39,7 @@ export const meta: Route.MetaFunction = () =>
 
 interface NominationResponse {
 	error?: string;
+	message?: string;
 	success?: boolean;
 	nominationId?: number;
 }
@@ -294,6 +295,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			}
 
 			return Response.json({
+				message: "Game nominated successfully!",
 				success: true,
 				nominationId: nomination.lastInsertRowid ? Number(nomination.lastInsertRowid) : null,
 			});
@@ -350,7 +352,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 					args: [nominationId, discordId],
 				});
 
-				return Response.json({ success: true });
+				return Response.json({ message: "Pitch deleted successfully!", success: true });
 			}
 
 			const pitchInput = formData.get("pitch");
@@ -371,7 +373,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 				});
 			}
 
-			return Response.json({ success: true });
+			return Response.json({ message: "Pitch saved successfully!", success: true });
 		} catch (error) {
 			console.error("Error processing edit:", error);
 			return Response.json({ error: "Failed to process edit. Please try again." }, { status: 500 });
@@ -399,7 +401,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			args: [nominationId],
 		});
 
-		return Response.json({ success: true });
+		return Response.json({ message: "Nomination deleted successfully!", success: true });
 	}
 
 	return Response.json({ error: "Invalid action" }, { status: 400 });
@@ -865,7 +867,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{nominate.data?.success && (
 				<div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
-					Game nominated successfully!
+					{nominate.data.message}
 				</div>
 			)}
 
