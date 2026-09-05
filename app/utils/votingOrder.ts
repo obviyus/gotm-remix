@@ -14,7 +14,9 @@ export function buildOrderFromRankings(
 		return ["divider", ...games.map((nomination) => String(nomination.id))];
 	}
 
-	const rankedIds = [...rankings]
+	const eligibleIds = new Set(games.map((nomination) => nomination.id));
+	const rankedIds = rankings
+		.filter((ranking) => eligibleIds.has(ranking.nomination_id))
 		.sort((a, b) => a.rank - b.rank)
 		.map((ranking) => String(ranking.nomination_id));
 	const rankedSet = new Set(rankedIds);

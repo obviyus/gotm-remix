@@ -18,6 +18,18 @@ function nomination(id: number): Nomination {
 }
 
 describe("buildOrderFromRankings", () => {
+	test("omits rankings for games moved out of the ballot", () => {
+		expect(
+			buildOrderFromRankings(
+				[nomination(2), nomination(3)],
+				[
+					{ nomination_id: 1, rank: 1 },
+					{ nomination_id: 2, rank: 2 },
+				],
+			),
+		).toEqual(["2", "divider", "3"]);
+	});
+
 	test("all unranked without rankings", () => {
 		expect(buildOrderFromRankings([nomination(1), nomination(2)], [])).toEqual([
 			"divider",
