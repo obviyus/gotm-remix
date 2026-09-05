@@ -35,8 +35,8 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 		voteState.set(vote.id, { rankIndex: 0 });
 	}
 
-	// Set of eliminated nomination IDs for fast lookup
-	const eliminatedIds = new Set<number>();
+	// Rankings can still refer to candidates moved out of this ballot.
+	const activeIds = new Set(nominations.map((nomination) => nomination.id));
 
 	let round = 1;
 
@@ -60,7 +60,7 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 			const { rankings } = vote;
 			while (state.rankIndex < rankings.length) {
 				const rank = rankings[state.rankIndex];
-				if (!eliminatedIds.has(rank.nominationId)) {
+				if (activeIds.has(rank.nominationId)) {
 					currentNomId = rank.nominationId;
 					break;
 				}
@@ -125,7 +125,7 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 		const _loserCount = currentVoteCounts.get(loser.id) || 0;
 
 		// 4. Eliminate loser
-		eliminatedIds.add(loser.id);
+		activeIds.delete(loser.id);
 		activeNominations = activeNominations.slice(1);
 
 		// 5. Calculate transfers for graph edges
@@ -147,7 +147,7 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 
 				while (nextIndex < vote.rankings.length) {
 					const rank = vote.rankings[nextIndex];
-					if (!eliminatedIds.has(rank.nominationId)) {
+					if (activeIds.has(rank.nominationId)) {
 						nextNomId = rank.nominationId;
 						break;
 					}
@@ -209,7 +209,7 @@ export function calculateIRV(nominations: Nomination[], votes: VoteWithRankings[
 			let idx = state.rankIndex;
 			while (idx < vote.rankings.length) {
 				const rank = vote.rankings[idx];
-				if (!eliminatedIds.has(rank.nominationId)) {
+				if (activeIds.has(rank.nominationId)) {
 					currentNomId = rank.nominationId;
 					break;
 				}

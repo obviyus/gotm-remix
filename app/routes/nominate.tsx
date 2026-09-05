@@ -1,3 +1,4 @@
+import type { Transaction } from "@libsql/client";
 import type { ChangeEvent, FormEvent } from "react";
 import { useId, useState } from "react";
 import { Link, useFetcher } from "react-router";
@@ -225,8 +226,39 @@ export async function action({ request, context }: Route.ActionArgs) {
 		return Response.json({ games });
 	}
 
+	const transaction = await db.transaction("write");
+	try {
+		const response = await mutateNomination(transaction, formData, method, discordId);
+		if (response.ok) {
+			await transaction.commit();
+		} else {
+			await transaction.rollback();
+		}
+		return response;
+	} catch (error) {
+		await transaction.rollback();
+		throw error;
+	} finally {
+		transaction.close();
+	}
+}
+
+async function mutateNomination(
+	transaction: Transaction,
+	formData: FormData,
+	method: string,
+	discordId: string,
+) {
+	// Hold the write transaction across the phase check and mutation so closing
+	// nominations cannot race a request from a page that is already open.
+	const month = await getCurrentMonth(transaction);
+	if (month.status !== "nominating") {
+		return Response.json({ error: "Nominations are not open" }, { status: 409 });
+	}
+	const intent = (formData.get("intent") || "").toString();
+
 	// Reuse previous winners check
-	const winners = await db.execute("SELECT DISTINCT game_id FROM winners");
+	const winners = await transaction.execute("SELECT DISTINCT game_id FROM winners");
 	const previousWinners = new Set(winners.rows.map((w) => (w.game_id ?? "").toString()));
 
 	if (method === "POST" && intent === "createNomination") {
@@ -245,6 +277,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 				return Response.json({ error: "Missing required fields" }, { status: 400 });
 			}
 
+			if (Number(monthId) !== month.id) {
+				return Response.json({ error: "Nominations are not open for this month" }, { status: 409 });
+			}
+
 			// Reject previous winners
 			if (previousWinners.has(gameIdStr)) {
 				return Response.json(
@@ -254,7 +290,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			}
 
 			// Check if user already nominated/pitched this game for the month
-			const existing = await db.execute({
+			const existing = await transaction.execute({
 				sql: "SELECT n.*, p.discord_id as pitch_discord_id FROM nominations n LEFT JOIN pitches p ON n.id = p.nomination_id WHERE n.month_id = ? AND n.game_id = ? AND p.discord_id = ?",
 				args: [monthId, gameIdStr, discordId],
 			});
@@ -272,7 +308,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			const normalizedCover = gameCover?.replace("t_thumb", "t_cover_big") || null;
 
 			// Insert nomination
-			const nomination = await db.execute({
+			const nomination = await transaction.execute({
 				sql: "INSERT INTO nominations (month_id, game_id, discord_id, short, game_name, game_year, game_cover, game_url, jury_selected, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch(), unixepoch())",
 				args: [
 					monthId,
@@ -288,7 +324,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			});
 
 			if (pitch && nomination.lastInsertRowid) {
-				await db.execute({
+				await transaction.execute({
 					sql: "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
 					args: [nomination.lastInsertRowid, discordId, pitch],
 				});
@@ -319,7 +355,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			}
 
 			// Fetch nomination and any existing pitch by this user
-			const nomination = await db.execute({
+			const nomination = await transaction.execute({
 				sql: `SELECT n.*, p.discord_id as pitch_discord_id
                       FROM nominations n
                       LEFT JOIN pitches p ON n.id = p.nomination_id AND p.discord_id = ?
@@ -329,6 +365,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 			if (nomination.rows.length === 0) {
 				return Response.json({ error: "Nomination not found" }, { status: 404 });
+			}
+
+			if (Number(nomination.rows[0].month_id) !== month.id) {
+				return Response.json({ error: "Nominations are not open for this month" }, { status: 409 });
 			}
 
 			const gameId = nomination.rows[0].game_id?.toString() ?? "";
@@ -347,7 +387,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 					return Response.json({ error: "No existing pitch to delete" }, { status: 400 });
 				}
 
-				await db.execute({
+				await transaction.execute({
 					sql: "DELETE FROM pitches WHERE nomination_id = ? AND discord_id = ?",
 					args: [nominationId, discordId],
 				});
@@ -362,12 +402,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 			}
 
 			if (hasExistingPitch) {
-				await db.execute({
+				await transaction.execute({
 					sql: "UPDATE pitches SET pitch = ?, updated_at = unixepoch() WHERE nomination_id = ? AND discord_id = ?",
 					args: [pitch, nominationId, discordId],
 				});
 			} else {
-				await db.execute({
+				await transaction.execute({
 					sql: "INSERT INTO pitches (nomination_id, discord_id, pitch, created_at, updated_at) VALUES (?, ?, ?, unixepoch(), unixepoch())",
 					args: [nominationId, discordId, pitch],
 				});
@@ -387,8 +427,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 		}
 
 		// Verify ownership
-		const nomination = await db.execute({
-			sql: "SELECT id FROM nominations WHERE id = ? AND discord_id = ?",
+		const nomination = await transaction.execute({
+			sql: "SELECT id, month_id FROM nominations WHERE id = ? AND discord_id = ?",
 			args: [nominationId, discordId],
 		});
 
@@ -396,7 +436,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 			return Response.json({ error: "Nomination not found or unauthorized" }, { status: 404 });
 		}
 
-		await db.execute({
+		if (Number(nomination.rows[0].month_id) !== month.id) {
+			return Response.json({ error: "Nominations are not open for this month" }, { status: 409 });
+		}
+
+		await transaction.execute({
 			sql: "DELETE FROM nominations WHERE id = ?",
 			args: [nominationId],
 		});

@@ -47,6 +47,54 @@ const nominations: Nomination[] = [
 ];
 
 describe("Voting Logic (IRV)", () => {
+	test("transfers past a candidate removed from the ballot", () => {
+		const votes: VoteWithRankings[] = [
+			{
+				id: 1,
+				rankings: [
+					{ voteId: 1, nominationId: 1, rank: 1 },
+					{ voteId: 1, nominationId: 2, rank: 2 },
+				],
+			},
+			{
+				id: 2,
+				rankings: [
+					{ voteId: 2, nominationId: 1, rank: 1 },
+					{ voteId: 2, nominationId: 2, rank: 2 },
+				],
+			},
+			{ id: 3, rankings: [{ voteId: 3, nominationId: 3, rank: 1 }] },
+		];
+		const results = calculateIRV(nominations.slice(1), votes);
+		expect(getWinnerName(results)).toBe("Game B");
+		expect(getWinnerNode(results)).toContain("(2)");
+	});
+
+	test("skips an ineligible preference during an elimination transfer", () => {
+		const votes: VoteWithRankings[] = [
+			{ id: 1, rankings: [{ voteId: 1, nominationId: 1, rank: 1 }] },
+			{ id: 2, rankings: [{ voteId: 2, nominationId: 1, rank: 1 }] },
+			{ id: 3, rankings: [{ voteId: 3, nominationId: 2, rank: 1 }] },
+			{ id: 4, rankings: [{ voteId: 4, nominationId: 2, rank: 1 }] },
+			{
+				id: 5,
+				rankings: [
+					{ voteId: 5, nominationId: 3, rank: 1 },
+					{ voteId: 5, nominationId: 99, rank: 2 },
+					{ voteId: 5, nominationId: 2, rank: 3 },
+				],
+			},
+			{ id: 6, rankings: [{ voteId: 6, nominationId: 99, rank: 1 }] },
+		];
+		const results = calculateIRV(nominations, votes);
+		expect(getWinnerName(results)).toBe("Game B");
+		expect(getWinnerNode(results)).toContain("(3)");
+		expect(
+			results.find((edge) => edge.source.startsWith("Game C") && edge.target.startsWith("Game B"))
+				?.weight,
+		).toBe("1");
+	});
+
 	test("Scenario 1: Simple Majority", () => {
 		// 3 votes for A, 1 for B, 1 for C
 		const votes: VoteWithRankings[] = [
