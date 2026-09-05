@@ -1,3 +1,4 @@
+import type { Client } from "@libsql/client";
 import { db } from "~/server/database.server";
 import type { Month, ThemeCategory } from "~/types";
 
@@ -57,8 +58,8 @@ export async function getMonth(monthId: number): Promise<Month> {
 	return monthRowToMonth(result.rows[0] as unknown as MonthRow);
 }
 
-export async function getCurrentMonth(): Promise<Month> {
-	const result = await db.execute({
+export async function getCurrentMonth(database: Pick<Client, "execute"> = db): Promise<Month> {
+	const result = await database.execute({
 		sql: `${monthSelect}
 	         ORDER BY CASE
 	                   WHEN ms.status IN ('nominating', 'jury', 'voting') THEN 0
