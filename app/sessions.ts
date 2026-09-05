@@ -4,6 +4,7 @@ import { getEnv } from "~/env.server";
 type SessionData = {
 	discordId: string;
 	discordAvatarUrl: string;
+	discordOAuthState: { value: string; expiresAt: number };
 };
 
 type SessionFlashData = {
