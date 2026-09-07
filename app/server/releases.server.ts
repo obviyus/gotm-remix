@@ -171,22 +171,20 @@ async function getCachedReleases(date: string): Promise<Release[] | null> {
 		return null;
 	}
 
-	return result.rows.map(
-		(row): Nomination => ({
-			id: row.id as number,
-			gameId: (row.game_id as number).toString(),
-			gameName: row.game_name as string,
-			gameCover: (row.game_cover as string) || undefined,
-			summary: (row.game_summary as string) || undefined,
-			gameYear: (row.game_year as string) || "",
-			gameUrl: (row.game_url as string) || "",
-			short: false,
-			jurySelected: false,
-			monthId: 0,
-			discordId: "",
-			pitches: [],
-		}),
-	);
+	return result.rows.map((row): Nomination => ({
+		id: row.id as number,
+		gameId: (row.game_id as number).toString(),
+		gameName: row.game_name as string,
+		gameCover: (row.game_cover as string) || undefined,
+		summary: (row.game_summary as string) || undefined,
+		gameYear: (row.game_year as string) || "",
+		gameUrl: (row.game_url as string) || "",
+		short: false,
+		jurySelected: false,
+		monthId: 0,
+		discordId: "",
+		pitches: [],
+	}));
 }
 
 export async function getReleasesForDate(date: string): Promise<Release[]> {

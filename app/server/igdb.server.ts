@@ -114,7 +114,9 @@ export async function searchGames(query: string): Promise<Nomination[]> {
 	// Sort games by name similarity to the search query and return top 10
 	const q = query.toLowerCase();
 	return games
-		.sort((a, b) => nameSimilarity(q, b.name.toLowerCase()) - nameSimilarity(q, a.name.toLowerCase()))
+		.sort(
+			(a, b) => nameSimilarity(q, b.name.toLowerCase()) - nameSimilarity(q, a.name.toLowerCase()),
+		)
 		.slice(0, 10)
 		.map((game) => ({
 			id: game.id,

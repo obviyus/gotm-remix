@@ -4,9 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 
-const ReactCompilerConfig = {
-	/* ... */
-};
+const ReactCompilerConfig = {/* ... */};
 const bunExternalModules = [
 	"bun",
 	...builtinModules,

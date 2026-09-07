@@ -61,29 +61,25 @@ const getNominationsAndVotes = async (
 	]);
 
 	return {
-		nominations: nominationsResult.rows.map(
-			(row): Nomination => ({
-				id: Number(row.id),
-				gameId: String(row.game_id),
-				short: Boolean(row.short),
-				jurySelected: Boolean(row.jury_selected),
-				monthId: monthId,
-				gameName: String(row.game_name),
-				gameYear: String(row.game_year),
-				gameCover: String(row.game_cover),
-				gameUrl: String(row.game_url),
-				discordId: String(row.discord_id),
-				pitches: [],
-			}),
-		),
-		votes: votesResult.rows.map(
-			(row): Vote => ({
-				id: Number(row.id),
-				monthId: Number(row.month_id),
-				short: Boolean(row.short),
-				discordId: "",
-			}),
-		),
+		nominations: nominationsResult.rows.map((row): Nomination => ({
+			id: Number(row.id),
+			gameId: String(row.game_id),
+			short: Boolean(row.short),
+			jurySelected: Boolean(row.jury_selected),
+			monthId: monthId,
+			gameName: String(row.game_name),
+			gameYear: String(row.game_year),
+			gameCover: String(row.game_cover),
+			gameUrl: String(row.game_url),
+			discordId: String(row.discord_id),
+			pitches: [],
+		})),
+		votes: votesResult.rows.map((row): Vote => ({
+			id: Number(row.id),
+			monthId: Number(row.month_id),
+			short: Boolean(row.short),
+			discordId: "",
+		})),
 	};
 };
 
@@ -136,21 +132,19 @@ const getNominationsForMonth = async (monthId: number, short: boolean): Promise<
 		args: [monthId, short ? 1 : 0],
 	});
 
-	return nominationsResult.rows.map(
-		(row): Nomination => ({
-			id: Number(row.id),
-			gameId: String(row.game_id),
-			short: Boolean(row.short),
-			jurySelected: Boolean(row.jury_selected),
-			monthId: monthId,
-			gameName: String(row.game_name),
-			gameYear: String(row.game_year),
-			gameCover: String(row.game_cover),
-			gameUrl: String(row.game_url),
-			discordId: String(row.discord_id),
-			pitches: [],
-		}),
-	);
+	return nominationsResult.rows.map((row): Nomination => ({
+		id: Number(row.id),
+		gameId: String(row.game_id),
+		short: Boolean(row.short),
+		jurySelected: Boolean(row.jury_selected),
+		monthId: monthId,
+		gameName: String(row.game_name),
+		gameYear: String(row.game_year),
+		gameCover: String(row.game_cover),
+		gameUrl: String(row.game_url),
+		discordId: String(row.discord_id),
+		pitches: [],
+	}));
 };
 
 const getVotesWithRankingsAndTimes = async (
