@@ -28,6 +28,7 @@ import {
 } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
+import { shuffle } from "~/utils/shuffle.server";
 import type { Route } from "./+types/nominate";
 
 export const meta: Route.MetaFunction = () =>
@@ -192,7 +193,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 	let allNominations: Nomination[] = [];
 	if (monthId) {
 		// Fetch all nominations for the month
-		allNominations = await getNominationsForMonth(monthId);
+		allNominations = shuffle(await getNominationsForMonth(monthId));
 
 		// Filter for user's nominations
 		userNominations = allNominations.filter((n) => n.discordId === discordId);
