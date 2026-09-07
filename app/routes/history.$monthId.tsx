@@ -19,6 +19,7 @@ import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
 import { SITE_NAME, absoluteUrl, monthLabel, pageMeta } from "~/utils/seo";
+import { shuffle } from "~/utils/shuffle.server";
 import type { Route } from "./+types/history.$monthId";
 
 type LoaderData = Route.ComponentProps["loaderData"];
@@ -92,7 +93,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	const shouldShowResults =
 		month.status === "over" || month.status === "complete" || month.status === "playing";
 
-	const allNominations = await getNominationsForMonth(monthId);
+	const allNominations = shuffle(await getNominationsForMonth(monthId));
 
 	let results: { long: Result[]; short: Result[] } = { long: [], short: [] };
 	let timelapse: {

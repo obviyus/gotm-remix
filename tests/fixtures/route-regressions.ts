@@ -253,4 +253,61 @@ authErrorLog.mockRestore();
 assert.equal(failed.headers.get("Location"), "/?error=auth_failed");
 assert.equal((await getSession(cookie(failed))).get("discordOAuthState"), undefined);
 fetchMock.mockRestore();
+
+const { loader: loadHome } = await import("~/routes/home");
+const { loader: loadNominations } = await import("~/routes/nominate");
+const { loader: loadHistory } = await import("~/routes/history.$monthId");
+await db.execute("UPDATE months SET status_id=1 WHERE id=42");
+const nominationLoaders = [
+	async () => {
+		const page = await loadHome(args(new Request("http://localhost/")));
+		assert(page.nominations);
+		return [...page.nominations.long, ...page.nominations.short].map((game) => game.id);
+	},
+	async () =>
+		(await loadNominations(args(new Request("http://localhost/nominate")))).allNominations.map(
+			(game) => game.id,
+		),
+	async () => {
+		const page = await loadHistory({
+			...args(new Request("http://localhost/history/42")),
+			params: { monthId: "42" },
+		});
+		return [...page.nominations.long, ...page.nominations.short].map((game) => game.id);
+	},
+];
+const random = spyOn(Math, "random");
+try {
+	for (const load of nominationLoaders) {
+		random.mockReturnValue(0);
+		const firstOrder = await load();
+		random.mockReturnValue(0.999);
+		const nextOrder = await load();
+		assert.notDeepEqual(firstOrder, nextOrder);
+		assert.deepEqual(
+			[...firstOrder].sort((a, b) => a - b),
+			[...nextOrder].sort((a, b) => a - b),
+		);
+	}
+	await db.execute("UPDATE months SET status_id=3 WHERE id=42");
+	random.mockReturnValue(0);
+	const firstBallot = await loadBallot(args(new Request("http://localhost/voting")));
+	random.mockReturnValue(0.999);
+	const nextBallot = await loadBallot(args(new Request("http://localhost/voting")));
+	assert(!(firstBallot instanceof Response) && !(nextBallot instanceof Response));
+	assert.notDeepEqual(firstBallot.longNominations, nextBallot.longNominations);
+	assert.deepEqual(firstBallot.longRankings, nextBallot.longRankings);
+	assert.deepEqual(buildOrderFromRankings(firstBallot.longNominations, firstBallot.longRankings), [
+		"11",
+		"divider",
+		"12",
+	]);
+	assert.deepEqual(buildOrderFromRankings(nextBallot.longNominations, nextBallot.longRankings), [
+		"11",
+		"divider",
+		"12",
+	]);
+} finally {
+	random.mockRestore();
+}
 console.log("Route regressions passed");

@@ -1,6 +1,6 @@
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -14,6 +14,7 @@ import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabe
 import { findNominationById } from "~/utils/nominations";
 import { buildOrderFromRankings, resolveVotedStatus } from "~/utils/votingOrder";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
+import { shuffle } from "~/utils/shuffle.server";
 import type { Route } from "./+types/voting";
 
 export const meta: Route.MetaFunction = () =>
@@ -139,8 +140,8 @@ export async function loader({ context }: Route.LoaderArgs) {
 	return {
 		monthId,
 		userId: discordId,
-		shortNominations: shortNoms,
-		longNominations: longNoms,
+		shortNominations: shuffle(shortNoms),
+		longNominations: shuffle(longNoms),
 		votedShort: Boolean(shortVoteResult.rows[0]),
 		votedLong: Boolean(longVoteResult.rows[0]),
 		shortRankings,
@@ -265,6 +266,10 @@ function VotingGamesList({
 }
 
 export default function Voting({ loaderData }: Route.ComponentProps) {
+	return <Ballot key={loaderData.monthId} loaderData={loaderData} />;
+}
+
+function Ballot({ loaderData }: Pick<Route.ComponentProps, "loaderData">) {
 	const {
 		userId,
 		shortNominations,
@@ -277,20 +282,19 @@ export default function Voting({ loaderData }: Route.ComponentProps) {
 	} = loaderData;
 
 	const voteFetcher = useFetcher<VoteActionResponse>();
-	const loaderOrder = useMemo(
-		() => ({
-			0: buildOrderFromRankings(longNominations, longRankings),
-			1: buildOrderFromRankings(shortNominations, shortRankings),
-		}),
-		[longNominations, longRankings, shortNominations, shortRankings],
-	);
-	const [currentOrder, setCurrentOrder] = useState(loaderOrder);
+	const [currentOrder, setCurrentOrder] = useState(() => ({
+		0: buildOrderFromRankings(longNominations, longRankings),
+		1: buildOrderFromRankings(shortNominations, shortRankings),
+	}));
 
 	useEffect(() => {
 		if (voteFetcher.state === "idle") {
-			setCurrentOrder(loaderOrder);
+			setCurrentOrder((previous) => ({
+				0: buildOrderFromRankings(longNominations, longRankings, previous[0]),
+				1: buildOrderFromRankings(shortNominations, shortRankings, previous[1]),
+			}));
 		}
-	}, [voteFetcher.state, loaderOrder]);
+	}, [voteFetcher.state, longNominations, longRankings, shortNominations, shortRankings]);
 
 	const votedLong = resolveVotedStatus(Boolean(loaderVotedLong), false, voteFetcher);
 	const votedShort = resolveVotedStatus(Boolean(loaderVotedShort), true, voteFetcher);

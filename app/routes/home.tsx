@@ -19,6 +19,7 @@ import type { Nomination } from "~/types";
 import { categoryGameTitle, categoryLabelsFromMonth } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
 import { pageMeta } from "~/utils/seo";
+import { shuffle } from "~/utils/shuffle.server";
 import type { Route } from "./+types/home";
 
 type NominationsByType = {
@@ -117,7 +118,9 @@ export async function loader({ context }: Route.LoaderArgs): Promise<LoaderData>
 	switch (month.status) {
 		case "nominating":
 		case "jury": {
-			const nominationsPromise = getNominationsForMonth(month.id).then(groupNominationsByType);
+			const nominationsPromise = getNominationsForMonth(month.id)
+				.then(shuffle)
+				.then(groupNominationsByType);
 			const nominations = await nominationsPromise;
 
 			return {
@@ -128,7 +131,9 @@ export async function loader({ context }: Route.LoaderArgs): Promise<LoaderData>
 			} satisfies LoaderData;
 		}
 		case "voting": {
-			const nominationsPromise = getNominationsForMonth(month.id).then(groupNominationsByType);
+			const nominationsPromise = getNominationsForMonth(month.id)
+				.then(shuffle)
+				.then(groupNominationsByType);
 			const [totalVotes, nominations] = await Promise.all([
 				getTotalVotesForMonth(month.id),
 				nominationsPromise,

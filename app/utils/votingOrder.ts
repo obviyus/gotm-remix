@@ -8,23 +8,31 @@ export type RankingRow = {
 export function buildOrderFromRankings(
 	nominations: Nomination[] | undefined,
 	rankings: RankingRow[] | undefined,
+	previousOrder: string[] = [],
 ): string[] {
 	const games = nominations ?? [];
-	if (!rankings?.length) {
-		return ["divider", ...games.map((nomination) => String(nomination.id))];
-	}
-
 	const eligibleIds = new Set(games.map((nomination) => nomination.id));
-	const rankedIds = rankings
+	const rankedIds = (rankings ?? [])
 		.filter((ranking) => eligibleIds.has(ranking.nomination_id))
 		.sort((a, b) => a.rank - b.rank)
 		.map((ranking) => String(ranking.nomination_id));
 	const rankedSet = new Set(rankedIds);
-	const unrankedIds = games
-		.filter((nomination) => !rankedSet.has(String(nomination.id)))
-		.map((nomination) => String(nomination.id));
+	const unrankedIds = new Set(
+		games
+			.filter((nomination) => !rankedSet.has(String(nomination.id)))
+			.map((nomination) => String(nomination.id)),
+	);
+	// Saving a vote reloads the shuffled candidates; keep the visible remainder
+	// in place until the voter opens a new page or refreshes.
+	const preservedIds: string[] = [];
+	for (const id of previousOrder) {
+		if (unrankedIds.has(id)) {
+			preservedIds.push(id);
+			unrankedIds.delete(id);
+		}
+	}
 
-	return [...rankedIds, "divider", ...unrankedIds];
+	return [...rankedIds, "divider", ...preservedIds, ...unrankedIds];
 }
 
 export function resolveVotedStatus(
