@@ -222,18 +222,29 @@ export async function loader(): Promise<StatsLoaderData> {
 
 		// 8. Monthly participation stats
 		db.execute(`
+			WITH monthly_nominations AS (
+				SELECT month_id,
+					COUNT(DISTINCT discord_id) AS nominators,
+					COUNT(*) AS total,
+					SUM(CASE WHEN jury_selected = 1 THEN 1 ELSE 0 END) AS selected
+				FROM nominations
+				GROUP BY month_id
+			), monthly_votes AS (
+				SELECT month_id, COUNT(DISTINCT discord_id) AS voters
+				FROM votes
+				GROUP BY month_id
+			)
 			SELECT
 				m.year || '-' || PRINTF('%02d', m.month) AS monthYear,
 				COALESCE(t.name, NULL) AS themeShort,
-				COUNT(DISTINCT CASE WHEN n.discord_id IS NOT NULL THEN n.discord_id END) AS nominators,
-				COUNT(DISTINCT CASE WHEN v.discord_id IS NOT NULL THEN v.discord_id END) AS voters,
-				COUNT(DISTINCT n.id) AS total,
-				COUNT(DISTINCT CASE WHEN n.jury_selected = 1 THEN n.id END) AS selected
+				COALESCE(n.nominators, 0) AS nominators,
+				COALESCE(v.voters, 0) AS voters,
+				COALESCE(n.total, 0) AS total,
+				COALESCE(n.selected, 0) AS selected
 			FROM months m
 			LEFT JOIN themes t ON m.theme_id = t.id
-			LEFT JOIN nominations n ON m.id = n.month_id
-			LEFT JOIN votes v ON m.id = v.month_id
-			GROUP BY m.id, m.year, m.month
+			LEFT JOIN monthly_nominations n ON m.id = n.month_id
+			LEFT JOIN monthly_votes v ON m.id = v.month_id
 			ORDER BY m.year, m.month
 		`),
 
