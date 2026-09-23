@@ -1,6 +1,6 @@
 import type { Transaction } from "@libsql/client";
 import type { ChangeEvent, FormEvent } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useFetcher } from "react-router";
 import GameCard from "~/components/GameCard";
 import PitchesModal from "~/components/PitchesModal";
@@ -27,6 +27,7 @@ import {
 	isDefaultCategoryLabels,
 } from "~/utils/categoryLabels";
 import { findNominationById } from "~/utils/nominations";
+import { readPitchDraft, writePitchDraft } from "~/utils/pitchDrafts";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
 import { shuffle } from "~/utils/shuffle.server";
 import type { Route } from "./+types/nominate";
@@ -486,6 +487,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const games = search.data?.games || initialGames;
 	const [searchTerm, setSearchTerm] = useState("");
 	const nominate = useFetcher<NominationResponse>();
+	const isSaving = nominate.state !== "idle";
+	// The dialog that submitted stays open with its text until the server answers.
+	// `previousData` tells the new answer apart from the one already on screen.
+	const [pendingSave, setPendingSave] = useState<{
+		dialog: "nominate" | "edit";
+		previousData: NominationResponse | undefined;
+	} | null>(null);
+	const [dialogError, setDialogError] = useState<string | null>(null);
 
 	// Generate unique IDs for form elements
 	const pitchId = useId();
@@ -598,6 +607,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		}
 
 		setSelectedGame(game);
+		setPitch((monthId && readPitchDraft(monthId, String(game.gameId))) || "");
+		setDialogError(null);
 		setIsOpen(true);
 	};
 
@@ -640,9 +651,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			},
 			{ method: "PATCH" },
 		);
-
-		setEditingNominationId(null);
-		setEditPitch("");
+		setPendingSave({ dialog: "edit", previousData: nominate.data });
+		setDialogError(null);
 	};
 
 	const handleDeleteConfirm = () => {
@@ -679,10 +689,8 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			},
 			{ method: "POST" },
 		);
-
-		setIsOpen(false);
-		setSelectedGame(null);
-		setPitch("");
+		setPendingSave({ dialog: "nominate", previousData: nominate.data });
+		setDialogError(null);
 	};
 
 	const selectShortGame = () => {
@@ -695,12 +703,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 	const handleEditPitchChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
 		setEditPitch(event.target.value);
+		if (monthId && editingNomination) {
+			writePitchDraft(monthId, editingNomination.gameId, event.target.value);
+		}
 	};
 
 	const handleEditDialogOpenChange = (open: boolean) => {
 		if (!open) {
-			setEditingNominationId(null);
-			setEditPitch("");
+			closeEditModal();
 		}
 	};
 
@@ -713,6 +723,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	const closeEditModal = () => {
 		setEditingNominationId(null);
 		setEditPitch("");
+		setDialogError(null);
 	};
 
 	const closeDeleteModal = () => {
@@ -730,6 +741,9 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 			return;
 		}
 
+		if (monthId) {
+			writePitchDraft(monthId, pitchToDelete.gameId, "");
+		}
 		void nominate.submit(
 			{
 				intent: "deletePitch",
@@ -752,8 +766,10 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 	};
 
 	const openNominationModal = (nomination: Nomination) => {
+		const savedPitch = nomination.pitches.find((p) => p.discordId === userDiscordId)?.pitch;
 		setEditingNominationId(nomination.id);
-		setEditPitch(nomination.pitches.find((p) => p.discordId === userDiscordId)?.pitch || "");
+		setEditPitch((monthId && readPitchDraft(monthId, nomination.gameId)) || savedPitch || "");
+		setDialogError(null);
 	};
 
 	const handleSearchTermChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -765,12 +781,37 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 		if (!open) {
 			setPitch("");
 			setSelectedGame(null);
+			setDialogError(null);
 		}
 	};
 
 	const handlePitchChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
 		setPitch(event.target.value);
+		if (monthId && selectedGame) {
+			writePitchDraft(monthId, String(selectedGame.gameId), event.target.value);
+		}
 	};
+
+	useEffect(() => {
+		if (!pendingSave || nominate.state !== "idle" || nominate.data === pendingSave.previousData) {
+			return;
+		}
+		setPendingSave(null);
+
+		if (!nominate.data?.success) {
+			setDialogError(nominate.data?.error ?? "Could not save. Your pitch is kept here; try again.");
+			return;
+		}
+
+		if (pendingSave.dialog === "nominate" && monthId && selectedGame) {
+			writePitchDraft(monthId, String(selectedGame.gameId), "");
+			handleNominationDialogOpenChange(false);
+		}
+		if (pendingSave.dialog === "edit" && monthId && editingNomination) {
+			writePitchDraft(monthId, editingNomination.gameId, "");
+			closeEditModal();
+		}
+	}, [nominate.state, nominate.data, pendingSave]);
 
 	if (!monthId || monthStatus !== "nominating") {
 		return (
@@ -1102,33 +1143,39 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						/>
 					</div>
 
+					{dialogError && (
+						<p role="alert" className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+							{dialogError}
+						</p>
+					)}
+
 					<DialogFooter>
 						<div className="grid grid-cols-2 gap-4 w-full">
 							<button
 								type="button"
 								onClick={selectShortGame}
-								disabled={Boolean(shortNomination)}
+								disabled={Boolean(shortNomination) || isSaving}
 								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
-									shortNomination
+									shortNomination || isSaving
 										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
 										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
 								}`}
 							>
-								<span>{categoryGameLabel(labels.short)}</span>
+								<span>{isSaving ? "Saving…" : categoryGameLabel(labels.short)}</span>
 								{showDurationHints && <span className="text-xs opacity-80">(&lt; 12 hours)</span>}
 								{shortNomination && <span className="text-xs">Already nominated</span>}
 							</button>
 							<button
 								type="button"
 								onClick={selectLongGame}
-								disabled={Boolean(longNomination)}
+								disabled={Boolean(longNomination) || isSaving}
 								className={`w-full inline-flex flex-col items-center justify-center gap-1 px-4 py-4 text-sm font-medium rounded-lg border transition-all duration-300 ${
-									longNomination
+									longNomination || isSaving
 										? "opacity-50 cursor-not-allowed text-zinc-400 border-zinc-400/20 bg-transparent"
 										: "text-emerald-500 border-emerald-400/20 bg-transparent hover:bg-emerald-500/10 hover:border-emerald-400/30"
 								}`}
 							>
-								<span>{categoryGameLabel(labels.long)}</span>
+								<span>{isSaving ? "Saving…" : categoryGameLabel(labels.long)}</span>
 								{showDurationHints && <span className="text-xs opacity-80">(&gt; 12 hours)</span>}
 								{longNomination && <span className="text-xs">Already nominated</span>}
 							</button>
@@ -1162,6 +1209,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 						/>
 					</div>
 
+					{dialogError && (
+						<p role="alert" className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+							{dialogError}
+						</p>
+					)}
+
 					<DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
 						{hasExistingEditingPitch && editingNomination && (
 							<button
@@ -1185,9 +1238,9 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 								type="button"
 								onClick={handleEditSubmit}
 								className="bg-blue-600 hover:bg-blue-700 text-white"
-								disabled={isSaveDisabled}
+								disabled={isSaveDisabled || isSaving}
 							>
-								{hasExistingEditingPitch ? "Save Changes" : "Add Pitch"}
+								{isSaving ? "Saving…" : hasExistingEditingPitch ? "Save Changes" : "Add Pitch"}
 							</Button>
 						</div>
 					</DialogFooter>
