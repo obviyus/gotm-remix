@@ -89,11 +89,14 @@ export async function loader({ params }: Route.LoaderArgs) {
 		throw new Response("Invalid month ID", { status: 400 });
 	}
 
-	const month = await getMonth(monthId);
+	const [month, monthNominations] = await Promise.all([
+		getMonth(monthId),
+		getNominationsForMonth(monthId),
+	]);
 	const shouldShowResults =
 		month.status === "over" || month.status === "complete" || month.status === "playing";
 
-	const allNominations = shuffle(await getNominationsForMonth(monthId));
+	const allNominations = shuffle(monthNominations);
 
 	let results: { long: Result[]; short: Result[] } = { long: [], short: [] };
 	let timelapse: {
@@ -102,28 +105,30 @@ export async function loader({ params }: Route.LoaderArgs) {
 	} = { long: null, short: null };
 	let totalVotes: number | null = null;
 	let gameUrls: Awaited<ReturnType<typeof getGameUrls>> = {};
-
-	if (shouldShowResults) {
-		[gameUrls, results.long, results.short, timelapse.long, timelapse.short] = await Promise.all([
-			getGameUrls(monthId),
-			calculateVotingResults(monthId, false),
-			calculateVotingResults(monthId, true),
-			getVotingTimelapse(monthId, false),
-			getVotingTimelapse(monthId, true),
-		]);
-	} else if (month.status === "voting") {
-		totalVotes = await getTotalVotesForMonth(monthId);
-	}
-
 	// Only fetch winners once results are meant to be visible
 	let shortWinner = null;
 	let longWinner = null;
 
 	if (shouldShowResults) {
-		[shortWinner, longWinner] = await Promise.all([
+		[
+			gameUrls,
+			results.long,
+			results.short,
+			timelapse.long,
+			timelapse.short,
+			shortWinner,
+			longWinner,
+		] = await Promise.all([
+			getGameUrls(monthId),
+			calculateVotingResults(monthId, false),
+			calculateVotingResults(monthId, true),
+			getVotingTimelapse(monthId, false),
+			getVotingTimelapse(monthId, true),
 			getWinner(monthId, true),
 			getWinner(monthId, false),
 		]);
+	} else if (month.status === "voting") {
+		totalVotes = await getTotalVotesForMonth(monthId);
 	}
 
 	// Group nominations by type

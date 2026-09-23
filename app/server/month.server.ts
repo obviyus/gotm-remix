@@ -61,13 +61,21 @@ export async function getMonth(monthId: number): Promise<Month> {
 export async function getCurrentMonth(database: Pick<Client, "execute"> = db): Promise<Month> {
 	const result = await database.execute({
 		sql: `${monthSelect}
-	         ORDER BY CASE
-	                   WHEN ms.status IN ('nominating', 'jury', 'voting') THEN 0
-	                   ELSE 1
-	                  END,
-	                  m.year DESC,
-	                  m.month DESC
-	         LIMIT 1`,
+	         WHERE m.id = COALESCE(
+	                   (SELECT am.id
+	                    FROM months am
+	                    JOIN themes at ON am.theme_id = at.id
+	                    JOIN month_status ams ON am.status_id = ams.id
+	                    WHERE ams.status IN ('nominating', 'jury', 'voting')
+	                    ORDER BY am.year DESC, am.month DESC
+	                    LIMIT 1),
+	                   (SELECT lm.id
+	                    FROM months lm
+	                    JOIN themes lt ON lm.theme_id = lt.id
+	                    JOIN month_status lms ON lm.status_id = lms.id
+	                    ORDER BY lm.year DESC, lm.month DESC
+	                    LIMIT 1)
+	                  )`,
 		args: [],
 	});
 

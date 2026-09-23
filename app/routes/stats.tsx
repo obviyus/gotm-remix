@@ -13,6 +13,7 @@ import { useEffect, useId, useRef } from "react";
 import { Card } from "~/components/ui/card";
 import { db } from "~/server/database.server";
 import { uniqueNameGenerator } from "~/server/nameGenerator";
+import globalCache from "~/utils/cache.server";
 import { SITE_NAME, pageMeta } from "~/utils/seo";
 import type { Route } from "./+types/stats";
 
@@ -154,8 +155,23 @@ type StatsLoaderData = {
 	monthlyNominationCounts: MonthlyNominationCountStats[];
 };
 
-// AIDEV-NOTE: Clean parallel queries - each query is typed and independent
+const STATS_CACHE_KEY = "stats:loader";
+const STATS_CACHE_TTL = 1000 * 60 * 10;
+
+// Site-wide aggregates only; no per-user data, so one cached copy serves every visitor.
 export async function loader(): Promise<StatsLoaderData> {
+	const cached = globalCache.get<StatsLoaderData>(STATS_CACHE_KEY);
+	if (cached) {
+		return cached;
+	}
+
+	const stats = await loadStats();
+	globalCache.set(STATS_CACHE_KEY, stats, STATS_CACHE_TTL);
+	return stats;
+}
+
+// AIDEV-NOTE: Clean parallel queries - each query is typed and independent
+async function loadStats(): Promise<StatsLoaderData> {
 	const [
 		totalsResult,
 		votesResult,
