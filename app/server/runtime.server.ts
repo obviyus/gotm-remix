@@ -80,8 +80,25 @@ export function createAppHandler(build: ServerBuildLoader, mode: ServerMode) {
 			}
 		}
 
-		return applyResponseDefaults(await handler(request, createLoadContext()));
+		return applyResponseDefaults(
+			await handler(withForwardedProtocol(request), createLoadContext()),
+		);
 	};
+}
+
+// The Cloudflare tunnel ends TLS and forwards plain HTTP to a loopback port.
+// React Router compares the action request origin with the browser's
+// `Origin` header, so the request URL must keep the public `https` scheme.
+export function withForwardedProtocol(request: Request) {
+	const protocol = request.headers.get("X-Forwarded-Proto");
+	const url = new URL(request.url);
+
+	if (protocol !== "https" || url.protocol === "https:") {
+		return request;
+	}
+
+	url.protocol = "https:";
+	return new Request(url, request);
 }
 
 export function applyResponseDefaults(response: Response) {
