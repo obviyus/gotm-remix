@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { applyResponseDefaults, shouldScheduleProductionJobs } from "./runtime.server";
+import {
+	applyResponseDefaults,
+	shouldScheduleProductionJobs,
+	withForwardedProtocol,
+} from "./runtime.server";
 
 describe("server runtime jobs", () => {
 	test("only production schedules external notification jobs", () => {
@@ -39,5 +43,20 @@ describe("applyResponseDefaults", () => {
 
 		expect(response.status).toBe(404);
 		expect(await response.text()).toBe("ok");
+	});
+});
+
+describe("withForwardedProtocol", () => {
+	test("keeps the public https origin and the form body behind the tunnel", async () => {
+		const request = withForwardedProtocol(
+			new Request("http://pg-gotm.com/admin/1", {
+				method: "POST",
+				headers: { Origin: "https://pg-gotm.com", "X-Forwarded-Proto": "https" },
+				body: new URLSearchParams({ intent: "createMonth" }),
+			}),
+		);
+
+		expect(new URL(request.url).origin).toBe("https://pg-gotm.com");
+		expect((await request.formData()).get("intent")).toBe("createMonth");
 	});
 });
