@@ -23,6 +23,7 @@ const fetchMock = spyOn(globalThis, "fetch").mockImplementation(
 	),
 );
 const { loader } = await import("~/routes/stats");
+const { default: globalCache } = await import("~/utils/cache.server");
 
 try {
 	sqlite.exec(`
@@ -61,6 +62,8 @@ try {
 		{ monthYear: "2026-06", themeShort: null, count: 0 },
 	]);
 	sqlite.exec("DELETE FROM nominations; DELETE FROM votes;");
+	assert.deepEqual(await loader(), result, "Stats stay cached until the TTL expires");
+	globalCache.clear();
 	const empty = await loader();
 	assert.equal(empty.monthlyStats.length, 6);
 	assert.equal(empty.jurySelectionStats.length, 6);
@@ -71,6 +74,7 @@ try {
 		),
 	);
 	sqlite.exec("DELETE FROM months;");
+	globalCache.clear();
 	assert.deepEqual((await loader()).monthlyStats, []);
 
 	const measured = new DatabaseSync(":memory:");

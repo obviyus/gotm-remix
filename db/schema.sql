@@ -124,8 +124,6 @@ CREATE TABLE IF NOT EXISTS winners (
   FOREIGN KEY (nomination_id) REFERENCES nominations (id) ON UPDATE CASCADE ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_igdb_releases_date ON igdb_releases(release_date);
-
 CREATE INDEX IF NOT EXISTS idx_igdb_releases_date_popularity
   ON igdb_releases(release_date, popularity_score DESC);
 
