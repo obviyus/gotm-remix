@@ -1102,7 +1102,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Game Length Selection Modal */}
 			<Dialog open={isOpen} onOpenChange={handleNominationDialogOpenChange}>
-				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
+				<DialogContent className="flex w-full flex-col sm:w-2xl sm:max-w-2xl bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
 							Nominate {selectedGame?.gameName} ({selectedGame?.gameYear})
@@ -1110,7 +1110,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					</DialogHeader>
 
 					{/* Game Cover and Summary */}
-					<div className="mb-6 flex gap-4">
+					<div className="mb-6 flex shrink-0 gap-4">
 						{selectedGame?.gameCover && (
 							<div className="shrink-0">
 								<img
@@ -1128,7 +1128,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					{/* Pitch Input */}
-					<div className="mb-6">
+					<div className="flex min-h-0 flex-col">
 						<Label htmlFor={pitchId} className="text-zinc-400">
 							Pitch (Optional)
 						</Label>
@@ -1137,7 +1137,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							name="pitch"
 							autoComplete="off"
 							rows={3}
-							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
+							className="min-h-24 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
 							value={pitch}
 							onChange={handlePitchChange}
 						/>
@@ -1186,14 +1186,14 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 
 			{/* Edit Modal */}
 			<Dialog open={isEditOpen} onOpenChange={handleEditDialogOpenChange}>
-				<DialogContent className="w-full sm:w-lg bg-zinc-900 border-white/10">
+				<DialogContent className="flex w-full flex-col sm:w-2xl sm:max-w-2xl bg-zinc-900 border-white/10">
 					<DialogHeader>
 						<DialogTitle className="text-zinc-200">
 							{hasExistingEditingPitch ? "Edit" : "Add"} Pitch: {editingNomination?.gameName}
 						</DialogTitle>
 					</DialogHeader>
 
-					<div className="mb-6">
+					<div className="flex min-h-0 flex-col">
 						<Label htmlFor={editPitchId} className="text-zinc-400">
 							Pitch
 						</Label>
@@ -1202,7 +1202,7 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							name="pitch"
 							autoComplete="off"
 							rows={3}
-							className="bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
+							className="min-h-24 bg-black/20 border-white/10 text-zinc-200 placeholder-zinc-400 focus:border-blue-500 focus:ring-blue-500 mt-2"
 							value={editPitch}
 							onChange={handleEditPitchChange}
 							placeholder="Why is this game worth playing? What makes it a good fit for the month's theme?"
@@ -1220,12 +1220,12 @@ export default function Nominate({ loaderData }: Route.ComponentProps) {
 							<button
 								type="button"
 								onClick={() => openDeletePitchDialog(editingNomination)}
-								className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
+								className="inline-flex h-9 w-full sm:w-auto items-center justify-center gap-2 px-3 text-sm font-medium rounded-lg transition-all duration-300 text-red-500 shadow-sm shadow-red-500/20 border border-red-400/20 hover:bg-red-500/10 hover:border-red-400/30 hover:shadow-red-500/40"
 							>
 								Delete pitch
 							</button>
 						)}
-						<div className="flex w-full justify-end gap-2 sm:w-auto">
+						<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
 							<Button
 								type="button"
 								onClick={closeEditModal}
